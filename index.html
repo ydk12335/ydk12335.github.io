@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>月下塔罗 · Tarot Divination</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="aurora"><i></i><i></i><i></i></div>
+<canvas id="stars"></canvas>
+<div class="halo" id="halo"></div>
+
+<button class="icon-btn" id="btnHist" title="占卜记录">📜</button>
+
+<div class="wrap">
+  <div class="kicker">TAROT · DIVINATION</div>
+  <h1 class="title">月 下 塔 罗</h1>
+  <p class="subtitle">静夜星辰为幕，七十八张经典韦特为媒<br>写下心中所问，任命运在指尖翻转显影</p>
+
+  <section class="panel" id="setupPanel">
+    <label class="q-label" for="question">✧ 你想问什么（可留空）</label>
+    <textarea id="question" maxlength="100" placeholder="例：最近这份工作要不要继续坚持？他对我是什么想法？……问题越具体，解读越贴合。"></textarea>
+    <div class="count"><span id="qCount">0</span>/100</div>
+    <div class="spreads" id="spreadSel"></div>
+    <button class="btn-gold" id="btnStart">开 始 占 卜</button>
+    <div class="auto-note" id="autoNote"></div>
+  </section>
+
+  <section class="stage" id="stage" style="display:none">
+    <div class="deck-zone">
+      <div class="deck" id="deck"></div>
+      <div class="deck-floor" id="deckFloor"></div>
+    </div>
+    <div class="slots" id="slotsMain" style="display:none"></div>
+    <div class="tapped-hint" id="tapHint">默念你的问题，轻触牌面将其翻开</div>
+    <div class="draw-actions" id="drawActions">
+      <button class="btn-gold" id="btnRead" disabled>☆ 请 塔 罗 师 解 读 ☆</button>
+      <br><br>
+      <button class="btn-glass" id="btnFlipAll" style="display:none">一键翻牌</button>
+      <button class="btn-glass" id="btnReset">重新占卜</button>
+    </div>
+  </section>
+
+  <section class="reading" id="readingBox">
+    <div class="reading-head">
+      <h2>占 卜 解 读</h2>
+      <div class="divider"></div>
+    </div>
+    <div class="ai-status" id="aiStatus">🌙 塔罗师正在洗牌凝神……</div>
+    <div class="parchment" id="readingText"></div>
+    <div class="reading-actions">
+      <button class="btn-glass" id="btnSave">收藏本次解读</button>
+      <button class="btn-glass" id="btnAgain">换一问再来</button>
+    </div>
+  </section>
+
+  <footer>
+    牌面图源：1909 年出版韦特塔罗牌 —— Pamela Colman Smith 绘制，已进入公有领域<br>
+    牌义依据韦特体系通行释义 · 解读文字由 AI 生成，仅供参考与娱乐
+    <div class="sleep-note">‥有点困‥</div>
+  </footer>
+</div>
+
+<div class="modal-mask" id="histMask">
+  <div class="modal">
+    <h3>📜 占 卜 记 录</h3>
+    <div id="histList"></div>
+    <div style="text-align:center;margin-top:12px">
+      <button class="btn-glass" id="btnClearHist">清空记录</button>
+      <button class="btn-glass" id="btnCloseHist">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
