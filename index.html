@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>月下塔罗 · Tarot Divination</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="aurora"><i></i><i></i><i></i></div>
+<canvas id="stars"></canvas>
+<div class="halo" id="halo"></div>
+
+<button class="icon-btn" id="btnHist" title="占卜记录">📜</button>
+<button class="icon-btn icon-btn--notice" id="btnNotice" title="指引">✦</button>
+<button class="icon-btn icon-btn--music" id="btnMusic" title="音乐">🎵</button>
+
+<div class="wrap">
+  <div class="kicker">TAROT · DIVINATION</div>
+  <h1 class="title">月 下 塔 罗</h1>
+  <p class="subtitle">静夜星辰为幕，七十八张经典韦特为媒<br>写下心中所问，任命运在指尖翻转显影</p>
+
+  <section class="panel" id="setupPanel">
+    <label class="q-label" for="question">✧ 你想问什么（可留空）</label>
+    <textarea id="question" maxlength="100" placeholder="例：最近这份工作要不要继续坚持？他对我是什么想法？……问题越具体，解读越贴合。"></textarea>
+    <div class="count"><span id="qCount">0</span>/100</div>
+    <div class="spreads" id="spreadSel"></div>
+    <button class="btn-gold" id="btnStart">开 始 占 卜</button>
+    <div class="auto-note" id="autoNote"></div>
+    <button class="btn-glass btn-quote" id="btnQuote">🌙 抽一支文案签</button>
+  </section>
+
+  <section class="stage" id="stage" style="display:none">
+    <div class="deck-zone">
+      <div class="deck" id="deck"></div>
+      <div class="deck-floor" id="deckFloor"></div>
+    </div>
+    <div class="slots" id="slotsMain" style="display:none"></div>
+    <div class="tapped-hint" id="tapHint">默念你的问题，轻触牌面将其翻开
+      <button class="btn-quick" id="btnQuickFlip">一键翻牌</button>
+    </div>
+    <div class="draw-actions" id="drawActions">
+      <button class="btn-gold" id="btnRead" disabled>☆ 请 塔 罗 师 解 读 ☆</button>
+      <br><br>
+      <button class="btn-glass" id="btnFlipAll" style="display:none">一键翻牌</button>
+      <button class="btn-glass" id="btnReset">重新占卜</button>
+    </div>
+  </section>
+
+  <section class="reading" id="readingBox">
+    <div class="reading-head">
+      <h2>占 卜 解 读</h2>
+      <div class="divider"></div>
+    </div>
+    <div class="ai-status" id="aiStatus">🌙 塔罗师正在洗牌凝神……</div>
+    <div class="parchment" id="readingText"></div>
+    <div class="reading-actions">
+      <button class="btn-glass" id="btnSave">收藏本次解读</button>
+      <button class="btn-glass" id="btnAgain">换一问再来</button>
+    </div>
+  </section>
+
+  <footer>
+    牌面图源：1909 年出版韦特塔罗牌 —— Pamela Colman Smith 绘制，已进入公有领域<br>
+    牌义依据韦特体系通行释义 · 解读文字由 AI 生成，仅供参考与娱乐
+    <div class="sleep-note">‥有点困‥</div>
+  </footer>
+</div>
+
+<!-- 深空彩蛋：继续下滑 -->
+<div class="void" id="voidZone">
+  <div class="void-hint">··· 夜色之外，似乎还有更深的星空 ···</div>
+</div>
+
+<div class="modal-mask" id="noticeMask">
+  <div class="modal modal--notice">
+    <h3>✦ 指 引 ✦</h3>
+    <div class="notice-body">
+      <ol class="notice-steps">
+        <li><b>写下问题</b>：在输入框写下你想问的事，越具体解读越准（可留空）。</li>
+        <li><b>选择牌阵</b>：单牌看指引，三张牌看时序，五张牌看全貌；拿不定主意就交给「智能选阵」。</li>
+        <li><b>静心抽牌</b>：默念问题，点击牌堆抽牌，再轻触牌面将其翻开（支持一键翻牌）。</li>
+        <li><b>查看解读</b>：全部翻开后点「请塔罗师解读」，AI 会结合牌面为你解析。</li>
+      </ol>
+      <div class="notice-tips">
+        <p>🌙 同一个问题短时间内不建议反复占卜，塔罗讲「一事一占」。</p>
+        <p>🌙 解读由 AI 生成，仅供娱乐与自我启发，重大决定请理性判断。</p>
+        <p>🌙 占卜记录仅保存在你的设备本地，点右上角 📜 可随时查看。</p>
+        <p>🎵 想要背景音乐？点右上角 🎵 打开音乐播放器，支持列表/单曲/随机循环。</p>
+        <p>🌌 据说夜空比看到的更深。若你愿意一直往下走，也许……别有洞天。</p>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:14px;flex:none">
+      <button class="btn-gold btn-notice-ok" id="btnNoticeOk">知道了，开始占卜</button>
+      <div style="font-size:.68rem;color:#8f86b8;margin-top:8px">随时可点右上角 ✦ 再看指引</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="histMask">
+<div class="modal modal--hist" id="histModal">
+    <h3>📜 占 卜 记 录</h3>
+    <div class="hist-body" id="histList"></div>
+    <div style="text-align:center;margin-top:12px;flex:none">
+      <button class="btn-glass" id="btnClearHist">清空记录</button>
+      <button class="btn-glass" id="btnCloseHist">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="quoteMask">
+  <div class="modal modal--quote">
+    <h3>🌙 文 案 签 🌙</h3>
+    <div class="quote-card" id="quoteCard">
+      <div class="quote-img-wrap"><img id="quoteImg" alt="氛围图" /></div>
+      <div class="quote-line" id="quoteLine">正在为你抽取一支签……</div>
+      <div class="quote-no" id="quoteNo"></div>
+    </div>
+    <div style="text-align:center;margin-top:14px;flex:none">
+      <button class="btn-gold" id="btnQuoteAgain">再 抽 一 支</button>
+      <button class="btn-glass" id="btnCloseQuote">收 起</button>
+      <div style="font-size:.68rem;color:#8f86b8;margin-top:8px">每一支签的图与文字都不重复 · 部分句子由 AI 夜色诗人即兴创作</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="musicMask">
+  <div class="modal modal--music">
+    <h3>🎵 音 乐 🎵</h3>
+    <div class="music-body">
+      <div class="music-now" id="musicNow">未在播放</div>
+      <div class="music-ctl">
+        <button class="music-btn" id="btnMusicPrev">⏮</button>
+        <button class="music-btn music-btn--main" id="btnMusicPlay"><svg id="iconPlay" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15c0 .8.9 1.3 1.6.9l12-7.5c.6-.4.6-1.4 0-1.8l-12-7.5C7.9 3.2 7 3.7 7 4.5z"/></svg><svg id="iconPause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="5" y="4" width="5" height="16" rx="1.5"/><rect x="14" y="4" width="5" height="16" rx="1.5"/></svg></button>
+        <button class="music-btn" id="btnMusicNext">⏭</button>
+      </div>
+      <div class="music-bar" id="musicBar"><div class="music-bar-fill" id="musicBarFill"></div></div>
+      <div class="music-time"><span id="musicCur">0:00</span><span id="musicDur">0:00</span></div>
+      <div class="music-list" id="musicList"></div>
+    </div>
+    <div style="text-align:center;margin-top:12px;flex:none">
+      <button class="btn-glass" id="btnMusicMode">循环：列表</button>
+      <button class="btn-glass" id="btnCloseMusic">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="musicAskMask">
+  <div class="modal modal--music modal--music-ask">
+    <h3>🌙 背 景 音 乐</h3>
+    <p class="music-ask-text">要在浏览塔罗时来点音乐吗？<br><small style="color:#8f86b8">随时可点右上角 🎵 打开电台</small></p>
+    <div style="text-align:center;margin-top:16px;flex:none">
+      <button class="btn-gold" id="btnMusicOn">开 启 音 乐</button>
+      <button class="btn-glass" id="btnMusicOffStyle">暂 不 需 要</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
