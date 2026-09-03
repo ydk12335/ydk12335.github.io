@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>星座合盘 · 有点困</title>
+<style>
+:root{--gold:#f0cf82;--gold-dim:#a9956a;--ivory:#f2ede0}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Songti SC","Noto Serif SC",serif;color:var(--ivory);background:#05030f;overflow-x:hidden}
+canvas#stars{position:fixed;inset:0;z-index:0}
+.btn-back{position:fixed;top:max(14px,env(safe-area-inset-top));left:16px;z-index:10;
+  background:rgba(20,12,44,.55);border:1px solid rgba(240,207,130,.3);color:#e8dcc0;
+  border-radius:999px;padding:8px 18px;font-size:.8rem;letter-spacing:.15em;cursor:pointer;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:inherit}
+.portal{position:relative;z-index:2;min-height:100svh;display:flex;flex-direction:column;
+  align-items:center;text-align:center;padding:clamp(64px,11vh,96px) 20px 30px}
+.kicker{font-size:.68rem;letter-spacing:.42em;text-indent:.42em;color:var(--gold-dim)}
+.p-title{font-size:clamp(1.7rem,6.4vw,2.5rem);letter-spacing:.3em;text-indent:.3em;font-weight:600;
+  color:var(--ivory);text-shadow:0 0 30px rgba(240,207,130,.25);margin-top:8px}
+.p-sub{margin-top:10px;font-size:.8rem;letter-spacing:.22em;color:#e8b48f}
+/* 关系类型选择 */
+.rel-bar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:clamp(22px,4vh,34px)}
+.rel-chip{cursor:pointer;user-select:none;-webkit-user-select:none;padding:9px 20px;border-radius:999px;
+  border:1px solid rgba(240,207,130,.24);color:#f0ead8;font-size:.86rem;letter-spacing:.1em;
+  background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.012));
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:.2s}
+.rel-chip.on{border-color:rgba(240,207,130,.65);color:var(--gold);background:rgba(240,207,130,.12);
+  text-shadow:0 0 10px rgba(240,207,130,.4)}
+/* 双人选择 */
+.pair-sel{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:clamp(20px,4vh,32px);
+  width:min(520px,94vw)}
+.p-sel{flex:1;cursor:pointer;user-select:none;-webkit-user-select:none;
+  background:rgba(255,255,255,.04);color:#f0ead8;
+  border:1px solid rgba(240,207,130,.35);border-radius:999px;padding:13px 10px;
+  font-family:inherit;font-size:.92rem;text-align:center;transition:.2s}
+.p-sel:active{border-color:rgba(240,207,130,.7);background:rgba(240,207,130,.08)}
+.p-sel .sel-sym{font-size:1.15rem;color:#f2d488;margin-right:6px;text-shadow:0 0 10px rgba(240,207,130,.4)}
+.pair-sel .px{color:var(--gold);font-size:1.3rem;text-shadow:0 0 12px rgba(240,207,130,.5);flex:none}
+.btn-gold{margin-top:clamp(22px,4vh,34px);cursor:pointer;border-radius:999px;
+  padding:14px 46px;font-size:.98rem;letter-spacing:.3em;text-indent:.3em;
+  font-family:inherit;font-weight:600;color:#fffbef;position:relative;overflow:hidden;isolation:isolate;
+  background:linear-gradient(165deg,rgba(255,238,196,.32),rgba(240,207,130,.08) 44%,rgba(198,150,74,.18)),linear-gradient(#160c33,#160c33);
+  border:1px solid rgba(240,207,130,.4);transition:.25s}
+.btn-gold:disabled{opacity:.5;cursor:default}
+.btn-gold:active{transform:scale(.96)}
+.pair-note{font-size:.72rem;color:#8a81b8;min-height:1.5em;margin-top:14px;letter-spacing:.08em}
+/* 结果 */
+#pairResult{width:min(580px,94vw);margin-top:clamp(22px,4vh,36px);display:none}
+.p-head{display:flex;align-items:center;justify-content:center;gap:12px;
+  font-size:1.1rem;color:#e9e3ff;letter-spacing:.1em;margin-bottom:6px}
+.p-head .ps{font-size:1.6rem;color:#f2d488;text-shadow:0 0 12px rgba(240,207,130,.5)}
+.p-rel{text-align:center;color:#a79ade;font-size:.8rem;letter-spacing:.2em;margin-bottom:12px}
+.a-card{background:rgba(255,255,255,.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:clamp(14px,3vw,22px);
+  box-shadow:0 14px 40px rgba(4,2,18,.4);line-height:1.95;font-size:.9rem;color:#e6e0f4;text-align:left}
+.a-card strong{color:#ffe4ab;font-weight:600}
+.p-foot{text-align:center;font-size:.66rem;color:#8f86b8;margin-top:12px;letter-spacing:.05em}
+.pair-share{display:flex;gap:10px;justify-content:center;margin-top:14px}
+.soon-pill{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  padding:11px 22px;border-radius:999px;font-size:.9rem;color:#f0ead8;letter-spacing:.08em;
+  border:1px solid rgba(240,207,130,.28);background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.012));
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:inherit;text-decoration:none;transition:.25s}
+.soon-pill:active{transform:scale(.95)}
+#shotModal{position:fixed;inset:0;z-index:50;background:rgba(3,1,14,.86);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px}
+#shotModal.show{display:flex}
+#shotImg{max-width:92vw;max-height:70vh;border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.6)}
+.shot-tip{font-size:.75rem;color:#b5abd8;letter-spacing:.1em}
+.a-loading{display:flex;align-items:center;justify-content:center;gap:12px;color:#c9c0e8;padding:26px 0}
+.orb-ring{position:relative;width:20px;height:20px;flex:none}
+.orb-ring::before{content:"";position:absolute;inset:0;border-radius:50%;
+  border:1.5px solid rgba(240,207,130,.25);border-top-color:var(--gold);animation:orbSpin 1.1s linear infinite}
+.orb-ring::after{content:"✦";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:.5rem;color:var(--gold);animation:orbGlow 2.2s ease-in-out infinite}
+@keyframes orbSpin{to{transform:rotate(360deg)}}
+@keyframes orbGlow{0%,100%{opacity:.4}50%{opacity:1;text-shadow:0 0 10px rgba(240,207,130,.8)}}
+.p-foot2{font-size:.72rem;letter-spacing:.3em;text-indent:.3em;color:#6f66a0;margin-top:auto;padding-top:30px}
+/* 星座宫格弹层 */
+#signGrid{position:fixed;inset:0;z-index:70;background:rgba(3,1,14,.82);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;padding:20px}
+#signGrid.open{display:flex}
+.sg-card{width:min(420px,94%);background:linear-gradient(155deg,rgba(255,255,255,.08),rgba(255,255,255,.025));
+  border:1px solid rgba(240,207,130,.28);border-radius:20px;padding:22px 16px;
+  box-shadow:0 22px 56px rgba(4,2,18,.5);text-align:center}
+.sg-card h3{color:var(--gold);letter-spacing:.24em;text-indent:.24em;font-size:.92rem;margin-bottom:14px}
+.sg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sg-it{cursor:pointer;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:11px 4px;
+  background:rgba(255,255,255,.03);transition:.2s}
+.sg-it .s-sym{font-size:1.3rem;color:#f2d488;display:block;text-shadow:0 0 10px rgba(240,207,130,.4)}
+.sg-it .s-name{font-size:.74rem;color:#e9e3ff;letter-spacing:.05em}
+.sg-it:active{border-color:rgba(240,207,130,.6);background:rgba(240,207,130,.08);transform:scale(.95)}
+.sg-cancel{margin-top:14px;font-size:.74rem;color:#8a81b8;cursor:pointer;letter-spacing:.15em}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<button class="btn-back" id="btnBack">⌂ 首页</button>
+
+<div class="portal">
+  <header>
+    <div class="kicker">SYNASTRY CHART</div>
+    <h1 class="p-title">星 座 合 盘</h1>
+    <p class="p-sub">✦ 两张星图重叠之处，藏着关系的密码 ✦</p>
+  </header>
+
+  <div class="rel-bar" id="relBar">
+    <span class="rel-chip on" data-rel="恋人">❤ 恋人</span>
+    <span class="rel-chip" data-rel="朋友">☘ 朋友</span>
+    <span class="rel-chip" data-rel="搭档">⚔ 搭档</span>
+    <span class="rel-chip" data-rel="家人">⌂ 家人</span>
+  </div>
+
+  <div class="pair-sel">
+    <div class="p-sel" id="selA"><span class="sel-sym"></span><span class="sel-name">选择星座</span></div>
+    <span class="px">✕</span>
+    <div class="p-sel" id="selB"><span class="sel-sym"></span><span class="sel-name">选择星座</span></div>
+  </div>
+
+  <button class="btn-gold" id="btnGo">开始合盘</button>
+  <div class="pair-note" id="pairNote">选择关系类型与两个星座，观星师为你深度解读</div>
+
+  <section id="pairResult">
+    <div class="p-head" id="pHead"></div>
+    <div class="p-rel" id="pRel"></div>
+    <div class="a-card" id="pText"></div>
+    <div class="p-foot">合盘由 AI 观星师即兴推演 · 仅供娱乐参考</div>
+    <div class="pair-share">
+      <button class="soon-pill" id="btnPairCopy">📋 文字分享</button>
+      <button class="soon-pill" id="btnPairShot">📸 生成分享图</button>
+    </div>
+  </section>
+
+  <footer class="p-foot2">‥ 有点困 ‥</footer>
+</div>
+
+<div id="signGrid">
+  <div class="sg-card">
+    <h3 id="sgTitle">✦ 选择星座 ✦</h3>
+    <div class="sg-grid" id="sgGrid"></div>
+    <div class="sg-cancel" id="sgCancel">—— 取消 ——</div>
+  </div>
+</div>
+
+<div id="shotModal">
+  <img id="shotImg" alt="分享图">
+  <div class="shot-tip">长按图片保存 / 分享</div>
+  <button class="soon-pill" id="shotClose" style="padding:10px 30px">关 闭</button>
+</div>
+
+<script>
+/* ================= 基础配置 ================= */
+const API_BASE='https://apihub.agnes-ai.cn/v1';
+const API_KEY='sk-bnT8gvJweewxMFO2oOnzNof2qpqazpKYq1spx5EulZ11vfyZ';
+const MODEL='agnes-2.5-flash';
+const SIGNS=[
+  ['白羊座','♈','火象 · 守护火星','行动力强、热情直率、敢于争先'],
+  ['金牛座','♉','土象 · 守护金星','踏实稳健、重质感、审美与耐心俱佳'],
+  ['双子座','♊','风象 · 守护水星','思维敏捷、好奇善沟通、点子多'],
+  ['巨蟹座','♋','水象 · 守护月亮','情感细腻、念家重情、直觉敏锐'],
+  ['狮子座','♌','火象 · 守护太阳','自信热情、重面子、有领导魅力'],
+  ['处女座','♍','土象 · 守护水星','细致追求完美、条理清晰、注重健康'],
+  ['天秤座','♎','风象 · 守护金星','重视平衡美感、善于协调、待人温和'],
+  ['天蝎座','♏','水象 · 守护冥王星','深沉有洞察力、专注执着、爱憎分明'],
+  ['射手座','♐','火象 · 守护木星','乐观爱自由、爱探索、讲求信念'],
+  ['摩羯座','♑','土象 · 守护土星','坚韧务实、目标感强、可靠有担当'],
+  ['水瓶座','♒','风象 · 守护天王星','独立创新、思维超前、重视友情'],
+  ['双鱼座','♓','水象 · 守护海王星','感性浪漫、想象力丰富、富同理心']
+];
+const $=id=>document.getElementById(id);
+/* 关系类型 */
+let relType='恋人';
+document.querySelectorAll('.rel-chip').forEach(c=>{
+  c.onclick=()=>{
+    document.querySelectorAll('.rel-chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');relType=c.dataset.rel;
+  };
+});
+/* 自定义星座选择器 */
+let selState={selA:0,selB:7},gridTarget=null;
+function renderSel(id){
+  const s=SIGNS[selState[id]];
+  $(id).querySelector('.sel-sym').textContent=s[1];
+  $(id).querySelector('.sel-name').textContent=s[0];
+}
+['selA','selB'].forEach(id=>{
+  renderSel(id);
+  $(id).onclick=()=>{
+    gridTarget=id;
+    $('sgTitle').textContent=id==='selA'?'✦ 选择第一位 ✦':'✦ 选择第二位 ✦';
+    $('signGrid').classList.add('open');
+  };
+});
+SIGNS.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='sg-it';
+  d.innerHTML='<span class="s-sym">'+s[1]+'</span><span class="s-name">'+s[0]+'</span>';
+  d.onclick=()=>{selState[gridTarget]=i;renderSel(gridTarget);$('signGrid').classList.remove('open');};
+  $('sgGrid').appendChild(d);
+});
+$('sgCancel').onclick=()=>$('signGrid').classList.remove('open');
+$('signGrid').onclick=e=>{if(e.target.id==='signGrid')$('signGrid').classList.remove('open');};
+
+/* ================= 动态粒子星盘背景（与观星页一致） ================= */
+const cv=document.getElementById('stars'),cx=cv.getContext('2d');
+const CHART_NAMES=['天鹅座','天琴座','仙后座','猎户座','飞马座','天龙座','南十字','大熊座','仙女座','天鹰座','波江座','长蛇座'];
+let chart=null,DPRs=Math.min(devicePixelRatio||1,2);
+function buildChart(){
+  const DPR=DPRs;
+  cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;
+  const R=Math.min(cv.width,cv.height)*.42;
+  const cx0=cv.width/2,cy0=cv.height/2;
+  const n=7+Math.floor(Math.random()*4);
+  const nodes=[],links=[];
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*R*.88;
+    nodes.push({x:Math.cos(a)*r,y:Math.sin(a)*r,r:(2.4+Math.random()*2)*DPR,p:Math.random()*7});
+  }
+  for(let i=1;i<n;i++)links.push([i-1,i]);
+  for(let i=2;i<n;i++)if(Math.random()<.6)links.push([Math.floor(Math.random()*(i-1)),i]);
+  chart={cx:cx0,cy:cy0,R,nodes,links,
+    name:CHART_NAMES[Math.floor(Math.random()*CHART_NAMES.length)],
+    rot:0,rotV:.00025+Math.random()*.0002,
+    starsBg:Array.from({length:130},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,
+      r:(Math.random()*1.1+.25)*DPR,p:Math.random()*7,s:.3+Math.random()*.8})),
+    dust:Array.from({length:24},()=>({li:Math.floor(Math.random()*links.length),t:Math.random(),v:.0012+Math.random()*.002}))};
+}
+buildChart();addEventListener('resize',buildChart);
+function tick(t){
+  cx.clearRect(0,0,cv.width,cv.height);
+  for(const s of chart.starsBg){
+    cx.globalAlpha=.3+.35*Math.abs(Math.sin(t*.001*s.s+s.p));
+    cx.fillStyle='#fff';cx.beginPath();cx.arc(s.x,s.y,s.r,0,7);cx.fill();
+  }
+  chart.rot+=chart.rotV;
+  cx.save();cx.translate(chart.cx,chart.cy);cx.rotate(chart.rot);
+  cx.globalAlpha=.10;cx.strokeStyle='rgba(240,207,130,.9)';cx.lineWidth=1;
+  cx.beginPath();cx.arc(0,0,chart.R,0,7);cx.stroke();
+  cx.globalAlpha=.05;cx.beginPath();cx.arc(0,0,chart.R*.82,0,7);cx.stroke();
+  cx.globalAlpha=.5;
+  cx.strokeStyle='rgba(190,170,255,.35)';cx.lineWidth=1*DPRs;
+  for(const[a,b]of chart.links){cx.beginPath();cx.moveTo(chart.nodes[a].x,chart.nodes[a].y);cx.lineTo(chart.nodes[b].x,chart.nodes[b].y);cx.stroke();}
+  for(const nd of chart.nodes){
+    cx.globalAlpha=.55+.35*Math.sin(t*.0016+nd.p);
+    cx.fillStyle='#fdf6e0';cx.beginPath();cx.arc(nd.x,nd.y,nd.r,0,7);cx.fill();
+    cx.globalAlpha=.12+.1*Math.sin(t*.002+nd.p);
+    cx.beginPath();cx.arc(nd.x,nd.y,nd.r*3,0,7);cx.fill();
+  }
+  cx.globalAlpha=.35;cx.fillStyle='#e8dcc0';cx.font=(10*DPRs)+'px serif';
+  cx.textAlign='center';cx.fillText('✦ '+chart.name+' ✦',0,-chart.R-14*DPRs);
+  cx.restore();
+  for(const d of chart.dust){
+    const[a,b]=chart.links[d.li];d.t+=d.v;if(d.t>1)d.t=0;
+    const A=chart.nodes[a],B=chart.nodes[b];
+    const x=A.x+(B.x-A.x)*d.t,y=A.y+(B.y-A.y)*d.t;
+    cx.globalAlpha=.5*Math.sin(d.t*Math.PI);cx.fillStyle='#ffe9b8';
+    cx.beginPath();cx.arc(x,y,1.2*DPRs,0,7);cx.fill();
+  }
+  cx.globalAlpha=1;
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* ================= AI 合盘推演 ================= */
+const SYN_SYS='你是一位资深华人占星师「月下观星师」，精通古典占星合盘（Synastry）。请结合两个星座各自的【元素】【守护星】【核心性格特质】，从元素互动（火土风水四元素的生克）、守护星相位隐喻、能量流动的角度，对两人的关系做深度解读。要求有真实占星依据感、有洞察、有温度，避免任何星座组合都能套用的万能文案。'+
+  '输出格式（使用简体中文，总长550~750字，按所选关系类型定制内容侧重）：\n'+
+  '## 盘面总览\n（先从四元素互动角度概括两人的能量底色：几比几的火土风水、元素间是滋养还是消耗，2~3句）\n'+
+  '## 守护星对话\n（两位守护星之间的"相位隐喻"：如火星与金星的吸引、土星与月亮的规训等，2~3句）\n'+
+  '## 能量流动\n（具体到相处场景：谁给谁充电、谁在哪类时刻消耗谁、两人能量的强弱周期，2~3句）\n'+
+  '## 相处建议\n（结合上述分析给出具体可行的相处提示，2~3条）\n'+
+  '最后另起一行给一句「盘语」——一句只属于这张合盘的诗意短句（不超过28字），格式为：> 盘语：……';
+function miniMD(t){
+  t=t.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  return t
+    .replace(/^> ?盘语：(.*)$/gm,'<p style="text-align:center;color:#f2d488;letter-spacing:.06em;margin-top:12px">✦ $1 ✦</p>')
+    .replace(/\n/g,'<br>');
+}
+let synBusy=false,lastSyn=null;
+$('btnGo').onclick=async()=>{
+  if(synBusy)return;
+  const a=SIGNS[selState.selA],b=SIGNS[selState.selB];
+  synBusy=true;$('btnGo').disabled=true;
+  $('pairNote').textContent='🌙 观星师正在重叠两张星图……';
+  $('pairResult').style.display='block';
+  $('pHead').innerHTML='<span class="ps">'+a[1]+'</span><b>'+a[0]+'</b><span style="color:var(--gold)">✕</span><b>'+b[0]+'</b><span class="ps">'+b[1]+'</span>';
+  $('pRel').textContent='— '+relType+' 合盘 —';
+  $('pText').innerHTML='<div class="a-loading"><span class="orb-ring"></span><span>✦ 两张星图正在重叠……</span></div>';
+  try{
+    const d=new Date();
+    const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
+      body:JSON.stringify({model:MODEL,messages:[{role:'system',content:SYN_SYS},
+        {role:'user',content:'请为「'+a[0]+'」（'+a[2]+'，核心性格特质：'+a[3]+'）与「'+b[0]+'」（'+b[2]+'，核心性格特质：'+b[3]+'）做一张「'+relType+'」关系的星座合盘。请严格贴合两个星座各自的元素、守护星与特质，内容侧重'+relType+'关系。避免通用套话。'}],temperature:.8,max_tokens:1800})});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const j=await res.json();
+    const raw=(j.choices[0].message.content||'').trim();
+    $('pText').innerHTML=miniMD(raw);
+    lastSyn={a:a[0],as:a[1],b:b[0],bs:b[1],rel:relType,text:raw};
+    $('pairNote').textContent='✦ 合盘完成，可分享这份解读';
+  }catch(e){
+    $('pText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再试一次</span>';
+    $('pairNote').textContent='';
+  }
+  synBusy=false;$('btnGo').disabled=false;
+};
+
+/* ================= 分享 ================= */
+$('btnPairCopy').onclick=async()=>{
+  if(!lastSyn)return;
+  const txt='✦ 星座合盘 · 月下观星 ✦\n'+lastSyn.as+' '+lastSyn.a+' ✕ '+lastSyn.b+' '+lastSyn.bs+'（'+lastSyn.rel+'）\n\n'+
+    lastSyn.text.replace(/^#+\s*/gm,'').replace(/\*\*/g,'')+
+    '\n\n—— 来自「有点困」\n🌙 在线合盘：https://ydk12335.github.io/astro/synastry/';
+  try{
+    if(navigator.share){await navigator.share({title:'星座合盘 · '+lastSyn.a+'✕'+lastSyn.b,text:txt});return;}
+    await navigator.clipboard.writeText(txt);
+    $('btnPairCopy').textContent='✓ 已复制，去粘贴吧';
+    setTimeout(()=>$('btnPairCopy').textContent='📋 文字分享',2000);
+  }catch(e){}
+};
+function drawSynCard(){
+  const W=720,H=1080,c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d');
+  const bg=g.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#0a0620');bg.addColorStop(.55,'#0d0a26');bg.addColorStop(1,'#1a0f2e');
+  g.fillStyle=bg;g.fillRect(0,0,W,H);
+  for(let i=0;i<130;i++){
+    g.globalAlpha=.25+Math.random()*.55;g.fillStyle='#fff';
+    g.beginPath();g.arc(Math.random()*W,Math.random()*H,Math.random()*1.4+.3,0,7);g.fill();
+  }
+  g.globalAlpha=1;
+  /* 两张交叠星图 */
+  g.strokeStyle='rgba(240,207,130,.35)';g.lineWidth=1.5;
+  g.beginPath();g.arc(W/2-60,230,100,0,7);g.stroke();
+  g.strokeStyle='rgba(190,170,255,.35)';
+  g.beginPath();g.arc(W/2+60,230,100,0,7);g.stroke();
+  /* 标题 */
+  g.textAlign='center';
+  g.fillStyle='#a9956a';g.font='22px serif';g.fillText('· 星 座 合 盘 ·',W/2,78);
+  g.fillStyle='#f0cf82';g.font='600 46px "Songti SC","Noto Serif SC",serif';
+  g.fillText(lastSyn.as+' '+lastSyn.a+' ✕ '+lastSyn.b,W/2,420);
+  g.fillStyle='#a79ade';g.font='26px serif';g.fillText('— '+lastSyn.rel+' 合盘 —',W/2,465);
+  /* 正文摘要 */
+  const lines=lastSyn.text.replace(/^#+.*$/gm,'').replace(/\*\*/g,'').split('\n')
+    .map(s=>s.trim()).filter(Boolean).slice(0,9);
+  g.font='24px "Songti SC","Noto Serif SC",serif';g.fillStyle='#e6e0f4';
+  let y=535;
+  for(const ln of lines){
+    let s=ln;if(s.length>20)s=s.slice(0,19)+'…';
+    g.fillText(s,W/2,y);y+=40;
+  }
+  const star=lastSyn.text.match(/盘语[：:]\s*(.+)/);
+  if(star){
+    g.fillStyle='#f2d488';g.font='italic 26px serif';
+    let s=star[1].trim();if(s.length>18)s=s.slice(0,17)+'…';
+    g.fillText('✦ '+s+' ✦',W/2,H-190);
+  }
+  g.fillStyle='#6f66a0';g.font='20px serif';
+  g.fillText('‥ 有点困 · AI 观星即兴推演 ‥',W/2,H-96);
+  return c;
+}
+$('btnPairShot').onclick=()=>{
+  if(!lastSyn)return;
+  $('shotImg').src=drawSynCard().toDataURL('image/png');
+  $('shotModal').classList.add('show');
+};
+$('shotClose').onclick=()=>$('shotModal').classList.remove('show');
+$('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList.remove('show');};
+$('btnBack').onclick=()=>location.href='../';
+</script>
+</body>
+</html>
