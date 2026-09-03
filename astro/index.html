@@ -36,9 +36,10 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .a-cell .h-name{font-size:.7rem;letter-spacing:.05em}
 .a-cell .h-range{font-size:.52rem;color:#8f86b8}
 /* ---------- 敬请期待胶囊按钮 ---------- */
-.soon-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:min(560px,94vw)}
-.soon-pill{flex:1;min-width:150px;cursor:default;text-align:center;
-  padding:11px 20px;border-radius:999px;font-size:.8rem;letter-spacing:.12em;color:#cfc6ea;
+.soon-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:min(560px,94vw);
+  margin-top:clamp(16px,3.4vh,32px)}
+.soon-pill{flex:1;min-width:170px;cursor:default;text-align:center;
+  padding:13px 24px;border-radius:999px;font-size:.82rem;letter-spacing:.12em;color:#cfc6ea;
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:.75}
 /* ---------- 运势结果 ---------- */
@@ -116,57 +117,76 @@ const SIGNS=[
   ['双鱼座','♓','2.19-3.20','水象 · 守护海王星','感性浪漫、想象力丰富、富同理心']
 ];
 
-/* ================= 动态粒子星座背景（每次打开随机生成一副星盘） ================= */
+/* ================= 动态粒子星盘背景（居中圆盘 + 随机星座 + 缓慢旋转） ================= */
 const cv=document.getElementById('stars'),cx=cv.getContext('2d');
-let nodes=[],links=[],starsBg=[];
-function buildConstellation(){
+const CHART_NAMES=['天鹅座','天琴座','仙后座','猎户座','飞马座','天龙座','南十字','大熊座','仙女座','天鹰座','波江座','长蛇座'];
+let chart=null; /* {cx,cy,R,nodes,links,name,rot,rotV,starsBg} */
+function buildChart(){
   const DPR=Math.min(devicePixelRatio||1,2);
   cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;
-  /* 随机星座：5~7 个主星，按链路+分支连线 */
+  const R=Math.min(cv.width,cv.height)*.33;
   const n=7+Math.floor(Math.random()*4);
-  nodes=[];links=[];
-  const cx0=cv.width*(.25+Math.random()*.5),cy0=cv.height*(.2+Math.random()*.35);
-  let px=cx0,py=cy0;
+  /* 星座点生成在半径 R 的圆盘内 */
+  const nodes=[],links=[];
   for(let i=0;i<n;i++){
-    nodes.push({x:px,y:py,r:(2.4+Math.random()*2)*DPR,p:Math.random()*7});
-    if(i>0)links.push([i-1,i]);
-    if(i>1&&Math.random()<.65){const j=Math.floor(Math.random()*(i-1));links.push([j,i]);}
-    px+=(Math.random()-.5)*cv.width*.22;
-    py+=(Math.random()-.45)*cv.height*.14;
-    px=Math.max(cv.width*.08,Math.min(cv.width*.92,px));
-    py=Math.max(cv.height*.08,Math.min(cv.height*.6,py));
+    const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*R*.82;
+    nodes.push({x:Math.cos(a)*r,y:Math.sin(a)*r,r:(2.2+Math.random()*2)*DPR,p:Math.random()*7});
   }
-  starsBg=Array.from({length:130},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,
-    r:(Math.random()*1.1+.25)*DPR,p:Math.random()*7,s:.3+Math.random()*.8}));
-  nodes.dust=Array.from({length:26},()=>({li:Math.floor(Math.random()*links.length),t:Math.random(),v:.0012+Math.random()*.002}));
+  for(let i=1;i<n;i++)links.push([i-1,i]);
+  for(let i=2;i<n;i++)if(Math.random()<.6)links.push([Math.floor(Math.random()*(i-1)),i]);
+  chart={cx:cv.width/2,cy:cv.height*.40,R,nodes,links,
+    name:CHART_NAMES[Math.floor(Math.random()*CHART_NAMES.length)],
+    rot:0,rotV:.00025+Math.random()*.0002, /* 缓慢旋转，每副速度略不同 */
+    starsBg:Array.from({length:130},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,
+      r:(Math.random()*1.1+.25)*DPR,p:Math.random()*7,s:.3+Math.random()*.8})),
+    dust:Array.from({length:24},()=>({li:Math.floor(Math.random()*links.length),t:Math.random(),v:.0012+Math.random()*.002}))};
 }
-buildConstellation();addEventListener('resize',buildConstellation);
+buildChart();addEventListener('resize',buildChart);
 function tick(t){
   cx.clearRect(0,0,cv.width,cv.height);
-  for(const s of starsBg){
-    cx.globalAlpha=.35+.4*Math.abs(Math.sin(t*.001*s.s+s.p));
+  /* 背景散星 */
+  for(const s of chart.starsBg){
+    cx.globalAlpha=.3+.35*Math.abs(Math.sin(t*.001*s.s+s.p));
     cx.fillStyle='#fff';cx.beginPath();cx.arc(s.x,s.y,s.r,0,7);cx.fill();
   }
-  const breathe=.5+.25*Math.sin(t*.0006);
-  cx.globalAlpha=.65*breathe+.15;cx.strokeStyle='rgba(240,207,140,.9)';cx.lineWidth=1.4;
-  for(const [a,b] of links){
-    cx.beginPath();cx.moveTo(nodes[a].x,nodes[a].y);cx.lineTo(nodes[b].x,nodes[b].y);cx.stroke();
+  chart.rot+=chart.rotV;
+  cx.save();cx.translate(chart.cx,chart.cy);cx.rotate(chart.rot);
+  /* 星盘外圈（极淡双环） */
+  cx.globalAlpha=.14;cx.strokeStyle='rgba(240,207,140,1)';cx.lineWidth=1;
+  cx.beginPath();cx.arc(0,0,chart.R,0,7);cx.stroke();
+  cx.globalAlpha=.08;
+  cx.beginPath();cx.arc(0,0,chart.R*.78,0,7);cx.stroke();
+  /* 星座连线 */
+  cx.globalAlpha=.5+.18*Math.sin(t*.0006);
+  cx.strokeStyle='rgba(240,207,150,.85)';cx.lineWidth=1.3;
+  for(const [a,b] of chart.links){
+    cx.beginPath();cx.moveTo(chart.nodes[a].x,chart.nodes[a].y);
+    cx.lineTo(chart.nodes[b].x,chart.nodes[b].y);cx.stroke();
   }
+  /* 流动星尘 */
   cx.fillStyle='rgba(255,240,200,.9)';
-  for(const du of nodes.dust){
-    du.t+=du.v;if(du.t>1){du.t=0;du.li=Math.floor(Math.random()*links.length);}
-    const [a,b]=links[du.li];
-    const x=nodes[a].x+(nodes[b].x-nodes[a].x)*du.t,y=nodes[a].y+(nodes[b].y-nodes[a].y)*du.t;
-    cx.globalAlpha=.8*Math.sin(du.t*Math.PI);
+  for(const du of chart.dust){
+    du.t+=du.v;if(du.t>1){du.t=0;du.li=Math.floor(Math.random()*chart.links.length);}
+    const [a,b]=chart.links[du.li],A=chart.nodes[a],B=chart.nodes[b];
+    const x=A.x+(B.x-A.x)*du.t,y=A.y+(B.y-A.y)*du.t;
+    cx.globalAlpha=.7*Math.sin(du.t*Math.PI);
     cx.beginPath();cx.arc(x,y,1.1,0,7);cx.fill();
   }
-  for(const nd of nodes){
+  /* 主星 + 光晕 */
+  for(const nd of chart.nodes){
     const tw=.7+.3*Math.sin(t*.0012+nd.p);
-    cx.globalAlpha=tw;
+    cx.globalAlpha=tw*.9;
     cx.fillStyle='#fdf6e0';cx.beginPath();cx.arc(nd.x,nd.y,nd.r,0,7);cx.fill();
-    cx.globalAlpha=tw*.25;
-    cx.beginPath();cx.arc(nd.x,nd.y,nd.r*3.2,0,7);cx.fill();
+    cx.globalAlpha=tw*.2;
+    cx.beginPath();cx.arc(nd.x,nd.y,nd.r*3.4,0,7);cx.fill();
   }
+  cx.restore();
+  /* 星盘名称（不随盘旋转，标注在盘下沿） */
+  cx.globalAlpha=.55;
+  cx.fillStyle='#d8c896';
+  cx.font=(11*Math.min(devicePixelRatio||1,2))+'px "Songti SC","Noto Serif SC",serif';
+  cx.textAlign='center';
+  cx.fillText('— '+chart.name+' —',chart.cx,chart.cy+chart.R+26*Math.min(devicePixelRatio||1,2));
   cx.globalAlpha=1;
   requestAnimationFrame(tick);
 }
