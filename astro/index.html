@@ -126,7 +126,7 @@ let chart=null; /* {cx,cy,R,nodes,links,name,rot,rotV,starsBg} */
 function buildChart(){
   const DPR=Math.min(devicePixelRatio||1,2);
   cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;
-  const R=Math.min(cv.width,cv.height)*.46;
+  const R=Math.min(cv.width,cv.height)*.33;
   const n=7+Math.floor(Math.random()*4);
   /* 星座点生成在半径 R 的圆盘内 */
   const nodes=[],links=[];
@@ -136,7 +136,10 @@ function buildChart(){
   }
   for(let i=1;i<n;i++)links.push([i-1,i]);
   for(let i=2;i<n;i++)if(Math.random()<.6)links.push([Math.floor(Math.random()*(i-1)),i]);
-  chart={cx:cv.width/2,cy:cv.height*.5,R,nodes,links,
+  /* 星盘放在内容流之下：日期标题下方、卡片网格上方之间的空隙正中 */
+  const headerH=document.querySelector('header').getBoundingClientRect().bottom*DPR;
+  const gridTop=document.getElementById('aGrid').getBoundingClientRect().top*DPR;
+  chart={cx:cv.width/2,cy:(headerH+gridTop)/2,R,nodes,links,
     name:CHART_NAMES[Math.floor(Math.random()*CHART_NAMES.length)],
     rot:0,rotV:.00025+Math.random()*.0002, /* 缓慢旋转，每副速度略不同 */
     starsBg:Array.from({length:130},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,
