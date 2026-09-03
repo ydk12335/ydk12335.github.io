@@ -40,9 +40,16 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .soon-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:min(560px,94vw);
   margin-top:clamp(16px,3.4vh,32px)}
 .soon-pill{flex:1;min-width:170px;cursor:default;text-align:center;
-  padding:13px 24px;border-radius:999px;font-size:.82rem;letter-spacing:.12em;color:#cfc6ea;
+  padding:13px 24px;border-radius:999px;font-size:.95rem;letter-spacing:.12em;color:#cfc6ea;
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:.75}
+/* 可点击的胶囊：亮一些、金描边、更大字 */
+a.soon-pill{cursor:pointer;opacity:1;font-size:1rem;font-weight:500;color:#f0ead8;
+  border-color:rgba(240,207,130,.45);background:linear-gradient(160deg,rgba(240,207,130,.10),rgba(255,255,255,.03));
+  text-decoration:none;transition:.25s}
+a.soon-pill:active{transform:scale(.95)}
+/* 无内容胶囊：更暗更小 */
+.soon-off{opacity:.45;font-size:.85rem;color:#8f86b8;border-style:dashed}
 /* ---------- 运势结果 ---------- */
 .a-result{width:min(560px,94vw);text-align:left;display:none}
 .a-now{display:flex;align-items:center;justify-content:center;gap:10px;font-size:1.05rem;letter-spacing:.12em;color:#e9e3ff;margin-bottom:10px}
@@ -92,9 +99,9 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 
   <div class="soon-bar">
     <a class="soon-pill pair-btn" href="pair/">☾ 星座配对</a>
-    <span class="soon-pill">☽ 星座合盘 · 敬请期待</span>
-    <span class="soon-pill">✧ 星座日历 · 敬请期待</span>
-    <span class="soon-pill">∞ 星空信箱 · 敬请期待</span>
+    <a class="soon-pill pair-btn" href="synastry/">☽ 星座合盘</a>
+    <span class="soon-pill soon-off">✧ 星座日历 · 敬请期待</span>
+    <span class="soon-pill soon-off">∞ 星空信箱 · 敬请期待</span>
   </div>
 
   <section class="a-result" id="aResult">
