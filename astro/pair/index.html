@@ -75,6 +75,30 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 #shotModal.show{display:flex}
 #shotImg{max-width:92vw;max-height:70vh;border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.6)}
 .shot-tip{font-size:.75rem;color:#b5abd8;letter-spacing:.1em}
+/* 人物信息卡（选填） */
+.info-card{width:min(520px,94vw);margin:18px auto 0;background:rgba(255,255,255,.04);
+  border:1px dashed rgba(240,207,130,.3);border-radius:18px;padding:14px 16px 16px;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);text-align:left}
+.info-card .ic-title{font-size:.72rem;color:#c9b98a;letter-spacing:.2em;text-align:center;margin-bottom:10px}
+.info-row{display:flex;align-items:center;gap:10px;margin-top:8px}
+.info-row .who{flex:none;width:58px;font-size:.78rem;color:#f2d488;letter-spacing:.08em;text-align:right}
+.info-row input{flex:1;min-width:0;background:rgba(255,255,255,.05);border:1px solid rgba(240,207,130,.22);
+  border-radius:10px;padding:9px 12px;color:#f0ead8;font-family:inherit;font-size:.88rem;outline:none;
+  color-scheme:dark;transition:.2s}
+.info-row input:focus{border-color:rgba(240,207,130,.6);background:rgba(240,207,130,.06)}
+.info-row input::placeholder{color:#7d74a8;font-size:.8rem}
+.info-row input[type=date]{max-width:46%}
+.dp-btn{flex:none;width:38px;height:38px;border-radius:10px;border:1px solid rgba(240,207,130,.3);
+  background:rgba(240,207,130,.08);cursor:pointer;font-size:1rem;line-height:1;
+  display:flex;align-items:center;justify-content:center;transition:.2s;padding:0}
+.dp-btn:active{background:rgba(240,207,130,.2);transform:scale(.93)}
+/* 隐私开关 */
+.privacy-bar{width:min(520px,94vw);margin:12px auto 0;display:flex;align-items:center;justify-content:center;gap:10px;
+  font-size:.76rem;color:#a99dd6;user-select:none;-webkit-user-select:none}
+.privacy-bar .pv-chip{cursor:pointer;padding:7px 16px;border-radius:999px;
+  border:1px solid rgba(190,170,255,.28);transition:.2s;letter-spacing:.06em}
+.privacy-bar .pv-chip.on{border-color:rgba(240,207,130,.6);color:#f2d488;background:rgba(240,207,130,.1);
+  text-shadow:0 0 8px rgba(240,207,130,.3)}
 .a-loading{display:flex;align-items:center;justify-content:center;gap:12px;color:#c9c0e8;padding:26px 0}
 .orb-ring{position:relative;width:20px;height:20px;flex:none}
 .orb-ring::before{content:"";position:absolute;inset:0;border-radius:50%;
@@ -103,6 +127,30 @@ canvas#stars{position:fixed;inset:0;z-index:0}
     <div class="p-sel" id="selB"><span class="sel-sym"></span><span class="sel-name">选择星座</span></div>
   </div>
 
+  <div class="info-card">
+    <div class="ic-title">✧ 补充信息 · 选填 ✧</div>
+    <div class="info-row">
+      <span class="who">TA的名字</span>
+      <input id="nameA" type="text" maxlength="12" placeholder="称呼即可，如：小星">
+    </div>
+    <div class="info-row">
+      <span class="who">TA的生日</span>
+      <input id="birthA" type="text" inputmode="numeric" maxlength="10" placeholder="可手动输入，如 2001-08-16">
+      <button type="button" class="dp-btn" id="dpA" title="选择日期">📅</button>
+      <input type="date" id="birthApick" style="display:none" max="2025-12-31">
+    </div>
+    <div class="info-row">
+      <span class="who">TA的名字</span>
+      <input id="nameB" type="text" maxlength="12" placeholder="称呼即可，如：阿月">
+    </div>
+    <div class="info-row">
+      <span class="who">TA的生日</span>
+      <input id="birthB" type="text" inputmode="numeric" maxlength="10" placeholder="可手动输入，如 1999-12-03">
+      <button type="button" class="dp-btn" id="dpB" title="选择日期">📅</button>
+      <input type="date" id="birthBpick" style="display:none" max="2025-12-31">
+    </div>
+  </div>
+
   <button class="btn-gold" id="btnGo">开始配对</button>
   <div class="pair-note" id="pairNote">选择两个星座，由观星师推演你们的星座关系</div>
 
@@ -114,6 +162,9 @@ canvas#stars{position:fixed;inset:0;z-index:0}
     <div class="pair-share">
       <button class="soon-pill" id="btnPairCopy">📋 文字分享</button>
       <button class="soon-pill" id="btnPairShot">📸 生成分享图</button>
+    </div>
+    <div class="privacy-bar" id="privacyBar">
+      <span class="pv-chip" id="pvName">🙈 隐藏姓名</span>
     </div>
   </section>
 
@@ -259,14 +310,46 @@ function miniMD(t){
     .replace(/^> ?星语：(.*)$/gm,'<p style="text-align:center;color:#f2d488;letter-spacing:.06em;margin-top:12px">✦ $1 ✦</p>')
     .replace(/\n/g,'<br>');
 }
+/* 日期选择按钮：点 📅 弹原生日期选择 */
+  for(const s of ['A','B']){
+    const pick=$('birth'+s+'pick'),btn=$('dp'+s),txt=$('birth'+s);
+    btn.onclick=()=>{if(pick.showPicker)pick.showPicker();else pick.click();};
+    pick.onchange=()=>{if(pick.value)txt.value=pick.value;};
+  }
+  /* 手输日期宽松解析：接受 2001-08-16 / 2001.8.16 / 2001/8/16 / 20010816 等 */
+  function parseDate(str){
+    const m=(str||'').trim().match(/^(\d{4})[年./\-\/]?(\d{1,2})[月./\-\/]?(\d{1,2})日?$/);
+    if(!m)return null;
+    const y=+m[1],mo=+m[2],d=+m[3];
+    if(mo<1||mo>12||d<1||d>31||y<1900||y>2025)return null;
+    return {y,mo,d};
+  }
+  /* 读取选填信息 */
+  function readInfo(suffix){
+    const n=($('name'+suffix).value||'').trim();
+    const dt=parseDate($('birth'+suffix).value);
+    let part='';
+    if(n)part+='，名字/称呼：「'+n+'」';
+    if(dt)part+='，生日：'+dt.y+'年'+dt.mo+'月'+dt.d+'日（'+dt.y+'年生，现约'+(new Date().getFullYear()-dt.y)+'岁）';
+    return part;
+  }
+  /* 隐私开关 */
+  let hideName=false;
+  $('pvName').onclick=()=>{
+    hideName=!hideName;
+    $('pvName').classList.toggle('on',hideName);
+    $('pvName').textContent=hideName?'🐵 显示姓名':'🙈 隐藏姓名';
+  };
+  function dispName(name,fallback){return hideName?(fallback+'座'):(name||fallback);}
 let pairBusy=false,lastPair=null;
 $('btnGo').onclick=async()=>{
   if(pairBusy)return;
   const a=SIGNS[selState.selA],b=SIGNS[selState.selB];
+  const nameA=($('nameA').value||'').trim(),nameB=($('nameB').value||'').trim();
   pairBusy=true;$('btnGo').disabled=true;
   $('pairNote').textContent='🌙 观星师正在推演两颗星辰的轨迹……';
   $('pairResult').style.display='block';
-  $('pHead').innerHTML='<span class="ps">'+a[1]+'</span><b>'+a[0]+'</b><span style="color:var(--gold)">✕</span><b>'+b[0]+'</b><span class="ps">'+b[1]+'</span>';
+    $('pHead').innerHTML='<span class="ps">'+a[1]+'</span><b>'+(nameA||a[0])+'</b><span style="color:var(--gold)">✕</span><b>'+(nameB||b[0])+'</b><span class="ps">'+b[1]+'</span>';
   $('pScore').textContent='';
   $('pText').innerHTML='<div class="a-loading"><span class="orb-ring"></span><span>✦ 两颗星辰正在相互靠近……</span></div>';
   try{
@@ -281,7 +364,7 @@ $('btnGo').onclick=async()=>{
     const m=raw.match(/匹配指数[：:]\s*(\d{1,3})\s*%/);
     $('pScore').textContent=m?('✦ 匹配指数 '+m[1]+'% ✦'):'';
     $('pText').innerHTML=miniMD(raw.replace(/^匹配指数[：:].*$/m,'').trim());
-    lastPair={a:a[0],as:a[1],b:b[0],bs:b[1],score:m?m[1]+'%':'',text:raw,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk};
+    lastPair={a:a[0],as:a[1],b:b[0],bs:b[1],na:nameA,nb:nameB,score:m?m[1]+'%':'',text:raw,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk};
     $('pairNote').textContent='✦ 推演完成，可分享这份星辰缘分';
   }catch(e){
     $('pText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再试一次</span>';
@@ -293,11 +376,11 @@ $('btnGo').onclick=async()=>{
 /* ================= 分享 ================= */
 $('btnPairCopy').onclick=async()=>{
   if(!lastPair)return;
-  const txt='✦ 星座配对 · 月下观星 ✦\n'+lastPair.as+' '+lastPair.a+' ✕ '+lastPair.b+' '+lastPair.bs+
+  const txt='✦ 星座配对 · 月下观星 ✦\n'+lastPair.as+' '+dispName(lastPair.na,lastPair.a)+' ✕ '+lastPair.b+' '+dispName(lastPair.nb,lastPair.b)+
     (lastPair.score?'\n匹配指数：'+lastPair.score:'')+'\n\n'+lastPair.text.replace(/^匹配指数[：:].*$/m,'').replace(/^#+\s*/gm,'').replace(/\*\*/g,'')+
     '\n\n—— 来自「有点困」\n🌙 在线配对：https://ydk12335.github.io/astro/pair/';
   try{
-    if(navigator.share){await navigator.share({title:'星座配对 · '+lastPair.a+'✕'+lastPair.b,text:txt});return;}
+    if(navigator.share){await navigator.share({title:'星座配对 · '+dispName(lastPair.na,lastPair.a)+'✕'+dispName(lastPair.nb,lastPair.b),text:txt});return;}
     await navigator.clipboard.writeText(txt);
     $('btnPairCopy').textContent='✓ 已复制，去粘贴吧';
     setTimeout(()=>$('btnPairCopy').textContent='📋 文字分享',2000);
@@ -325,7 +408,7 @@ function drawPairCard(){
   g.textAlign='center';
   g.fillStyle='#a9956a';g.font='22px serif';g.fillText('· 星 座 配 对 ·',W/2,78);
   g.fillStyle='#f0cf82';g.font='600 46px "Songti SC","Noto Serif SC",serif';
-  g.fillText(lastPair.as+' '+lastPair.a+' ✕ '+lastPair.b,W/2,400);
+  g.fillText(lastPair.as+' '+dispName(lastPair.na,lastPair.a)+' ✕ '+lastPair.b,W/2,400);
   g.fillStyle='#8f86b8';g.font='22px serif';g.fillText(lastPair.date,W/2,442);
   if(lastPair.score){g.fillStyle='#f2d488';g.font='600 34px serif';g.fillText('✦ 匹配指数 '+lastPair.score+' ✦',W/2,492);}
   /* 正文摘要 */
