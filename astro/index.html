@@ -126,7 +126,7 @@ let chart=null; /* {cx,cy,R,nodes,links,name,rot,rotV,starsBg} */
 function buildChart(){
   const DPR=Math.min(devicePixelRatio||1,2);
   cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;
-  const R=Math.min(cv.width,cv.height)*.33;
+  const R=Math.min(cv.width,cv.height)*.46;
   const n=7+Math.floor(Math.random()*4);
   /* 星座点生成在半径 R 的圆盘内 */
   const nodes=[],links=[];
