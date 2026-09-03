@@ -19,15 +19,31 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .p-title{font-size:clamp(1.7rem,6.4vw,2.5rem);letter-spacing:.3em;text-indent:.3em;font-weight:600;
   color:var(--ivory);text-shadow:0 0 30px rgba(240,207,130,.25);margin-top:8px}
 .p-sub{margin-top:10px;font-size:.8rem;letter-spacing:.22em;color:#e8b48f}
-/* 双人选择 */
+/* 双人选择（自定义宫格选择器，兼容所有手机浏览器） */
 .pair-sel{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:clamp(26px,5vh,44px);
   width:min(520px,94vw)}
-.pair-sel select{flex:1;background:rgba(255,255,255,.04);color:#f0ead8;
-  border:1px solid rgba(240,207,130,.35);border-radius:999px;padding:13px 16px;
-  font-family:inherit;font-size:.92rem;appearance:none;-webkit-appearance:none;
-  text-align:center;text-align-last:center;cursor:pointer;outline:none}
-.pair-sel select:focus{border-color:rgba(240,207,130,.6)}
+.p-sel{flex:1;cursor:pointer;user-select:none;-webkit-user-select:none;
+  background:rgba(255,255,255,.04);color:#f0ead8;
+  border:1px solid rgba(240,207,130,.35);border-radius:999px;padding:13px 10px;
+  font-family:inherit;font-size:.92rem;text-align:center;transition:.2s}
+.p-sel:active{border-color:rgba(240,207,130,.7);background:rgba(240,207,130,.08)}
+.p-sel .sel-sym{font-size:1.15rem;color:#f2d488;margin-right:6px;text-shadow:0 0 10px rgba(240,207,130,.4)}
 .pair-sel .px{color:var(--gold);font-size:1.3rem;text-shadow:0 0 12px rgba(240,207,130,.5);flex:none}
+/* 星座宫格弹层 */
+#signGrid{position:fixed;inset:0;z-index:70;background:rgba(3,1,14,.82);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;padding:20px}
+#signGrid.open{display:flex}
+.sg-card{width:min(420px,94%);background:linear-gradient(155deg,rgba(255,255,255,.08),rgba(255,255,255,.025));
+  border:1px solid rgba(240,207,130,.28);border-radius:20px;padding:22px 16px;
+  box-shadow:0 22px 56px rgba(4,2,18,.5);text-align:center}
+.sg-card h3{color:var(--gold);letter-spacing:.24em;text-indent:.24em;font-size:.92rem;margin-bottom:14px}
+.sg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sg-it{cursor:pointer;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:11px 4px;
+  background:rgba(255,255,255,.03);transition:.2s}
+.sg-it .s-sym{font-size:1.3rem;color:#f2d488;display:block;text-shadow:0 0 10px rgba(240,207,130,.4)}
+.sg-it .s-name{font-size:.74rem;color:#e9e3ff;letter-spacing:.05em}
+.sg-it:active{border-color:rgba(240,207,130,.6);background:rgba(240,207,130,.08);transform:scale(.95)}
+.sg-cancel{margin-top:14px;font-size:.74rem;color:#8a81b8;cursor:pointer;letter-spacing:.15em}
 .btn-gold{margin-top:clamp(24px,4.5vh,38px);cursor:pointer;border-radius:999px;
   padding:14px 46px;font-size:.98rem;letter-spacing:.3em;text-indent:.3em;
   font-family:inherit;font-weight:600;color:#fffbef;position:relative;overflow:hidden;isolation:isolate;
@@ -82,9 +98,9 @@ canvas#stars{position:fixed;inset:0;z-index:0}
   </header>
 
   <div class="pair-sel">
-    <select id="selA"></select>
+    <div class="p-sel" id="selA"><span class="sel-sym"></span><span class="sel-name">选择星座</span></div>
     <span class="px">✕</span>
-    <select id="selB"></select>
+    <div class="p-sel" id="selB"><span class="sel-sym"></span><span class="sel-name">选择星座</span></div>
   </div>
 
   <button class="btn-gold" id="btnGo">开始配对</button>
@@ -102,6 +118,14 @@ canvas#stars{position:fixed;inset:0;z-index:0}
   </section>
 
   <footer class="p-foot">‥ 有点困 ‥</footer>
+</div>
+
+<div id="signGrid">
+  <div class="sg-card">
+    <h3 id="sgTitle">✦ 选择星座 ✦</h3>
+    <div class="sg-grid" id="sgGrid"></div>
+    <div class="sg-cancel" id="sgCancel">—— 取消 ——</div>
+  </div>
 </div>
 
 <div id="shotModal">
@@ -130,14 +154,33 @@ const SIGNS=[
   ['双鱼座','♓','水象 · 守护海王星','感性浪漫、想象力丰富、富同理心']
 ];
 const $=id=>document.getElementById(id);
-/* 填充下拉 */
-for(const sid of ['selA','selB']){
-  SIGNS.forEach((s,i)=>{
-    const o=document.createElement('option');o.value=i;o.textContent=s[1]+' '+s[0];
-    $(sid).appendChild(o);
-  });
+/* 自定义星座选择器：点选择框弹 12 宫格 */
+let selState={selA:0,selB:7},gridTarget=null;
+function renderSel(id){
+  const s=SIGNS[selState[id]];
+  $(id).querySelector('.sel-sym').textContent=s[1];
+  $(id).querySelector('.sel-name').textContent=s[0];
 }
-$('selA').value=0;$('selB').value=7;
+['selA','selB'].forEach(id=>{
+  renderSel(id);
+  $(id).onclick=()=>{
+    gridTarget=id;
+    $('sgTitle').textContent=id==='selA'?'✦ 选择第一位 ✦':'✦ 选择第二位 ✦';
+    $('signGrid').classList.add('open');
+  };
+});
+/* 生成宫格 */
+SIGNS.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='sg-it';
+  d.innerHTML='<span class="s-sym">'+s[1]+'</span><span class="s-name">'+s[0]+'</span>';
+  d.onclick=()=>{
+    selState[gridTarget]=i;renderSel(gridTarget);
+    $('signGrid').classList.remove('open');
+  };
+  $('sgGrid').appendChild(d);
+});
+$('sgCancel').onclick=()=>$('signGrid').classList.remove('open');
+$('signGrid').onclick=e=>{if(e.target.id==='signGrid')$('signGrid').classList.remove('open');};
 
 /* ================= 动态粒子星盘背景（与观星页一致） ================= */
 const cv=document.getElementById('stars'),cx=cv.getContext('2d');
@@ -219,7 +262,7 @@ function miniMD(t){
 let pairBusy=false,lastPair=null;
 $('btnGo').onclick=async()=>{
   if(pairBusy)return;
-  const a=SIGNS[+$('selA').value],b=SIGNS[+$('selB').value];
+  const a=SIGNS[selState.selA],b=SIGNS[selState.selB];
   pairBusy=true;$('btnGo').disabled=true;
   $('pairNote').textContent='🌙 观星师正在推演两颗星辰的轨迹……';
   $('pairResult').style.display='block';
