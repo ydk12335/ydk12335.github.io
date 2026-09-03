@@ -7,96 +7,81 @@
 <style>
 :root{--gold:#f0cf82;--gold-dim:#a9956a;--ivory:#f2ede0}
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%}
-body{font-family:"Songti SC","Noto Serif SC",serif;color:var(--ivory);
-  background:#05030f;overflow-x:hidden}
-canvas#stars{position:fixed;inset:0;z-index:0;pointer-events:none}
-.aurora i{position:fixed;border-radius:50%;filter:blur(70px);z-index:0;pointer-events:none}
-.aurora i:nth-child(1){width:48vmax;height:48vmax;left:-14%;top:-18%;
-  background:radial-gradient(circle,rgba(120,96,220,.13),transparent 60%);animation:drift1 37s ease-in-out infinite alternate}
-.aurora i:nth-child(2){width:40vmax;height:40vmax;right:-12%;top:32%;
-  background:radial-gradient(circle,rgba(60,140,200,.10),transparent 58%);animation:drift2 45s ease-in-out infinite alternate}
-.aurora i:nth-child(3){width:44vmax;height:44vmax;left:18%;bottom:-30%;
-  background:radial-gradient(circle,rgba(255,188,118,.06),transparent 58%);animation:drift3 39s ease-in-out infinite alternate}
-@keyframes drift1{to{transform:translate3d(9vw,7vh,0) scale(1.13) rotate(24deg)}}
-@keyframes drift2{to{transform:translate3d(-8vw,-6vh,0) scale(1.08) rotate(-18deg)}}
-@keyframes drift3{to{transform:translate3d(6vw,-5vh,0) scale(1.14)}}
-.astro-view{position:relative;z-index:2;min-height:100svh;display:flex;flex-direction:column;
-  justify-content:space-evenly;max-width:600px;margin:0 auto;padding:clamp(18px,4vh,36px) 20px;text-align:center}
-.astro-top{position:absolute;top:calc(14px + env(safe-area-inset-top));left:14px;z-index:5}
-.btn-back{background:rgba(255,255,255,.07);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.14);color:#d8d0ef;border-radius:999px;padding:8px 18px;
-  font-size:.82rem;letter-spacing:.1em;cursor:pointer;font-family:inherit;transition:.25s}
-.btn-back:active{transform:scale(.95)}
+body{font-family:"Songti SC","Noto Serif SC",serif;color:var(--ivory);background:#05030f;overflow-x:hidden}
+canvas#stars{position:fixed;inset:0;z-index:0}
+/* ---------- 布局：与首页 portal 一致 ---------- */
+.portal{position:relative;z-index:2;min-height:100svh;display:flex;flex-direction:column;
+  justify-content:space-evenly;align-items:center;text-align:center;
+  padding:clamp(20px,5vh,44px) 20px 22px}
 .kicker{font-size:.68rem;letter-spacing:.42em;text-indent:.42em;color:var(--gold-dim)}
-.a-title{font-size:clamp(1.7rem,6vw,2.3rem);letter-spacing:.24em;text-indent:.24em;font-weight:600;
+.p-title{font-size:clamp(1.7rem,6vw,2.2rem);letter-spacing:.24em;text-indent:.24em;font-weight:600;
   color:var(--gold);text-shadow:0 0 24px rgba(240,207,130,.35);margin-top:6px}
-.a-sub{font-size:.78rem;color:#b5abd8;letter-spacing:.14em;margin-top:8px}
-.a-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.a-cell{cursor:pointer;position:relative;overflow:hidden;border-radius:18px;padding:16px 4px 12px;
-  display:flex;flex-direction:column;align-items:center;gap:4px;
-  background:linear-gradient(155deg,rgba(255,255,255,.08),rgba(255,255,255,.02));
-  border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  transition:transform .3s,border-color .3s,box-shadow .3s}
-.a-cell::before{content:"";position:absolute;inset:0;background:radial-gradient(80% 60% at 50% 0%,rgba(240,207,130,.18),transparent 70%);opacity:0;transition:opacity .35s}
-.a-cell:hover{transform:translateY(-3px) scale(1.03);border-color:rgba(240,207,130,.55);box-shadow:0 12px 30px rgba(240,207,130,.14)}
-.a-cell:hover::before{opacity:1}
-.a-cell:active{transform:translateY(0) scale(.96)}
-.a-cell.on{border-color:rgba(240,207,130,.7);box-shadow:0 10px 28px rgba(240,207,130,.16)}
-.a-cell .h-sym{font-size:2rem;line-height:1;color:#f2d488;text-shadow:0 0 14px rgba(240,207,130,.45),0 1px 3px rgba(0,0,0,.5)}
-.a-cell .h-name{font-size:.82rem;letter-spacing:.05em}
-.a-cell .h-range{font-size:.6rem;color:#8f86b8;letter-spacing:.02em}
-.a-result{margin-top:4px;text-align:left}
-.a-now{display:flex;align-items:center;justify-content:center;gap:10px;font-size:1.1rem;letter-spacing:.12em;color:#e9e3ff;margin-bottom:12px}
-.a-now .h-now-sym{font-size:1.5rem;color:#f2d488;text-shadow:0 0 12px rgba(240,207,130,.5)}
-.a-now .h-now-range{font-size:.78rem;color:#8f86b8;letter-spacing:.04em}
-.a-card{background:rgba(255,255,255,.06);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:clamp(16px,3vw,24px);
-  box-shadow:0 14px 40px rgba(4,2,18,.4),inset 0 1px 0 rgba(255,255,255,.08);line-height:1.95;font-size:.93rem;color:#e6e0f4}
-.a-card h3{color:var(--gold);font-size:1.02rem;margin:16px 0 6px;letter-spacing:.08em}
+.p-sub{font-size:.78rem;color:#b5abd8;letter-spacing:.14em;margin-top:8px}
+.btn-back{position:fixed;top:calc(14px + env(safe-area-inset-top));left:14px;z-index:9;
+  background:rgba(255,255,255,.07);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.14);color:#d8d0ef;border-radius:999px;padding:7px 16px;
+  font-size:.78rem;letter-spacing:.1em;cursor:pointer;font-family:inherit;transition:.25s}
+.btn-back:active{transform:scale(.94)}
+/* ---------- 小卡片网格 ---------- */
+.a-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:min(480px,94vw)}
+.a-cell{cursor:pointer;position:relative;border-radius:14px;padding:10px 2px 8px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+  transition:transform .28s,border-color .28s,background .28s}
+.a-cell:hover{transform:translateY(-2px);border-color:rgba(240,207,130,.5);background:rgba(255,255,255,.07)}
+.a-cell:active{transform:scale(.95)}
+.a-cell.on{border-color:rgba(240,207,130,.75);background:rgba(240,207,130,.10)}
+.a-cell .h-sym{font-size:1.35rem;line-height:1;color:#f2d488;text-shadow:0 0 10px rgba(240,207,130,.45)}
+.a-cell .h-name{font-size:.7rem;letter-spacing:.05em}
+.a-cell .h-range{font-size:.52rem;color:#8f86b8}
+.a-cell.soon{cursor:default;opacity:.55}
+.a-cell.soon .h-sym{color:#9a90c0;text-shadow:none}
+/* ---------- 运势结果 ---------- */
+.a-result{width:min(560px,94vw);text-align:left;display:none}
+.a-now{display:flex;align-items:center;justify-content:center;gap:10px;font-size:1.05rem;letter-spacing:.12em;color:#e9e3ff;margin-bottom:10px}
+.a-now .h-now-sym{font-size:1.4rem;color:#f2d488;text-shadow:0 0 12px rgba(240,207,130,.5)}
+.a-now .h-now-range{font-size:.74rem;color:#8f86b8}
+.a-card{background:rgba(255,255,255,.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:clamp(14px,3vw,22px);
+  box-shadow:0 14px 40px rgba(4,2,18,.4);line-height:1.9;font-size:.9rem;color:#e6e0f4}
+.a-card h3{color:var(--gold);font-size:.98rem;margin:14px 0 5px;letter-spacing:.08em}
 .a-card h3:first-child{margin-top:0}
-.a-card p{margin:8px 0}
-.a-card ul{margin:6px 0;padding-left:20px}
-.a-card li{margin:3px 0}
+.a-card p{margin:7px 0}
 .a-card strong{color:#ffe4ab;font-weight:600}
-.a-foot{text-align:center;font-size:.7rem;color:#8f86b8;margin-top:14px;letter-spacing:.05em;text-align:center}
-.a-loading{display:flex;align-items:center;justify-content:center;gap:12px;color:#c9c0e8}
+.a-foot{text-align:center;font-size:.66rem;color:#8f86b8;margin-top:12px;letter-spacing:.05em}
+.a-loading{display:flex;align-items:center;justify-content:center;gap:12px;color:#c9c0e8;padding:30px 0}
 .orb-ring{position:relative;width:20px;height:20px;flex:none}
 .orb-ring::before{content:"";position:absolute;inset:0;border-radius:50%;
   border:1.5px solid rgba(240,207,130,.25);border-top-color:var(--gold);animation:orbSpin 1.1s linear infinite}
 .orb-ring::after{content:"✦";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:.5rem;color:var(--gold);animation:orbGlow 2.2s ease-in-out infinite}
 @keyframes orbSpin{to{transform:rotate(360deg)}}
-@keyframes orbGlow{0%,100%{opacity:.4;text-shadow:0 0 4px rgba(240,207,130,.3)}50%{opacity:1;text-shadow:0 0 10px rgba(240,207,130,.8)}}
-.caret{display:inline-block;width:9px;height:1.05em;background:var(--gold);vertical-align:-2px;margin-left:4px;
-  box-shadow:0 0 10px rgba(240,207,130,.85);animation:blink 1s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
-.a-foot-page{font-size:.72rem;letter-spacing:.3em;color:#6f66a0}
-@media(max-width:420px){.a-grid{grid-template-columns:repeat(3,1fr)}}
+@keyframes orbGlow{0%,100%{opacity:.4}50%{opacity:1;text-shadow:0 0 10px rgba(240,207,130,.8)}}
+.p-foot{font-size:.72rem;letter-spacing:.3em;text-indent:.3em;color:#6f66a0}
+@media(max-width:400px){.a-grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
 <canvas id="stars"></canvas>
-<div class="aurora"><i></i><i></i><i></i></div>
+<button class="btn-back" id="btnBack">← 返回</button>
 
-<div class="astro-top"><button class="btn-back" id="btnBack">← 返回</button></div>
-
-<div class="astro-view">
+<div class="portal">
   <header>
-    <div class="kicker">ASTROLOGY</div>
-    <h1 class="a-title">观 星</h1>
-    <div class="a-sub" id="aDate"></div>
+    <div class="kicker" id="aDate">ASTROLOGY</div>
+    <h1 class="p-title">观 星</h1>
+    <p class="p-sub">点一个星座，看看今天</p>
   </header>
 
   <div class="a-grid" id="aGrid"></div>
 
-  <section class="a-result" id="aResult" style="display:none">
+  <section class="a-result" id="aResult">
     <div class="a-now" id="aNow"></div>
     <div class="a-card" id="aText"></div>
     <div class="a-foot">运势由 AI 占星师即兴推演 · 仅供娱乐参考</div>
   </section>
 
-  <footer class="a-foot-page">‥ 有点困 ‥</footer>
+  <footer class="p-foot">‥ 有点困 ‥</footer>
 </div>
 
 <script>
@@ -120,38 +105,80 @@ const SIGNS=[
   ['双鱼座','♓','2.19-3.20','水象 · 守护海王星','感性浪漫、想象力丰富、富同理心']
 ];
 
-/* ================= 星空背景 ================= */
+/* ================= 动态粒子星座背景（每次打开随机生成一副星盘） ================= */
 const cv=document.getElementById('stars'),cx=cv.getContext('2d');
-let starsA=[],shooting=[];
-function resizeStars(){
+let nodes=[],links=[],starsBg=[];
+function buildConstellation(){
   const DPR=Math.min(devicePixelRatio||1,2);
   cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;
-  starsA=Array.from({length:150},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,
-    r:(Math.random()*1.3+.3)*DPR,p:Math.random()*7,s:.3+Math.random()*.9}));
+  /* 随机星座：5~7 个主星，按链路+分支连线 */
+  const n=5+Math.floor(Math.random()*3);
+  nodes=[];links=[];
+  const cx0=cv.width*(.25+Math.random()*.5),cy0=cv.height*(.2+Math.random()*.35);
+  let px=cx0,py=cy0;
+  for(let i=0;i<n;i++){
+    nodes.push({x:px,y:py,r:(1.6+Math.random()*1.6)*DPR,p:Math.random()*7});
+    if(i>0)links.push([i-1,i]);
+    if(i>1&&Math.random()<.5){const j=Math.floor(Math.random()*(i-1));links.push([j,i]);}
+    px+=(Math.random()-.5)*cv.width*.22;
+    py+=(Math.random()-.45)*cv.height*.14;
+    px=Math.max(cv.width*.08,Math.min(cv.width*.92,px));
+    py=Math.max(cv.height*.08,Math.min(cv.height*.6,py));
+  }
+  starsBg=Array.from({length:130},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,
+    r:(Math.random()*1.1+.25)*DPR,p:Math.random()*7,s:.3+Math.random()*.8}));
+  nodes.dust=Array.from({length:26},()=>({li:Math.floor(Math.random()*links.length),t:Math.random(),v:.0012+Math.random()*.002}));
 }
-resizeStars();addEventListener('resize',resizeStars);
-function starTick(t){
+buildConstellation();addEventListener('resize',buildConstellation);
+function tick(t){
   cx.clearRect(0,0,cv.width,cv.height);
-  for(const s of starsA){
-    const tw=.45+.55*Math.abs(Math.sin(t*.001*s.s+s.p));
-    cx.globalAlpha=tw;cx.fillStyle='#fff';
-    cx.beginPath();cx.arc(s.x,s.y,s.r,0,7);cx.fill();
+  for(const s of starsBg){
+    cx.globalAlpha=.35+.4*Math.abs(Math.sin(t*.001*s.s+s.p));
+    cx.fillStyle='#fff';cx.beginPath();cx.arc(s.x,s.y,s.r,0,7);cx.fill();
+  }
+  const breathe=.5+.25*Math.sin(t*.0006);
+  cx.globalAlpha=.35*breathe;cx.strokeStyle='rgba(240,207,140,.8)';cx.lineWidth=1;
+  for(const [a,b] of links){
+    cx.beginPath();cx.moveTo(nodes[a].x,nodes[a].y);cx.lineTo(nodes[b].x,nodes[b].y);cx.stroke();
+  }
+  cx.fillStyle='rgba(255,240,200,.9)';
+  for(const du of nodes.dust){
+    du.t+=du.v;if(du.t>1){du.t=0;du.li=Math.floor(Math.random()*links.length);}
+    const [a,b]=links[du.li];
+    const x=nodes[a].x+(nodes[b].x-nodes[a].x)*du.t,y=nodes[a].y+(nodes[b].y-nodes[a].y)*du.t;
+    cx.globalAlpha=.8*Math.sin(du.t*Math.PI);
+    cx.beginPath();cx.arc(x,y,1.1,0,7);cx.fill();
+  }
+  for(const nd of nodes){
+    const tw=.7+.3*Math.sin(t*.0012+nd.p);
+    cx.globalAlpha=tw;
+    cx.fillStyle='#fdf6e0';cx.beginPath();cx.arc(nd.x,nd.y,nd.r,0,7);cx.fill();
+    cx.globalAlpha=tw*.25;
+    cx.beginPath();cx.arc(nd.x,nd.y,nd.r*3.2,0,7);cx.fill();
   }
   cx.globalAlpha=1;
-  requestAnimationFrame(starTick);
+  requestAnimationFrame(tick);
 }
-requestAnimationFrame(starTick);
+requestAnimationFrame(tick);
 
-/* ================= 星座格子 ================= */
+/* ================= 日期 ================= */
+const d=new Date(),wk='日一二三四五六'.charAt(d.getDay());
+document.getElementById('aDate').textContent=
+  d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 · 星期'+wk+' · ASTROLOGY';
+
+/* ================= 网格（12星座 + 敬请期待） ================= */
 const $=id=>document.getElementById(id);
 const grid=$('aGrid');
 SIGNS.forEach((s,i)=>{
-  const b=document.createElement('div');b.className='a-cell';b.dataset.i=i;
+  const b=document.createElement('div');b.className='a-cell';
   b.innerHTML='<span class="h-sym">'+s[1]+'</span><span class="h-name">'+s[0]+'</span><span class="h-range">'+s[2]+'</span>';
   b.onclick=()=>pick(i);grid.appendChild(b);
 });
-const d=new Date(),wk='日一二三四五六'.charAt(d.getDay());
-$('aDate').textContent=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 · 星期'+wk+' · 点一个星座，看看今天';
+[["☽"],["☾"],["✧"],["∞"]].forEach(([sym])=>{
+  const b=document.createElement('div');b.className='a-cell soon';
+  b.innerHTML='<span class="h-sym">'+sym+'</span><span class="h-name">敬请期待</span><span class="h-range">酝酿中</span>';
+  grid.appendChild(b);
+});
 
 /* ================= AI 推演 ================= */
 const HORO_SYS='你是一位资深华人占星师「月下观星师」，擅长基于古典占星推演精准而有温度的「今日星座运势」。请严格结合用户所选星座的【元素】【守护星】【核心性格特质】，以及当前日期的季节与节气能量来推演，让运势真正贴合该星座，而不是任何星座都能套用的万能文案。\n'+
@@ -163,7 +190,7 @@ const HORO_SYS='你是一位资深华人占星师「月下观星师」，擅长�
 function miniMD(t){
   t=t.replace(/&/g,'&amp;').replace(/</g,'&lt;');
   return t
-    .replace(/^> ?今日星语：(.*)$/gm,'<p style="text-align:center;color:#f2d488;letter-spacing:.06em;margin-top:14px">✦ $1 ✦</p>')
+    .replace(/^> ?今日星语：(.*)$/gm,'<p style="text-align:center;color:#f2d488;letter-spacing:.06em;margin-top:12px">✦ $1 ✦</p>')
     .replace(/^## (.*)$/gm,'<h3>$1</h3>')
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
     .replace(/\n{2,}/g,'<p>')
@@ -172,17 +199,16 @@ function miniMD(t){
 let horoSeq=0;
 async function pick(i){
   const my=++horoSeq;
-  [...grid.children].forEach((c,ci)=>c.classList.toggle('on',ci===i));
+  [...grid.querySelectorAll('.a-cell:not(.soon)')].forEach((c,ci)=>c.classList.toggle('on',ci===i));
   const [name,sym,range,astro,trait]=SIGNS[i];
   $('aResult').style.display='block';
   $('aNow').innerHTML='<span class="h-now-sym">'+sym+'</span><b>'+name+'</b><span class="h-now-range">'+range+'</span>';
   $('aText').innerHTML='<div class="a-loading"><span class="orb-ring"></span><span>🌙 正在为你观星推演……</span></div>';
-  $('aResult').scrollIntoView({behavior:'smooth',block:'start'});
   try{
     const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
       body:JSON.stringify({model:MODEL,messages:[{role:'system',content:HORO_SYS},
-        {role:'user',content:'请为「'+name+'」（日期区间'+range+'，属'+astro+'，核心性格特质：'+trait+'）推演今日（'+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日，周'+'日一二三四五六'.charAt(d.getDay())+'）的运势。请严格贴合该星座特质，避免通用套话。'}],temperature:.8,max_tokens:1500})});
+        {role:'user',content:'请为「'+name+'」（日期区间'+range+'，属'+astro+'，核心性格特质：'+trait+'）推演今日（'+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日，周'+wk+'）的运势。请严格贴合该星座特质，避免通用套话。'}],temperature:.8,max_tokens:1500})});
     if(my!==horoSeq)return;
     if(!res.ok)throw new Error('HTTP '+res.status);
     const j=await res.json();
