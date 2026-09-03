@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>有点困 · Sleepy Space</title>
-<link rel="stylesheet" href="style.css?v=rev5">
+<link rel="stylesheet" href="style.css?v=rev6">
 </head>
 <body>
 <canvas id="sky"></canvas>
@@ -12,7 +12,7 @@
 <div class="portal">
   <div class="kicker" id="skyLabel">…</div>
 <h1 class="p-title">有 点 困</h1>
-  <div class="p-greet" id="greet"><span class="g-clock" id="gClock">--:--</span><span class="g-word" id="gWord">夜深了</span></div>
+  <div class="p-greet" id="greet"><span class="g-date" id="gDate">--</span><span class="g-clock" id="gClock">--:--:--</span><span class="g-word" id="gWord">夜深了</span></div>
 
   <div class="p-grid">
     <a class="p-card" href="tarot/"><div class="card-fx"></div>
@@ -100,11 +100,13 @@ function greetWord(h){
 function tickGreet(){
   const el=document.getElementById('gClock');if(!el)return;
   const n=new Date(),p=v=>String(v).padStart(2,'0');
-  el.textContent=p(n.getHours())+':'+p(n.getMinutes());
+  el.textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds());
+  const d=document.getElementById('gDate');
+  if(d)d.textContent=(n.getMonth()+1)+'月'+n.getDate()+'日 '+['周日','周一','周二','周三','周四','周五','周六'][n.getDay()];
   const w=document.getElementById('gWord');
   if(w)w.textContent=greetWord(n.getHours());
 }
-tickGreet();setInterval(tickGreet,10000);
+tickGreet();setInterval(tickGreet,1000);
 function applySky(){
   const g=ctx.createLinearGradient(0,0,0,H);
   curTime.g.forEach((c,i)=>g.addColorStop(i/(curTime.g.length-1),c));
