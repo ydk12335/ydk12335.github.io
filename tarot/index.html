@@ -16,10 +16,25 @@
 <button class="icon-btn icon-btn--notice" id="btnNotice" title="指引">✦</button>
 <button class="icon-btn icon-btn--music" id="btnMusic" title="音乐">🎵</button>
 
-<div id="shotModal" style="position:fixed;inset:0;z-index:99;background:rgba(3,1,14,.88);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px">
-  <img id="shotImg" alt="分享图" style="max-width:92vw;max-height:66vh;border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.6)">
-  <div style="font-size:.75rem;color:#b5abd8;letter-spacing:.1em">长按图片保存 / 分享</div>
+<div id="shotModal" style="position:fixed;inset:0;z-index:99;background:rgba(3,1,14,.9);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px">
+  <img id="shotImg" alt="分享图" style="max-width:92vw;max-height:58vh;border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.6)">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+    <button class="btn-glass" id="btnShotImg" style="padding:11px 22px">🖼 图片分享</button>
+    <button class="btn-glass" id="btnShotTxt" style="padding:11px 22px">📋 文字分享</button>
+  </div>
+  <div style="font-size:.75rem;color:#8a81b8;letter-spacing:.1em">也可以长按图片直接保存</div>
   <button class="btn-glass" id="shotClose" style="padding:10px 30px">关 闭</button>
+</div>
+
+<!-- 占卜记录详情（点历史记录条目打开，全文可滚动可选中） -->
+<div id="histDetailMask" style="position:fixed;inset:0;z-index:98;background:rgba(3,1,14,.9);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="width:min(560px,96%);max-height:84vh;display:flex;flex-direction:column;background:linear-gradient(155deg,rgba(255,255,255,.08),rgba(255,255,255,.025));border:1px solid rgba(240,207,130,.28);border-radius:18px;padding:20px;box-shadow:0 22px 56px rgba(4,2,18,.5)">
+    <div id="histDetailBody" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;-webkit-user-select:text;user-select:text;color:#d8d0ef;font-size:.86rem;line-height:1.95;text-align:left"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex:none;flex-wrap:wrap">
+      <button class="btn-glass" id="btnHistShare">📤 分享这条记录</button>
+      <button class="btn-glass" id="btnHistDetailClose">关 闭</button>
+    </div>
+  </div>
 </div>
 
 <div class="wrap">
@@ -114,13 +129,14 @@
       </ol>
       <div class="notice-tips">
         <p>🎵 <b>背景音乐</b>：点右上角 🎵 打开音乐播放器。支持列表/单曲/随机循环；点进度条可跳转，可切换五种音效（原声/双耳环绕/低音增强/回声/空间感）。</p>
-        <p>📜 <b>占卜记录</b>：点右上角 📜 可随时回看历史占卜；记录仅保存在你的设备本地，不会上传。</p>
+        <p>📜 <b>占卜记录</b>：点右上角 📜 查看历史占卜；<b>点任意一条记录即可展开全文</b>，文字可滚动、可长按选中复制，还能单独分享这条记录。记录仅保存在你的设备本地，不会上传。</p>
         <p>🌙 同一个问题短时间内不建议反复占卜，塔罗讲「一事一占」，结果容易受心态干扰。</p>
         <p>🌙 解读由 AI 生成，仅供娱乐与自我启发，重要决定请理性判断。</p>
       </div>
       <div class="notice-changelog">
         <div class="chg-title">📜 更新日志</div>
         <ul>
+          <li><b>v3.0</b> · 追问升级：每次追问都是独立问答框，问几次出几个；新增「分享本次占卜」——解读+追问合并成一张夜色长图或一段文字，图片/文字随心选；📜 占卜记录可点开看全文（文字可滚动、可选中复制），每条记录都能单独分享。</li>
           <li><b>v2.6</b> · 新增「自定义牌阵」：自由拖拽设计专属阵型，每个位置可命名（如"我的优势"），模板保存后可重复使用。</li>
           <li><b>v2.5</b> · 「今日星座运势」板块迁移至首页「✦ 今日观星」，塔罗页专注占卜本身。</li>
           <li><b>v2.4</b> · 解读完成后新增「返回主界面」按钮，退出更顺手；深空彩蛋改为点击进入，滚动不再误触发。</li>

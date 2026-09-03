@@ -687,10 +687,11 @@ function buildShareText(){
   if(lastReading.q)t+='问：'+lastReading.q+'\n';
   t+='牌阵：'+lastReading.spread+'\n牌面：'+lastReading.cards+'\n\n'+lastReading.text.replace(/^#+\s*/gm,'').replace(/\*\*/g,'');
   for(const f of fuHistory)t+='\n\n✧ 问：'+f.q+'\n'+f.a.replace(/^#+\s*/gm,'').replace(/\*\*/g,'');
-  return t+'\n\n—— 来自「有点困」';
+  return t+'\n\n—— 来自「有点困」\n🌙 在线占卜：https://ydk12335.github.io/tarot/';
 }
 /* 分享图：夜色长卡（牌面信息 + 解读 + 追问问答合并） */
-function drawTarotCard(){
+function drawTarotCard(r){
+  r=r||lastReading;if(!r)return document.createElement('canvas');
   const W=720,c=document.createElement('canvas');
   const g0=c.getContext('2d');
   /* 先量内容高度 */
@@ -698,8 +699,8 @@ function drawTarotCard(){
   const bodyLines=[];
   const push=(s)=>{for(let i=0;i<s.length;i+=20)bodyLines.push(s.slice(i,i+20));};
   push('【解读】');
-  lastReading.text.replace(/^#+\s*/gm,'').replace(/\*\*/g,'').split('\n').map(s=>s.trim()).filter(Boolean).forEach(push);
-  for(const f of fuHistory){push('');push('✧ 问：'+f.q);push('');push(f.a.replace(/^#+\s*/gm,'').replace(/\*\*/g,''));}
+  String(r.text||'').replace(/^#+\s*/gm,'').replace(/\*\*/g,'').split('\n').map(s=>s.trim()).filter(Boolean).forEach(push);
+  for(const f of (r.fu||[])){push('');push('✧ 问：'+f.q);push('');push(f.a.replace(/^#+\s*/gm,'').replace(/\*\*/g,''));}
   const H=headH+bodyLines.length*38+150;
   c.width=W;c.height=H;
   const g=c.getContext('2d');
@@ -710,34 +711,94 @@ function drawTarotCard(){
     g.beginPath();g.arc(Math.random()*W,Math.random()*H,Math.random()*1.3+.3,0,7);g.fill();}
   g.globalAlpha=1;g.textAlign='center';
   g.fillStyle='#a9956a';g.font='22px serif';g.fillText('· 月 下 塔 罗 ·',W/2,80);
-  g.fillStyle='#f0cf82';g.font='600 40px "Songti SC",serif';g.fillText(lastReading.spread,W/2,150);
+  g.fillStyle='#f0cf82';g.font='600 40px "Songti SC",serif';g.fillText(r.spread,W/2,150);
   g.fillStyle='#8f86b8';g.font='24px serif';
-  let info=lastReading.cards;if(info.length>22)info=info.slice(0,21)+'…';
-  g.fillText(info,W/2,200);
-  if(lastReading.q){g.fillStyle='#cfc0a0';g.font='26px serif';
-    let q=lastReading.q;if(q.length>16)q=q.slice(0,15)+'…';
+  let info=r.cards;if(info&&info.length>22)info=info.slice(0,21)+'…';
+  g.fillText(info||'',W/2,200);
+  if(r.q){g.fillStyle='#cfc0a0';g.font='26px serif';
+    let q=r.q;if(q.length>16)q=q.slice(0,15)+'…';
     g.fillText('问：'+q,W/2,248);}
   g.textAlign='left';g.font='27px "Songti SC",serif';g.fillStyle='#e6e0f4';
   let y=headH+30;
   for(const ln of bodyLines){g.fillText(ln,70,y);y+=38;}
   g.textAlign='center';g.fillStyle='#6f66a0';g.font='20px serif';
-  g.fillText('‥ 有点困 · AI 塔罗即兴解读 ‥',W/2,H-70);
+  g.fillText('‥ 有点困 · AI 塔罗即兴解读 ‥',W/2,H-104);
+  g.fillStyle='#a9956a';g.font='22px serif';
+  g.fillText('ydk12335.github.io/tarot',W/2,H-70);
   return c;
 }
-$('btnShareAll').onclick=async function(){
-  const txt=buildShareText();if(!txt)return;
-  const cv=drawTarotCard();
+/* ========== 通用分享：打开弹窗后可选 图片分享 / 文字分享 ========== */
+let shareCtx=null;/* {time,q,spread,cards,text,fu:[]} 本次要分享的内容快照 */
+function openShareModal(rec){
+  shareCtx={time:rec.time,q:rec.q||'',spread:rec.spread||'',cards:rec.cards||'',text:rec.text||'',fu:rec.fu||[]};
+  const cv=drawTarotCard(shareCtx);
+  cv.toBlob(b=>{
+    if(b)document.getElementById('shotImg').src=URL.createObjectURL(b);
+    document.getElementById('shotModal').style.display='flex';
+  },'image/png');
+}
+function buildShareText(r){
+  r=r||shareCtx;if(!r)return '';
+  let t='✦ 月下塔罗 ✦\n'+r.time+'\n';
+  if(r.q)t+='问：'+r.q+'\n';
+  t+='牌阵：'+r.spread+'\n牌面：'+r.cards+'\n\n'+String(r.text||'').replace(/^#+\s*/gm,'').replace(/\*\*/g,'');
+  for(const f of (r.fu||[]))t+='\n\n✧ 问：'+f.q+'\n'+f.a.replace(/^#+\s*/gm,'').replace(/\*\*/g,'');
+  return t+'\n\n—— 来自「有点困」\n🌙 在线占卜：https://ydk12335.github.io/tarot/';
+}
+async function shareImage(){
+  if(!shareCtx)return;
+  const cv=drawTarotCard(shareCtx);
   const shot=await new Promise(r=>cv.toBlob(r,'image/png'));
   try{
     if(navigator.canShare&&shot&&navigator.canShare({files:[new File([shot],'tarot.png',{type:'image/png'})]})){
-      await navigator.share({files:[new File([shot],'tarot.png',{type:'image/png'})],title:'月下塔罗',text:txt.slice(0,120)});
+      await navigator.share({files:[new File([shot],'tarot.png',{type:'image/png'})],title:'月下塔罗',text:buildShareText().slice(0,120)});
       return;
     }
   }catch(e){}
   document.getElementById('shotImg').src=URL.createObjectURL(shot);
-  document.getElementById('shotModal').classList.add('show');
+}
+async function shareText(){
+  const txt=buildShareText();if(!txt)return;
+  try{
+    if(navigator.share){await navigator.share({title:'月下塔罗',text:txt});return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  try{await navigator.clipboard.writeText(txt);toast('✓ 已复制到剪贴板，去粘贴分享吧');}
+  catch(e){prompt('长按复制以下内容：',txt);}
+}
+function toast(msg){
+  let t=document.getElementById('opToast');
+  if(!t){t=document.createElement('div');t.id='opToast';
+    t.style.cssText='position:fixed;left:50%;bottom:9vh;transform:translateX(-50%);z-index:999;background:rgba(20,12,44,.92);border:1px solid rgba(240,207,130,.4);color:#f0e6c8;padding:10px 22px;border-radius:999px;font-size:.82rem;letter-spacing:.06em;pointer-events:none;transition:opacity .3s';
+    document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';clearTimeout(t._tm);t._tm=setTimeout(()=>t.style.opacity='0',2200);
+}
+$('btnShotImg').onclick=shareImage;
+$('btnShotTxt').onclick=shareText;
+document.getElementById('shotClose').onclick=()=>document.getElementById('shotModal').style.display='none';
+document.getElementById('shotModal').addEventListener('click',e=>{
+  if(e.target.id==='shotModal')document.getElementById('shotModal').style.display='none';
+});
+$('btnShareAll').onclick=()=>{if(lastReading)openShareModal(lastReading);};
+
+/* ========== 占卜记录详情弹窗（点历史条目打开；全文滚动/选中/单独分享） ========== */
+let histDetailIdx=-1;
+function openHistDetail(idx){
+  const h=loadHist(),r=h[idx];if(!r)return;
+  histDetailIdx=idx;
+  $('histDetailBody').innerHTML=
+    '<div style="color:var(--gold);font-size:.9rem;letter-spacing:.12em;margin-bottom:6px">'+escapeHtml(r.time)+(r.fav?' ⭐':'')+'</div>'+
+    '<div style="color:#b5abd8;font-size:.8rem;margin-bottom:12px">'+escapeHtml(r.spread||'')+(r.cards?' · '+escapeHtml(r.cards):'')+'</div>'+
+    (r.q?'<div style="color:#cfc0a0;margin-bottom:10px">问：'+escapeHtml(r.q)+'</div>':'')+
+    '<div class="parchment" style="background:rgba(255,255,255,.03);padding:14px;border:none">'+miniMD(String(r.text||''))+'</div>';
+  $('histDetailMask').style.display='flex';
+  $('histDetailBody').scrollTop=0;
+}
+$('btnHistDetailClose').onclick=()=>$('histDetailMask').style.display='none';
+$('histDetailMask').addEventListener('click',e=>{if(e.target.id==='histDetailMask')$('histDetailMask').style.display='none';});
+$('btnHistShare').onclick=()=>{
+  const h=loadHist(),r=h[histDetailIdx];if(!r)return;
+  openShareModal({time:r.time,q:r.q,spread:r.spread,cards:r.cards,text:r.text,fu:[]});
 };
-document.getElementById('shotClose').onclick=()=>document.getElementById('shotModal').classList.remove('show');
 
 /* ================= 追问（基于本次牌面，最多 3 次，跑题拒答） ================= */
 let fuLeft=0,fuHistory=[];
@@ -838,10 +899,12 @@ $('btnHist').onclick=function(){
   sorted.forEach(r=>{
     const idx=h.indexOf(r);
     const d=document.createElement('div');d.className='hist-item'+(r.fav?' fav':'');
+    d.style.cursor='pointer';
     d.innerHTML='<div class="hist-top"><b>'+escapeHtml(r.time)+'</b> · '+escapeHtml(r.spread)+
       '<button class="hist-fav" data-i="'+idx+'" title="收藏/取消">'+(r.fav?'★':'☆')+'</button></div>'+
       '<div class="hist-cards">'+(r.q?'问：'+escapeHtml(r.q)+'<br>':'')+'⟡ '+escapeHtml(r.cards)+'</div>'+
-      '<div style="max-height:84px;overflow:hidden;color:#7d74a8">'+escapeHtml(String(r.text||'').slice(0,90))+'…</div>';
+      '<div style="max-height:84px;overflow:hidden;color:#7d74a8">'+escapeHtml(String(r.text||'').slice(0,90))+'…<span style="color:var(--gold);font-size:.72rem">　▼ 点开看全文</span></div>';
+    d.onclick=e=>{if(e.target.closest('.hist-fav'))return;openHistDetail(idx);};
     list.appendChild(d);
   });
   /* 点星号切换收藏 */
