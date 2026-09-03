@@ -17,10 +17,10 @@ body.light-sky .p-foot{color:#5d739a}
   color:var(--ivory);text-shadow:0 0 30px rgba(240,207,130,.25)}
 .p-greet{margin-top:12px;display:inline-flex;flex-direction:column;align-items:center;gap:7px;white-space:nowrap;
   padding:12px 30px;border-radius:22px;
-  background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
-  border:1px solid rgba(240,207,130,.24);
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  box-shadow:0 8px 26px rgba(4,2,18,.35), inset 0 1px 0 rgba(255,255,255,.10)}
+  background:linear-gradient(160deg,rgba(255,255,255,.035),rgba(255,255,255,.008));
+  border:1px solid rgba(240,207,130,.16);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  box-shadow:0 8px 26px rgba(4,2,18,.22), inset 0 1px 0 rgba(255,255,255,.06)}
 .p-greet .g-row{display:inline-flex;align-items:center;gap:12px}
 .p-greet .g-date{font-size:.76rem;color:#d8c9a8;font-weight:500;text-shadow:0 0 10px rgba(240,207,130,.25)}
 .p-greet .g-sep{color:rgba(240,207,130,.45)}
