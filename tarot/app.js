@@ -666,12 +666,80 @@ async function askTarot(){
     '（'+curSpread.slots.join('/')+'）；抽牌：'+drawn.map((dd,i)=>curSpread.slots[i]+'「'+dd.card.zh+'」'+(dd.rev?'逆位':'正位')).join('，');
   readingBusy=false;$('btnRead').disabled=false;
   /* 解读完成：开启追问（本次占卜最多 3 次） */
+  lastReading={time:new Date().toLocaleString('zh-CN',{hour12:false}),q:$('question').value.trim(),
+    spread:curSpread.name,cards:drawn.map(dd=>(dd.rev?'逆位「':'正位「')+dd.card.zh+'」').join(' '),text:full};
   fuLeft=3;fuHistory=[];
   $('followup').style.display='block';
   $('fuLeft').textContent=fuLeft;
   $('fuNote').textContent='';
   $('fuInput').value='';
+  $('fuBoxes').innerHTML='';
+  /* 解读完成即出现「分享本次占卜」按钮（解读+追问一起分享） */
+  const sb=document.getElementById('btnShareAll');
+  if(sb)sb.style.display='inline-block';
 }
+let lastReading=null;/* 本次占卜全文快照：{time,q,spread,cards,text} */
+function buildShareText(){
+  if(!lastReading)return '';
+  let t='✦ 月下塔罗 ✦\n'+lastReading.time+'\n';
+  if(lastReading.q)t+='问：'+lastReading.q+'\n';
+  t+='牌阵：'+lastReading.spread+'\n牌面：'+lastReading.cards+'\n\n'+lastReading.text.replace(/^#+\s*/gm,'').replace(/\*\*/g,'');
+  for(const f of fuHistory)t+='\n\n✧ 问：'+f.q+'\n'+f.a.replace(/^#+\s*/gm,'').replace(/\*\*/g,'');
+  return t+'\n\n—— 来自「有点困」';
+}
+/* 分享图：夜色长卡（牌面信息 + 解读 + 追问问答合并） */
+function drawTarotCard(){
+  const W=720,c=document.createElement('canvas');
+  const g0=c.getContext('2d');
+  /* 先量内容高度 */
+  const headH=300;
+  const bodyLines=[];
+  const push=(s)=>{for(let i=0;i<s.length;i+=20)bodyLines.push(s.slice(i,i+20));};
+  push('【解读】');
+  lastReading.text.replace(/^#+\s*/gm,'').replace(/\*\*/g,'').split('\n').map(s=>s.trim()).filter(Boolean).forEach(push);
+  for(const f of fuHistory){push('');push('✧ 问：'+f.q);push('');push(f.a.replace(/^#+\s*/gm,'').replace(/\*\*/g,''));}
+  const H=headH+bodyLines.length*38+150;
+  c.width=W;c.height=H;
+  const g=c.getContext('2d');
+  const bg=g.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#0a0620');bg.addColorStop(.6,'#0d0a26');bg.addColorStop(1,'#1a0f2e');
+  g.fillStyle=bg;g.fillRect(0,0,W,H);
+  for(let i=0;i<120;i++){g.globalAlpha=.2+Math.random()*.5;g.fillStyle='#fff';
+    g.beginPath();g.arc(Math.random()*W,Math.random()*H,Math.random()*1.3+.3,0,7);g.fill();}
+  g.globalAlpha=1;g.textAlign='center';
+  g.fillStyle='#a9956a';g.font='22px serif';g.fillText('· 月 下 塔 罗 ·',W/2,80);
+  g.fillStyle='#f0cf82';g.font='600 40px "Songti SC",serif';g.fillText(lastReading.spread,W/2,150);
+  g.fillStyle='#8f86b8';g.font='24px serif';
+  let info=lastReading.cards;if(info.length>22)info=info.slice(0,21)+'…';
+  g.fillText(info,W/2,200);
+  if(lastReading.q){g.fillStyle='#cfc0a0';g.font='26px serif';
+    let q=lastReading.q;if(q.length>16)q=q.slice(0,15)+'…';
+    g.fillText('问：'+q,W/2,248);}
+  g.textAlign='left';g.font='27px "Songti SC",serif';g.fillStyle='#e6e0f4';
+  let y=headH+30;
+  for(const ln of bodyLines){g.fillText(ln,70,y);y+=38;}
+  g.textAlign='center';g.fillStyle='#6f66a0';g.font='20px serif';
+  g.fillText('‥ 有点困 · AI 塔罗即兴解读 ‥',W/2,H-70);
+  return c;
+}
+document.getElementById('btnShareAll').onclick=async function(){
+  const txt=buildShareText();if(!txt)return;
+  const shot=drawTarotCard().toDataURL('image/png');
+  const im=new Image();
+  im.onload=async()=>{
+    try{
+      if(navigator.canShare&&navigator.canShare({files:[new File([await (await fetch(shot)).blob()],'tarot.png',{type:'image/png'})]})){
+        const blob=await (await fetch(shot)).blob();
+        await navigator.share({files:[new File([blob],'tarot.png',{type:'image/png'})],title:'月下塔罗',text:txt.slice(0,120)});
+        return;
+      }
+    }catch(e){}
+    document.getElementById('shotImg').src=shot;
+    document.getElementById('shotModal').classList.add('show');
+  };
+  im.src=shot;
+};
+document.getElementById('shotClose').onclick=()=>document.getElementById('shotModal').classList.remove('show');
 
 /* ================= 追问（基于本次牌面，最多 3 次，跑题拒答） ================= */
 let fuLeft=0,fuHistory=[];
@@ -707,16 +775,15 @@ async function sendFollowup(){
     fuHistory.push({q,a:ans});
     fuLeft--;
     $('fuLeft').textContent=fuLeft;
-    /* 追问与回答直接追加进解读面板，与解读融为一体 */
-    const div=document.createElement('div');
-    div.className='fu-qa';
-    div.innerHTML='<p style="margin-top:14px;color:#cfc0a0;font-size:.86rem"><b>✧ 问：</b>'+escapeHtml(q)+'</p>'+
-      '<div style="border-left:2px solid rgba(240,207,130,.3);padding-left:12px;margin:6px 0 2px;color:#e6e0f4">'+
-      miniMD(ans)+'</div>';
-    $('readingText').appendChild(div);
+    /* 每次追问生成一个独立的问答框 */
+    const box=document.createElement('div');
+    box.className='fu-box';
+    box.innerHTML='<div class="fu-q"><b>✧ 问：</b>'+escapeHtml(q)+'</div>'+
+      '<div class="fu-a">'+miniMD(ans)+'</div>';
+    $('fuBoxes').appendChild(box);
     note.textContent='';
     $('fuInput').value='';
-    try{$('readingText').lastElementChild.scrollIntoView({behavior:'smooth',block:'end'});}catch(e){}
+    try{box.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(e){}
     if(fuLeft<=0){
       note.textContent='✦ 月语已尽 · 一事一占，想再问就重新开一局吧';
       $('fuInput').disabled=true;$('fuSend').disabled=true;
