@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>有点困 · Sleepy Space</title>
+<link rel="stylesheet" href="style.css?v=rev6">
+</head>
+<body>
+<canvas id="sky"></canvas>
+
+<div class="portal">
+  <div class="kicker" id="skyLabel">…</div>
+<h1 class="p-title">有 点 困</h1>
+  <div class="p-greet" id="greet"><div class="g-row"><span class="g-date" id="gDate">--</span><span class="g-sep">·</span><span class="g-clock" id="gClock">--:--:--</span></div><div class="g-word" id="gWord">晚上好</div></div>
+
+  <div class="p-grid">
+    <a class="p-card" href="tarot/"><div class="card-fx"></div>
+      <div class="p-ico">🌙</div>
+      <div class="p-name">塔罗占卜</div>
+      <div class="p-desc">七十八张韦特 · 月下解读</div>
+    </a>
+    <a class="p-card" href="astro/"><div class="card-fx"></div>
+      <div class="p-ico">✦</div>
+      <div class="p-name">今日观星</div>
+      <div class="p-desc">十二星座 · AI 即兴推演</div>
+    </a>
+    <div class="p-card p-soon"><div class="card-fx"></div>
+      <div class="p-ico">☾</div>
+      <div class="p-name">敬请期待</div>
+      <div class="p-desc">新的板块正在酝酿</div>
+    </div>
+    <div class="p-card p-soon"><div class="card-fx"></div>
+      <div class="p-ico">✧</div>
+      <div class="p-name">敬请期待</div>
+      <div class="p-desc">新的板块正在酝酿</div>
+    </div>
+  </div>
+
+  <div class="weather-bar">
+    <button class="w-chip" id="wWeather"><span id="wWeatherLabel">天气</span></button>
+    <button class="w-chip" id="wTime"><span id="wTimeLabel">时间</span></button>
+    <button class="w-chip" id="wSound">🔇 静音</button>
+  </div>
+  <div class="wheel-mask" id="wheelMask">
+    <div class="wheel" id="wheel">
+      <div class="wheel-pointer"></div>
+      <div class="wheel-disc" id="wheelDisc"></div>
+      <div class="wheel-center" id="wheelCenter"></div>
+    </div>
+    <div class="wheel-hint">点选 · 或长按拖动转盘</div>
+  </div>
+
+  <footer class="p-foot">‥ 有点困 ‥</footer>
+</div>
+
+<script>
+/* ============ 动态天气背景 ============ */
+const TIMES={
+  morning :{n:'早晨', g:['#2a3550','#5a6b96','#c98d6b','#e8b98a'], sun:{x:.78,y:.72,r:26,c:'#ffd9a0',glow:.5}, stars:0,  tone:'#f4ecdd'},
+  forenoon:{n:'上午', g:['#4a7bb5','#7aa8d5','#a8cbe8','#cfe4f2'], sun:{x:.22,y:.18,r:34,c:'#fff4d6',glow:.85}, stars:0,  tone:'#22344c'},
+  noon    :{n:'中午', g:['#3d8ecf','#6fb1e2','#a5d0ef','#d8ecf7'], sun:{x:.5, y:.08,r:38,c:'#ffffff',glow:1},   stars:0,  tone:'#1d3550'},
+  dusk    :{n:'夕阳傍晚',g:['#2b1a3e','#6e2a4d','#c4482e','#f08a3c'], sun:{x:.5, y:.62,r:40,c:'#ff9a4d',glow:.95}, stars:.15,tone:'#f4ecdd'},
+  night   :{n:'深夜',   g:['#04020e','#0a0524','#14103a','#1e1848'], sun:{x:.72,y:.16,r:22,c:'#e8e4ff',glow:.7,moon:true},stars:1,tone:'#f4ecdd'}
+};
+const WEATHERS={
+  sunny  :{n:'晴天', c:0,   rain:0,  dim:0},
+  cloudy :{n:'阴天', c:1,   rain:0,  dim:.25},
+  drizzle:{n:'小雨', c:.8,  rain:90, dim:.35},
+  rain   :{n:'中雨', c:1,   rain:200,dim:.45},
+  storm  :{n:'大雨', c:1,   rain:380,dim:.55}
+};
+let curTime,curWeather,clouds=[],drops=[],splashes=[],bounces=[],stars=[],wind=.4;
+const cv=document.getElementById('sky'),ctx=cv.getContext('2d');
+let W,H,DPR,skyGrad;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=cv.width=innerWidth*DPR;H=cv.height=innerHeight*DPR;
+  cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';
+  stars=Array.from({length:140},()=>({x:Math.random()*W,y:Math.random()*H*.6,r:(Math.random()*1.2+.3)*DPR,p:Math.random()*7,s:.4+Math.random()}));
+  buildClouds();buildRain();}
+function buildClouds(){clouds=[];const n=Math.min(3,Math.round((curWeather?curWeather.c:0)*3)+ (curWeather&&curWeather.c>0?1:0));
+  for(let i=0;i<n;i++)clouds.push({x:Math.random()*W,y:(.03+Math.random()*.13)*H,w:(.2+Math.random()*.18)*W,h:(.035+Math.random()*.03)*H,
+    v:(.1+Math.random()*.2)*wind*DPR,p:Math.random()*7,seed:Math.random()*9});}
+function buildRain(){drops=[];splashes=[];if(!curWeather||!curWeather.rain)return;
+  const heavy=curWeather.rain>=300,sp=heavy?1.5:curWeather.rain>=180?1.2:1;
+  const G=H*.98;
+  for(let i=0;i<curWeather.rain;i++)drops.push({x:Math.random()*W,y:Math.random()*G,l:(8+Math.random()*10)*sp*DPR,
+    v:(7+Math.random()*5)*sp*DPR,drift:wind*DPR,a:.25+Math.random()*.35,w:heavy?1.4*DPR:1*DPR});}
+/* ===== 时间问候 ===== */
+/* ===== 时间问候：问候 + 贴心一句 ===== */
+const GREET_POOLS=[
+  {h:[0,5],  g:'凌晨好', t:'夜深了，早点休息吧'},
+  {h:[5,7],  g:'早上好', t:'天刚亮，再眯一会儿也行'},
+  {h:[7,9],  g:'早上好', t:'新的一天，吃好早餐'},
+  {h:[9,12], g:'上午好', t:'加油，事情会顺利的'},
+  {h:[12,13],g:'中午好', t:'记得吃午饭，别饿着'},
+  {h:[13,15],g:'中午好', t:'午饭后小憩一会儿吧'},
+  {h:[15,18],g:'下午好', t:'累了就歇一歇，喝口水'},
+  {h:[18,19],g:'傍晚好', t:'天色渐晚，早点回家'},
+  {h:[19,23],g:'晚上好', t:'辛苦一天了，放松一下'},
+  {h:[23,24],g:'晚上好', t:'夜深了，早点休息吧'}
+];
+function greetWord(h){
+  for(const p of GREET_POOLS){if(h>=p.h[0]&&h<p.h[1])return p.g+'，'+p.t;}
+  return '晚上好，夜深了早点休息吧';
+}
+function tickGreet(){
+  const el=document.getElementById('gClock');if(!el)return;
+  const n=new Date(),p=v=>String(v).padStart(2,'0');
+  el.textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds());
+  const d=document.getElementById('gDate');
+  if(d)d.textContent=(n.getMonth()+1)+'月'+n.getDate()+'日 '+['周日','周一','周二','周三','周四','周五','周六'][n.getDay()];
+  const w=document.getElementById('gWord');
+  if(w&&w.textContent!==undefined){const gw=greetWord(n.getHours());if(w.textContent!==gw)w.textContent=gw;}
+}
+tickGreet();setInterval(tickGreet,1000);
+function applySky(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  curTime.g.forEach((c,i)=>g.addColorStop(i/(curTime.g.length-1),c));
+  skyGrad=g;
+  document.getElementById('skyLabel').textContent=curTime.n+' · '+curWeather.n;
+  tickGreet();
+  /* 自动对比色：取页面底部（页脚区）实际背景亮度决定文字色 */
+  const bottomHex=curTime.g[curTime.g.length-1];
+  const r=parseInt(bottomHex.slice(1,3),16),gr=parseInt(bottomHex.slice(3,5),16),b=parseInt(bottomHex.slice(5,7),16);
+  const lum=(0.299*r+0.587*gr+0.114*b)/255;
+  const dim=curWeather.dim||0;
+  const effLum=lum*(1-dim);
+  const topHex=curTime.g[0];
+  const tr=parseInt(topHex.slice(1,3),16),tg=parseInt(topHex.slice(3,5),16),tb=parseInt(topHex.slice(5,7),16);
+  const topLum=(0.299*tr+0.587*tg+0.114*tb)/255;
+  const titleDark=(effLum>.6),titleTopDark=(topLum*(1-dim)>.6);
+  document.body.className=(titleDark&&titleTopDark)?'light-sky':'';
+  document.body.dataset.weather=Object.keys(WEATHERS).find(k=>WEATHERS[k]===curWeather)||'cloudy';
+  document.body.dataset.time=Object.keys(TIMES).find(k=>TIMES[k]===curTime)||'dusk';
+  buildClouds();buildRain();
+}
+function pickScene(){
+  const tk=Object.keys(TIMES);
+  curTime=TIMES[tk[Math.floor(Math.random()*tk.length)]];
+  const wk=Object.keys(WEATHERS);
+  curWeather=WEATHERS[wk[Math.floor(Math.random()*wk.length)]];
+  if(curTime.n==='深夜'&&curWeather.n==='晴天')curWeather=WEATHERS.cloudy;
+  applySky();
+}
+function draw(t){
+  const dim=curWeather.dim;
+  ctx.fillStyle=skyGrad;ctx.fillRect(0,0,W,H);
+  /* 星星 */
+  if(curTime.stars>0){stars.forEach(s=>{const a=curTime.stars*(.3+.5*Math.abs(Math.sin(t/1300*s.s+s.p)));
+    ctx.fillStyle='rgba(244,236,221,'+a+')';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,7);ctx.fill();});}
+  /* 太阳 / 月亮 */
+  const su=curTime.sun,sx=su.x*W,sy=su.y*H,sr=su.r*DPR;
+  const glow=ctx.createRadialGradient(sx,sy,0,sx,sy,sr*(su.moon?2.2:3.4));
+  glow.addColorStop(0,su.c);glow.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.globalAlpha=su.glow*(1-dim*.8);ctx.fillStyle=glow;
+  ctx.beginPath();ctx.arc(sx,sy,sr*(su.moon?2.2:3.4),0,7);ctx.fill();
+  ctx.globalAlpha=1;ctx.fillStyle=su.c;
+  ctx.beginPath();ctx.arc(sx,sy,sr,0,7);ctx.fill();
+  /* 云 */
+  clouds.forEach(c=>{
+    c.x+=c.v*.4;if(c.x>W+c.w)c.x=-c.w;
+    const drift=Math.sin(t/4000+c.p)*6*DPR;
+    ctx.globalAlpha=.5+Math.sin(t/6000+c.seed)*.15;
+    const cg=ctx.createRadialGradient(c.x+c.w/2+drift,c.y,0,c.x+c.w/2+drift,c.y,c.w/1.6);
+    cg.addColorStop(0,'rgba(255,255,255,.75)');cg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=cg;
+    ctx.beginPath();ctx.ellipse(c.x+c.w/2+drift,c.y,c.w/1.6,c.h,0,0,7);ctx.fill();
+    ctx.beginPath();ctx.ellipse(c.x+c.w*.3+drift,c.y+c.h*.3,c.w/2.4,c.h*.8,0,0,7);ctx.fill();
+    ctx.beginPath();ctx.ellipse(c.x+c.w*.7+drift,c.y+c.h*.25,c.w/2.2,c.h*.75,0,0,7);ctx.fill();
+  });
+  ctx.globalAlpha=1;
+  /* 雨（落到地面线，不越过内容区） */
+  const G=H*.98;
+  if(drops.length){
+    ctx.strokeStyle='rgba(200,220,255,1)';ctx.lineCap='round';
+    drops.forEach(d=>{
+      d.y+=d.v;d.x+=d.drift*.3;
+      if(d.y>G){splashes.push({x:d.x,y:G,r:1,a:.5});d.y=-d.l;d.x=Math.random()*W;}
+      if(d.x>W)d.x=0;
+      ctx.globalAlpha=d.a;ctx.lineWidth=d.w;
+      ctx.beginPath();ctx.moveTo(d.x,Math.min(d.y,G));ctx.lineTo(d.x-d.drift*.3,Math.max(d.y-d.l,0)>G?G:d.y-d.l);ctx.stroke();
+    });
+    ctx.globalAlpha=1;
+    /* 地面涟漪 + 溅水珠（抛物线弹起） */
+    ctx.strokeStyle='rgba(225,238,255,1)';
+    splashes=splashes.filter(s=>s.a>0);
+    splashes.forEach(s=>{
+      s.r+=1.5*DPR;s.a-=.03;
+      ctx.globalAlpha=Math.min(.85,s.a);ctx.lineWidth=1*DPR;
+      ctx.beginPath();ctx.ellipse(s.x,G,s.r,s.r*.28,0,0,7);ctx.stroke();
+      if(s.r>4*DPR){ctx.globalAlpha=s.a*.4;
+        ctx.beginPath();ctx.ellipse(s.x,G,s.r*.5,s.r*.14,0,0,7);ctx.stroke();}
+    });
+    /* 溅起的水珠（少量，重力抛物线） */
+    if(drops.length){
+      splashes.forEach(s=>{
+        if(s.r>2*DPR&&s.r<4*DPR&&Math.random()<.18){
+          bounces.push({x:s.x,y:G,vx:(Math.random()*2-1)*1.2*DPR,vy:-(1.6+Math.random()*1.2)*DPR,a:.9});
+        }
+      });
+    }
+    bounces=bounces.filter(b=>b.a>0);
+    bounces.forEach(b=>{
+      b.x+=b.vx;b.y+=b.vy;b.vy+=.12*DPR;b.a-=.04;
+      ctx.globalAlpha=b.a;ctx.fillStyle='rgba(235,245,255,1)';
+      ctx.beginPath();ctx.arc(b.x,b.y,1.1*DPR,0,7);ctx.fill();
+    });
+    ctx.globalAlpha=1;
+  }
+  /* 天色压暗 */
+  if(dim>0){ctx.fillStyle='rgba(10,8,30,'+dim+')';ctx.fillRect(0,0,W,H);}
+  requestAnimationFrame(draw);
+}
+resize();addEventListener('resize',resize);
+pickScene();requestAnimationFrame(draw);
+
+/* ============ 换天气 ============ */
+const TK=Object.keys(TIMES),WK=Object.keys(WEATHERS);
+let tkI=Object.keys(TIMES).findIndex(k=>TIMES[k]===curTime);
+let wkI=Object.keys(WEATHERS).findIndex(k=>WEATHERS[k]===curWeather);
+function setTime(k){curTime=TIMES[k];tkI=TK.indexOf(k);
+  if(curTime.n==='深夜'&&curWeather.n==='晴天'){curWeather=WEATHERS.cloudy;wkI=WK.indexOf('cloudy');}
+  applySky();}
+function setWeather(k){curWeather=WEATHERS[k];wkI=WK.indexOf(k);applySky();}
+
+/* ============ 轮盘选择器 ============ */
+const wheelMask=document.getElementById('wheelMask'),wheelDisc=document.getElementById('wheelDisc'),
+      wheelCenter=document.getElementById('wheelCenter');
+let wheelItems=[],wheelCB=null,rot=0,dragging=false,dragMoved=false,startA=0,startR=0,downT=0;
+function openWheel(type){
+  if(type==='weather'){wheelItems=WK.map(k=>WEATHERS[k].n);wheelCB=k=>setWeather(k);
+    buildDisc(wkI);wheelCenter.textContent=WEATHERS[WK[wkI]].n;
+    document.getElementById('wheelMask').dataset.sel=wkI;}
+  else{wheelItems=TK.map(k=>TIMES[k].n);wheelCB=k=>setTime(k);
+    buildDisc(tkI);wheelCenter.textContent=TIMES[TK[tkI]].n;
+    document.getElementById('wheelMask').dataset.sel=tkI;}
+  wheelMask.dataset.type=type;
+  dragMoved=false;dragging=false;
+  wheelMask.classList.add('show');
+}
+function buildDisc(sel){
+  const n=wheelItems.length,step=360/n;
+  wheelDisc.innerHTML='';
+  wheelItems.forEach((t,i)=>{
+    const el=document.createElement('div');el.className='wheel-item'+(i===sel?' on':'');
+    el.textContent=t;
+    el.style.transform='rotate('+(i*step)+'deg) translateY(-40%) translateY(-86px) rotate(-'+(i*step)+'deg)';
+    el.dataset.i=i;
+    wheelDisc.appendChild(el);
+  });
+  wheelDisc.style.transform='rotate(0deg)';
+}
+function closeWheel(){wheelMask.classList.remove('show');dragging=false;}
+wheelMask.addEventListener('click',e=>{
+  if(e.target===wheelMask){closeWheel();return;}
+  const it=e.target.closest('.wheel-item');
+  if(it&&!dragMoved){wheelCB(Object.keys(wheelMask.dataset.type==='weather'?WEATHERS:TIMES)[+it.dataset.i]);closeWheel();}
+});
+/* 长按拖动 + 盘上拖动 */
+function angOf(e){const r=wheelDisc.getBoundingClientRect();
+  return Math.atan2(e.clientY-(r.top+r.height/2),e.clientX-(r.left+r.width/2))*180/Math.PI;}
+wheelMask.addEventListener('pointerdown',e=>{
+  if(e.target===wheelMask)return;
+  if(!wheelMask.classList.contains('show'))return;
+  downT=Date.now();dragMoved=false;startA=angOf(e);startR=rot;dragging=true;
+});
+addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  const a=angOf(e);let d=a-startA;
+  if(Math.abs(d)>360)return;
+  if(Math.abs(d)>4)dragMoved=true;
+  rot=startR+d;
+  wheelDisc.style.transform='rotate('+rot+'deg)';
+});
+addEventListener('pointerup',e=>{
+  if(!dragging)return;dragging=false;
+  if(dragMoved){
+    const step=360/wheelItems.length;
+    const sel=((Math.round(-rot/step)%wheelItems.length)+wheelItems.length)%wheelItems.length;
+    rot=-sel*step;wheelDisc.style.transition='transform .3s';wheelDisc.style.transform='rotate('+rot+'deg)';
+    setTimeout(()=>wheelDisc.style.transition='',320);
+    if(wheelMask.dataset.type==='weather'){wkI=sel;wheelCB(WK[sel]);}
+    else{tkI=sel;wheelCB(TK[sel]);}
+    closeWheel();
+  }
+});
+/* 长按召唤：按住600ms弹出并可直接拖 */
+let lpTimer=null;
+function bindHold(btn,type){
+  btn.addEventListener('contextmenu',e=>e.preventDefault());
+  btn.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    lpTimer=setTimeout(()=>{openWheel(type);/* 预备拖动 */
+      const once=ev=>{startA=angOf(ev);startR=0;dragging=true;dragMoved=false;
+        removeEventListener('pointermove',mv);removeEventListener('pointerup',up);};
+      const mv=ev=>{if(!dragging)return;const a=angOf(ev);const d=a-startA;
+        if(Math.abs(d)>4)dragMoved=true;rot=startR+d;wheelDisc.style.transform='rotate('+rot+'deg)';};
+      const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);
+        if(dragging&&dragMoved){dragging=false;
+          const step=360/wheelItems.length;
+          const sel=((Math.round(-rot/step)%wheelItems.length)+wheelItems.length)%wheelItems.length;
+          rot=-sel*step;
+          if(wheelMask.dataset.type==='weather'){wkI=sel;wheelCB(WK[sel]);}else{tkI=sel;wheelCB(TK[sel]);}
+          closeWheel();}else dragging=false;};
+      setTimeout(()=>{addEventListener('pointermove',mv);addEventListener('pointerup',up);},30);
+    },600);
+  });
+  btn.addEventListener('pointerup',()=>{clearTimeout(lpTimer);});
+  btn.addEventListener('pointerleave',()=>{clearTimeout(lpTimer);});
+  btn.addEventListener('click',()=>{if(!wheelMask.classList.contains('show'))openWheel(type);});
+}
+bindHold(document.getElementById('wWeather'),'weather');
+bindHold(document.getElementById('wTime'),'time');
+/* 按住时若已弹出轮盘，阻止 click 重复打开 */
+/* 按钮文字实时更新 */
+/* 按钮文字实时更新 */
+new MutationObserver(()=>{}).observe(document.getElementById('skyLabel'),{childList:true});
+const _applySky=applySky;
+applySky=function(){
+  _applySky();
+  document.getElementById('wWeatherLabel').textContent=WEATHERS[Object.keys(WEATHERS).find(k=>WEATHERS[k]===curWeather)].n;
+  document.getElementById('wTimeLabel').textContent=TIMES[Object.keys(TIMES).find(k=>TIMES[k]===curTime)].n;
+};
+
+/* ============ 雨声（WebAudio 现场合成，无音频文件，按雨量分级调音色） ============ */
+let audioCtx=null,rainNodes=null,rainOn=false;
+function startRain(){
+  if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  stopRainNodes();
+  const sr=audioCtx.sampleRate;
+  /* 细雨：生成带"颗粒感"的脉冲式沙沙声，而不是连续白噪 */
+  const len=sr*2,buf=audioCtx.createBuffer(1,len,sr),d=buf.getChannelData(0);
+  const wk=Object.keys(WEATHERS).find(k=>WEATHERS[k]===curWeather)||'rain';
+  const isLight=wk==='drizzle';
+  for(let i=0;i<len;i++){
+    if(isLight){
+      /* 小雨：稀疏的细小水滴颗粒 + 轻柔底噪 */
+      d[i]=(Math.random()*2-1)*.3;
+      if(Math.random()<.015)d[i]+=(Math.random()*2-1)*.5; /* 偶发小水滴 */
+    }else{
+      d[i]=Math.random()*2-1;
+    }
+  }
+  const src=audioCtx.createBufferSource();src.buffer=buf;src.loop=true;
+  const hp=audioCtx.createBiquadFilter();hp.type='highpass';
+  const lp=audioCtx.createBiquadFilter();lp.type='lowpass';
+  const gain=audioCtx.createGain();
+  let vol=0;
+  if(wk==='drizzle'){        /* 小雨：高频柔沙沙，音量很轻 */
+    hp.frequency.value=1800; lp.frequency.value=6500; vol=.045;
+  }else if(wk==='rain'){     /* 中雨：中频清晰哗哗 */
+    hp.frequency.value=600;  lp.frequency.value=3000; vol=.10;
+  }else if(wk==='storm'){    /* 大雨：低频轰鸣+宽频哗哗 */
+    hp.frequency.value=120;  lp.frequency.value=1800; vol=.17;
+  }
+  gain.gain.value=vol;
+  src.connect(hp);hp.connect(lp);lp.connect(gain);gain.connect(audioCtx.destination);
+  /* 小雨加缓慢起伏，像一阵一阵的细雨 */
+  let lfo=null,lfoGain=null;
+  if(isLight){
+    lfo=audioCtx.createOscillator();lfo.frequency.value=.13;
+    lfoGain=audioCtx.createGain();lfoGain.gain.value=vol*.5;
+    lfo.connect(lfoGain);lfoGain.connect(gain.gain);lfo.start();
+  }
+  src.start();
+  rainNodes={src,gain,lfo,lfoGain};
+  rainOn=true;document.getElementById('wSound').textContent='🔊 雨声';
+}
+function stopRainNodes(){
+  if(!rainNodes)return;
+  try{rainNodes.src.stop()}catch(e){}
+  if(rainNodes.lfo){try{rainNodes.lfo.stop()}catch(e){}}
+  rainNodes=null;
+}
+function stopRain(){
+  stopRainNodes();
+  rainOn=false;document.getElementById('wSound').textContent='🔇 静音';
+}
+document.getElementById('wSound').onclick=()=>{
+  if(rainOn)stopRain();else{
+    if(curWeather.rain===0){curWeather=WEATHERS.rain;wkI=WK.indexOf('rain');applySky();}
+    startRain();
+  }
+};
+/* 换天气时若开着雨声，跟随新天气调音量 */
+document.getElementById('wToggle').addEventListener('click',()=>{
+  if(rainOn){stopRain();if(curWeather.rain>0)startRain();}
+});
+</script>
+</body>
+</html>
