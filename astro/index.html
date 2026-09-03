@@ -17,10 +17,12 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .p-title{font-size:clamp(1.7rem,6vw,2.2rem);letter-spacing:.24em;text-indent:.24em;font-weight:600;
   color:var(--gold);text-shadow:0 0 24px rgba(240,207,130,.35);margin-top:6px}
 .p-sub{font-size:.78rem;color:#b5abd8;letter-spacing:.14em;margin-top:8px}
-.btn-back{position:fixed;top:calc(14px + env(safe-area-inset-top));left:14px;z-index:9;
-  background:rgba(255,255,255,.07);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.14);color:#d8d0ef;border-radius:999px;padding:7px 16px;
-  font-size:.78rem;letter-spacing:.1em;cursor:pointer;font-family:inherit;transition:.25s}
+.btn-back{position:fixed;top:calc(14px + env(safe-area-inset-top));right:14px;z-index:9;
+  background:linear-gradient(155deg,rgba(255,255,255,.14),rgba(255,255,255,.04));
+  backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+  border:1px solid rgba(255,255,255,.22);color:#f2ede0;border-radius:999px;padding:9px 22px;
+  font-size:.8rem;letter-spacing:.12em;cursor:pointer;font-family:inherit;transition:.25s;
+  box-shadow:0 6px 20px rgba(4,2,18,.35),inset 0 1px 0 rgba(255,255,255,.18)}
 .btn-back:active{transform:scale(.94)}
 /* ---------- 小卡片网格 ---------- */
 .a-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:min(480px,94vw)}
@@ -69,7 +71,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 </head>
 <body>
 <canvas id="stars"></canvas>
-<button class="btn-back" id="btnBack">← 返回</button>
+<button class="btn-back" id="btnBack">⌂ 首页</button>
 
 <div class="portal">
   <header>
