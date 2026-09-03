@@ -11,10 +11,8 @@ body{font-family:"Songti SC","Noto Serif SC",serif;color:var(--ivory);background
 canvas#stars{position:fixed;inset:0;z-index:0}
 /* ---------- 布局：与首页 portal 一致 ---------- */
 .portal{position:relative;z-index:2;min-height:100svh;display:flex;flex-direction:column;
-  align-items:center;text-align:center;
+  justify-content:space-evenly;align-items:center;text-align:center;
   padding:clamp(56px,10vh,84px) 20px 22px}
-/* 观星台：标题与卡片之间预留的空白区，星盘嵌在这里完整可见 */
-.chart-stage{flex:1 1 auto;min-height:36vh;width:100%;position:relative}
 .kicker{font-size:.68rem;letter-spacing:.42em;text-indent:.42em;color:var(--gold-dim)}
 .p-title{font-size:clamp(1.7rem,6vw,2.2rem);letter-spacing:.24em;text-indent:.24em;font-weight:600;
   color:var(--gold);text-shadow:0 0 24px rgba(240,207,130,.35);margin-top:6px}
@@ -81,8 +79,6 @@ canvas#stars{position:fixed;inset:0;z-index:0}
     <p class="p-sub" id="chartName">✦ … ✦</p>
   </header>
 
-  <div class="chart-stage" id="chartStage"></div>
-
   <div class="a-grid" id="aGrid"></div>
 
   <div class="soon-bar">
@@ -129,16 +125,14 @@ let chart=null; /* {cx,cy,R,nodes,links,name,rot,rotV,starsBg} */
 function buildChart(){
   const DPR=Math.min(devicePixelRatio||1,2);
   cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;
-  /* 星盘嵌在「观星台」空区：取空区上下边缘正中，半径取能完整落进空区的高度一半（并留边距） */
-  const st=document.getElementById('chartStage').getBoundingClientRect();
-  const topY=st.top*DPR, botY=st.bottom*DPR;
-  const cx0=cv.width/2, cy0=(topY+botY)/2;
-  const R=Math.max(60, Math.min( (botY-topY)/2*0.96, cv.width/2*0.92, Math.min(cv.width,cv.height)*.42 ));
+  /* 星盘固定屏幕正中，半径取约 42% 屏宽，铺满大半屏；卡片透明不会遮挡 */
+  const R=Math.min(cv.width,cv.height)*.42;
+  const cx0=cv.width/2, cy0=cv.height/2;
   const n=7+Math.floor(Math.random()*4);
   /* 星座点生成在半径 R 的圆盘内 */
   const nodes=[],links=[];
   for(let i=0;i<n;i++){
-    const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*R*.85;
+    const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*R*.88;
     nodes.push({x:Math.cos(a)*r,y:Math.sin(a)*r,r:(2.4+Math.random()*2)*DPR,p:Math.random()*7});
   }
   for(let i=1;i<n;i++)links.push([i-1,i]);
