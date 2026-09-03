@@ -75,7 +75,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
   <header>
     <div class="kicker" id="aDate">ASTROLOGY</div>
     <h1 class="p-title">观 星</h1>
-    <p class="p-sub">点一个星座，看看今天</p>
+    <p class="p-sub" id="chartName">✦ … ✦</p>
   </header>
 
   <div class="a-grid" id="aGrid"></div>
@@ -134,7 +134,7 @@ function buildChart(){
   }
   for(let i=1;i<n;i++)links.push([i-1,i]);
   for(let i=2;i<n;i++)if(Math.random()<.6)links.push([Math.floor(Math.random()*(i-1)),i]);
-  chart={cx:cv.width/2,cy:cv.height*.40,R,nodes,links,
+  chart={cx:cv.width/2,cy:cv.height*.5,R,nodes,links,
     name:CHART_NAMES[Math.floor(Math.random()*CHART_NAMES.length)],
     rot:0,rotV:.00025+Math.random()*.0002, /* 缓慢旋转，每副速度略不同 */
     starsBg:Array.from({length:130},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,
@@ -181,16 +181,12 @@ function tick(t){
     cx.beginPath();cx.arc(nd.x,nd.y,nd.r*3.4,0,7);cx.fill();
   }
   cx.restore();
-  /* 星盘名称（不随盘旋转，标注在盘下沿） */
-  cx.globalAlpha=.55;
-  cx.fillStyle='#d8c896';
-  cx.font=(11*Math.min(devicePixelRatio||1,2))+'px "Songti SC","Noto Serif SC",serif';
-  cx.textAlign='center';
-  cx.fillText('— '+chart.name+' —',chart.cx,chart.cy+chart.R+26*Math.min(devicePixelRatio||1,2));
   cx.globalAlpha=1;
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
+/* 星盘名称写在页面上方（同首页天气栏），不随盘旋转 */
+document.getElementById('chartName').textContent='✦ '+chart.name+' ✦';
 
 /* ================= 日期 ================= */
 const d=new Date(),wk='日一二三四五六'.charAt(d.getDay());
