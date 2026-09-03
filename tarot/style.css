@@ -251,6 +251,9 @@ textarea#question:focus{border-color:var(--gold);background:rgba(255,255,255,.06
 .fu-box .fu-q{color:#cfc0a0;font-size:.86rem;margin-bottom:8px;line-height:1.6}
 .fu-box .fu-q b{color:var(--gold)}
 .fu-box .fu-a{color:#e6e0f4;line-height:1.85;font-size:.88rem}
+/* 分享按钮：独占一行，与追问区/其他按钮拉开距离 */
+.share-row{margin-top:22px;margin-bottom:14px;text-align:center}
+.share-row .btn-share{padding:12px 34px;font-size:.88rem;letter-spacing:.1em}
 
 /* ---------- 解读区 ---------- */
 .reading{margin-top:clamp(36px,6vh,52px);text-align:left;display:none}

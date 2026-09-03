@@ -576,6 +576,8 @@ let statusTimer=null;
 async function askTarot(){
   readingBusy=true;$('btnRead').disabled=true;
   $('followup').style.display='none';
+  $('fuBoxes').innerHTML='';/* 清空上一局的追问框 */
+  const sb0=document.getElementById('btnShareAll');if(sb0)sb0.style.display='none';
   $('readingBox').style.display='block';
   $('readingText').innerHTML='';
   try{$('readingBox').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}
@@ -722,22 +724,18 @@ function drawTarotCard(){
   g.fillText('‥ 有点困 · AI 塔罗即兴解读 ‥',W/2,H-70);
   return c;
 }
-document.getElementById('btnShareAll').onclick=async function(){
+$('btnShareAll').onclick=async function(){
   const txt=buildShareText();if(!txt)return;
-  const shot=drawTarotCard().toDataURL('image/png');
-  const im=new Image();
-  im.onload=async()=>{
-    try{
-      if(navigator.canShare&&navigator.canShare({files:[new File([await (await fetch(shot)).blob()],'tarot.png',{type:'image/png'})]})){
-        const blob=await (await fetch(shot)).blob();
-        await navigator.share({files:[new File([blob],'tarot.png',{type:'image/png'})],title:'月下塔罗',text:txt.slice(0,120)});
-        return;
-      }
-    }catch(e){}
-    document.getElementById('shotImg').src=shot;
-    document.getElementById('shotModal').classList.add('show');
-  };
-  im.src=shot;
+  const cv=drawTarotCard();
+  const shot=await new Promise(r=>cv.toBlob(r,'image/png'));
+  try{
+    if(navigator.canShare&&shot&&navigator.canShare({files:[new File([shot],'tarot.png',{type:'image/png'})]})){
+      await navigator.share({files:[new File([shot],'tarot.png',{type:'image/png'})],title:'月下塔罗',text:txt.slice(0,120)});
+      return;
+    }
+  }catch(e){}
+  document.getElementById('shotImg').src=URL.createObjectURL(shot);
+  document.getElementById('shotModal').classList.add('show');
 };
 document.getElementById('shotClose').onclick=()=>document.getElementById('shotModal').classList.remove('show');
 
