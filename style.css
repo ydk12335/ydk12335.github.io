@@ -22,13 +22,14 @@ body.light-sky .p-foot{color:#5d739a}
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
   box-shadow:0 8px 26px rgba(4,2,18,.35), inset 0 1px 0 rgba(255,255,255,.10);
   font-size:.78rem;letter-spacing:.18em;color:#b7a8d9}
-.p-greet .g-date{font-size:.72rem;color:#9a8cc0}
+.p-greet .g-date{font-size:.74rem;color:#d8c9a8;font-weight:500;text-shadow:0 0 10px rgba(240,207,130,.25)}
+.p-greet .g-sep{color:rgba(240,207,130,.45)}
 .p-greet .g-clock{font-variant-numeric:tabular-nums;font-size:.95rem;color:var(--gold);
   text-shadow:0 0 14px rgba(240,207,130,.35)}
 .p-greet .g-word{font-size:.8rem;color:#e8b48f}
 body.light-sky .p-greet{background:linear-gradient(160deg,rgba(255,255,255,.55),rgba(255,255,255,.3));
   border-color:rgba(150,110,40,.3);color:#5c5140;box-shadow:0 8px 22px rgba(120,90,30,.18)}
-body.light-sky .p-greet .g-date{color:#7a6a45}
+body.light-sky .p-greet .g-date{color:#5a4a28;font-weight:600}
 body.light-sky .p-greet .g-clock{color:#8a6a2f;text-shadow:none}
 body.light-sky .p-greet .g-word{color:#a06a2a}
 .p-sub{margin-top:14px;font-size:.86rem;letter-spacing:.28em;color:#e8b48f}
