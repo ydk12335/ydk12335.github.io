@@ -35,8 +35,12 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .a-cell .h-sym{font-size:1.35rem;line-height:1;color:#f2d488;text-shadow:0 0 10px rgba(240,207,130,.45)}
 .a-cell .h-name{font-size:.7rem;letter-spacing:.05em}
 .a-cell .h-range{font-size:.52rem;color:#8f86b8}
-.a-cell.soon{cursor:default;opacity:.55}
-.a-cell.soon .h-sym{color:#9a90c0;text-shadow:none}
+/* ---------- 敬请期待胶囊按钮 ---------- */
+.soon-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:min(560px,94vw)}
+.soon-pill{flex:1;min-width:150px;cursor:default;text-align:center;
+  padding:11px 20px;border-radius:999px;font-size:.8rem;letter-spacing:.12em;color:#cfc6ea;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:.75}
 /* ---------- 运势结果 ---------- */
 .a-result{width:min(560px,94vw);text-align:left;display:none}
 .a-now{display:flex;align-items:center;justify-content:center;gap:10px;font-size:1.05rem;letter-spacing:.12em;color:#e9e3ff;margin-bottom:10px}
@@ -75,6 +79,13 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 
   <div class="a-grid" id="aGrid"></div>
 
+  <div class="soon-bar">
+    <span class="soon-pill">☽ 星座合盘 · 敬请期待</span>
+    <span class="soon-pill">☾ 星座配对 · 敬请期待</span>
+    <span class="soon-pill">✧ 星座日历 · 敬请期待</span>
+    <span class="soon-pill">∞ 星空信箱 · 敬请期待</span>
+  </div>
+
   <section class="a-result" id="aResult">
     <div class="a-now" id="aNow"></div>
     <div class="a-card" id="aText"></div>
@@ -112,14 +123,14 @@ function buildConstellation(){
   const DPR=Math.min(devicePixelRatio||1,2);
   cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;
   /* 随机星座：5~7 个主星，按链路+分支连线 */
-  const n=5+Math.floor(Math.random()*3);
+  const n=7+Math.floor(Math.random()*4);
   nodes=[];links=[];
   const cx0=cv.width*(.25+Math.random()*.5),cy0=cv.height*(.2+Math.random()*.35);
   let px=cx0,py=cy0;
   for(let i=0;i<n;i++){
-    nodes.push({x:px,y:py,r:(1.6+Math.random()*1.6)*DPR,p:Math.random()*7});
+    nodes.push({x:px,y:py,r:(2.4+Math.random()*2)*DPR,p:Math.random()*7});
     if(i>0)links.push([i-1,i]);
-    if(i>1&&Math.random()<.5){const j=Math.floor(Math.random()*(i-1));links.push([j,i]);}
+    if(i>1&&Math.random()<.65){const j=Math.floor(Math.random()*(i-1));links.push([j,i]);}
     px+=(Math.random()-.5)*cv.width*.22;
     py+=(Math.random()-.45)*cv.height*.14;
     px=Math.max(cv.width*.08,Math.min(cv.width*.92,px));
@@ -137,7 +148,7 @@ function tick(t){
     cx.fillStyle='#fff';cx.beginPath();cx.arc(s.x,s.y,s.r,0,7);cx.fill();
   }
   const breathe=.5+.25*Math.sin(t*.0006);
-  cx.globalAlpha=.35*breathe;cx.strokeStyle='rgba(240,207,140,.8)';cx.lineWidth=1;
+  cx.globalAlpha=.65*breathe+.15;cx.strokeStyle='rgba(240,207,140,.9)';cx.lineWidth=1.4;
   for(const [a,b] of links){
     cx.beginPath();cx.moveTo(nodes[a].x,nodes[a].y);cx.lineTo(nodes[b].x,nodes[b].y);cx.stroke();
   }
@@ -174,11 +185,7 @@ SIGNS.forEach((s,i)=>{
   b.innerHTML='<span class="h-sym">'+s[1]+'</span><span class="h-name">'+s[0]+'</span><span class="h-range">'+s[2]+'</span>';
   b.onclick=()=>pick(i);grid.appendChild(b);
 });
-[["☽"],["☾"],["✧"],["∞"]].forEach(([sym])=>{
-  const b=document.createElement('div');b.className='a-cell soon';
-  b.innerHTML='<span class="h-sym">'+sym+'</span><span class="h-name">敬请期待</span><span class="h-range">酝酿中</span>';
-  grid.appendChild(b);
-});
+/* 敬请期待已改为 HTML 胶囊按钮 */
 
 /* ================= AI 推演 ================= */
 const HORO_SYS='你是一位资深华人占星师「月下观星师」，擅长基于古典占星推演精准而有温度的「今日星座运势」。请严格结合用户所选星座的【元素】【守护星】【核心性格特质】，以及当前日期的季节与节气能量来推演，让运势真正贴合该星座，而不是任何星座都能套用的万能文案。\n'+
