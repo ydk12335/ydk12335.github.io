@@ -575,6 +575,7 @@ let statusTimer=null;
 
 async function askTarot(){
   readingBusy=true;$('btnRead').disabled=true;
+  $('followup').style.display='none';
   $('readingBox').style.display='block';
   $('readingText').innerHTML='';
   try{$('readingBox').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}
@@ -660,8 +661,73 @@ async function askTarot(){
   $('readingText').innerHTML=miniMD(full);
   addToHistory({time:new Date().toLocaleString('zh-CN',{hour12:false}),q:$('question').value.trim(),
     spread:curSpread.name,cards:drawn.map(d=>(d.rev?'逆位「':'正位「')+d.card.zh+'」').join(' '),text:full});
+  /* 记录本次占卜上下文供追问使用 */
+  fuCtx='问题：'+($('question').value.trim()||'（未提供具体问题，围绕当下整体状态）')+'；牌阵：'+curSpread.name+
+    '（'+curSpread.slots.join('/')+'）；抽牌：'+drawn.map((dd,i)=>curSpread.slots[i]+'「'+dd.card.zh+'」'+(dd.rev?'逆位':'正位')).join('，');
   readingBusy=false;$('btnRead').disabled=false;
+  /* 解读完成：开启追问（本次占卜最多 3 次） */
+  fuLeft=3;fuHistory=[];
+  $('followup').style.display='block';
+  $('fuLeft').textContent=fuLeft;
+  $('fuNote').textContent='';
+  $('fuInput').value='';
 }
+
+/* ================= 追问（基于本次牌面，最多 3 次，跑题拒答） ================= */
+let fuLeft=0,fuHistory=[];
+const FU_SYS_PREFIX='你是「月下塔罗师」。求问者刚完成一次塔罗占卜，现在想就这次牌面继续追问。'+
+  '本次占卜信息如下：\n'+/* 由 askTarot 时填入 */
+  '';
+let fuCtx='';/* 本次占卜的完整上下文（问题+牌阵+牌+解读） */
+async function sendFollowup(){
+  if(readingBusy)return;
+  const q=$('fuInput').value.trim();
+  if(!q){$('fuNote').textContent='✦ 想好了再问月亮';return;}
+  if(fuLeft<=0)return;
+  readingBusy=true;
+  const note=$('fuNote'),btn=$('fuSend');
+  btn.disabled=true;
+  note.innerHTML='<span style="color:#a79ade">🌙 塔罗师正凝视牌面，思考你的追问……</span>';
+  const lastAns=fuHistory.length?fuHistory[fuHistory.length-1].a:'';
+  try{
+    const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
+      body:JSON.stringify({model:MODEL,temperature:.8,max_tokens:1200,
+        messages:[
+          {role:'system',content:'你是「月下塔罗师」。求问者刚完成一次塔罗占卜并已收到完整解读，现在可以就**这次牌面**继续追问，最多 3 次。\n'+
+            '【本次占卜】'+fuCtx+'\n'+
+            '【规则】1. 回答必须紧扣本次抽到的牌与已给出的解读，可以展开某张牌、某个位置、某段结论，也可以结合牌面给出更细的建议；\n'+
+            '2. 如果追问与本次占卜的问题和牌面明显无关（例如问别的占卜、闲聊、要求重新占卜、问与牌面无关的事实信息等），你必须婉拒：以塔罗师的口吻温和说明牌面能量只覆盖这一次占问，建议重新洗牌开一局，输出不超过 3 句话；\n'+
+            '3. 语气延续月下塔罗师风格，中文，100~300 字，不用 Markdown 标题，可用少量**加粗**。'},
+          {role:'user',content:'（占卜解读已完成，以下是解读全文）\n'+lastAns+'\n\n（求问者的追问）'+q}
+        ]})});
+    const j=await res.json();
+    if(!j.choices)throw new Error((j.error&&j.error.message)||'HTTP '+res.status);
+    const ans=(j.choices[0].message.content||'').trim();
+    fuHistory.push({q,a:ans});
+    fuLeft--;
+    $('fuLeft').textContent=fuLeft;
+    /* 追问与回答直接追加进解读面板，与解读融为一体 */
+    const div=document.createElement('div');
+    div.className='fu-qa';
+    div.innerHTML='<p style="margin-top:14px;color:#cfc0a0;font-size:.86rem"><b>✧ 问：</b>'+escapeHtml(q)+'</p>'+
+      '<div style="border-left:2px solid rgba(240,207,130,.3);padding-left:12px;margin:6px 0 2px;color:#e6e0f4">'+
+      miniMD(ans)+'</div>';
+    $('readingText').appendChild(div);
+    note.textContent='';
+    $('fuInput').value='';
+    try{$('readingText').lastElementChild.scrollIntoView({behavior:'smooth',block:'end'});}catch(e){}
+    if(fuLeft<=0){
+      note.textContent='✦ 月语已尽 · 一事一占，想再问就重新开一局吧';
+      $('fuInput').disabled=true;$('fuSend').disabled=true;
+    }
+  }catch(e){
+    note.innerHTML='<span style="color:#ff9d9d">✕ 信号中断了，再试一次</span>';
+  }
+  btn.disabled=false;readingBusy=false;
+}
+$('fuSend').onclick=sendFollowup;
+$('fuInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendFollowup();});
 let stickyBottom=true;
 setInterval(()=>{
   const rb=$('readingBox');if(rb.style.display==='none')return;

@@ -232,6 +232,19 @@ textarea#question:focus{border-color:var(--gold);background:rgba(255,255,255,.06
 .draw-actions{margin-top:22px;opacity:0;transition:.45s;pointer-events:none}
 .draw-actions.on{opacity:1;pointer-events:auto}
 
+/* ---------- 追问区（解读完成后，基于牌面最多 3 次） ---------- */
+.followup{margin-top:16px;background:rgba(255,255,255,.045);border:1px solid rgba(240,207,130,.2);
+  border-radius:14px;padding:14px}
+.fu-head{font-size:.8rem;color:#cfc0a0;letter-spacing:.06em;margin-bottom:10px;text-align:center}
+.fu-head b{color:var(--gold)}
+.fu-row{display:flex;gap:8px}
+.fu-row input{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(240,207,130,.25);
+  border-radius:10px;padding:10px 12px;color:#f2ede0;font-family:inherit;font-size:.86rem;outline:none;min-width:0}
+.fu-row input::placeholder{color:#7d74a8}
+.fu-row input:focus{border-color:rgba(240,207,130,.5)}
+.fu-row .btn-glass{padding:10px 18px;flex:none}
+.fu-note{font-size:.74rem;color:#a79ade;margin-top:8px;text-align:center;min-height:1em}
+
 /* ---------- 解读区 ---------- */
 .reading{margin-top:clamp(36px,6vh,52px);text-align:left;display:none}
 .reading-head{position:relative;text-align:center;margin-bottom:20px}

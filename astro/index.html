@@ -65,6 +65,15 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 @keyframes orbSpin{to{transform:rotate(360deg)}}
 @keyframes orbGlow{0%,100%{opacity:.4}50%{opacity:1;text-shadow:0 0 10px rgba(240,207,130,.8)}}
 .p-foot{font-size:.72rem;letter-spacing:.3em;text-indent:.3em;color:#6f66a0}
+/* ---------- 分享按钮 ---------- */
+.a-share{display:flex;gap:10px;justify-content:center;margin-top:12px}
+.share-btn{flex:0 1 auto;min-width:0;opacity:.9;cursor:pointer}
+.share-btn:active{transform:scale(.95)}
+#shotModal{position:fixed;inset:0;z-index:50;background:rgba(3,1,14,.86);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px}
+#shotModal.show{display:flex}
+#shotImg{max-width:92vw;max-height:70vh;border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.6)}
+.shot-tip{font-size:.75rem;color:#b5abd8;letter-spacing:.1em}
 @media(max-width:400px){.a-grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
@@ -92,9 +101,19 @@ canvas#stars{position:fixed;inset:0;z-index:0}
     <div class="a-now" id="aNow"></div>
     <div class="a-card" id="aText"></div>
     <div class="a-foot">运势由 AI 占星师即兴推演 · 仅供娱乐参考</div>
+    <div class="a-share" id="aShare" style="display:none">
+      <button class="soon-pill share-btn" id="btnShot">📸 生成分享图</button>
+      <button class="soon-pill share-btn" id="btnCopy">📋 文字分享</button>
+    </div>
   </section>
 
   <footer class="p-foot">‥ 有点困 ‥</footer>
+</div>
+
+<div id="shotModal">
+  <img id="shotImg" alt="分享图">
+  <div class="shot-tip">长按图片保存 / 分享</div>
+  <button class="soon-pill share-btn" id="shotClose" style="padding:10px 30px">关 闭</button>
 </div>
 
 <script>
@@ -239,12 +258,87 @@ async function pick(i){
     if(!res.ok)throw new Error('HTTP '+res.status);
     const j=await res.json();
     if(my!==horoSeq)return;
-    $('aText').innerHTML=miniMD((j.choices[0].message.content||'').trim());
+    const raw=(j.choices[0].message.content||'').trim();
+    $('aText').innerHTML=miniMD(raw);
+    /* 记录本次运势供分享 */
+    lastHoro={sign:name,sym,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk,text:raw};
+    $('aShare').style.display='flex';
   }catch(e){
     if(my!==horoSeq)return;
+    $('aShare').style.display='none';
     $('aText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再点一次星座试试</span>';
   }
 }
+let lastHoro=null;
+
+/* ================= 分享：文字 + 分享图 ================= */
+$('btnCopy').onclick=async()=>{
+  if(!lastHoro)return;
+  const txt='✦ 月下观星 ✦\n'+lastHoro.sign+' '+lastHoro.date+'\n\n'+lastHoro.text.replace(/^#+\s*/gm,'').replace(/\*\*/g,'')+'\n\n—— 来自「有点困」';
+  try{
+    if(navigator.share){await navigator.share({title:'今日观星 · '+lastHoro.sign,text:txt});return;}
+    await navigator.clipboard.writeText(txt);
+    const b=$('btnCopy');b.textContent='✓ 已复制，去粘贴吧';
+    setTimeout(()=>b.textContent='📋 文字分享',2000);
+  }catch(e){}
+};
+/* 分享图：canvas 手绘夜色卡片（星星点缀 + 星座 + 摘要文字） */
+function drawShareCard(){
+  const W=720,H=1080,c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d');
+  /* 夜空渐变 */
+  const bg=g.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#0a0620');bg.addColorStop(.55,'#0d0a26');bg.addColorStop(1,'#1a0f2e');
+  g.fillStyle=bg;g.fillRect(0,0,W,H);
+  /* 散星 */
+  for(let i=0;i<130;i++){
+    g.globalAlpha=.25+Math.random()*.55;g.fillStyle='#fff';
+    g.beginPath();g.arc(Math.random()*W,Math.random()*H,Math.random()*1.4+.3,0,7);g.fill();
+  }
+  g.globalAlpha=1;
+  /* 星盘圆环 */
+  g.strokeStyle='rgba(240,207,130,.35)';g.lineWidth=1.5;
+  g.beginPath();g.arc(W/2,208,128,0,7);g.stroke();
+  g.strokeStyle='rgba(240,207,130,.18)';
+  g.beginPath();g.arc(W/2,208,104,0,7);g.stroke();
+  g.fillStyle='#fdf6e0';g.beginPath();g.arc(W/2+52,208-38,4,0,7);g.fill();
+  g.beginPath();g.arc(W/2-64,208+30,3.2,0,7);g.fill();
+  g.beginPath();g.arc(W/2+20,208+58,3,0,7);g.fill();
+  g.strokeStyle='rgba(240,207,150,.55)';g.lineWidth=1.2;
+  g.beginPath();g.moveTo(W/2+52,208-38);g.lineTo(W/2-64,208+30);g.lineTo(W/2+20,208+58);g.stroke();
+  /* 标题 */
+  g.textAlign='center';
+  g.fillStyle='#a9956a';g.font='22px serif';g.fillText('· 月 下 观 星 ·',W/2,78);
+  g.fillStyle='#f0cf82';g.font='600 44px "Songti SC","Noto Serif SC",serif';
+  g.fillText(lastHoro.sym+' '+lastHoro.sign,W/2,392);
+  g.fillStyle='#8f86b8';g.font='22px serif';g.fillText(lastHoro.date,W/2,432);
+  /* 正文摘要（取各节前两行，最多 9 行） */
+  const lines=lastHoro.text.replace(/^#+.*$/gm,'').replace(/\*\*/g,'').split('\n')
+    .map(s=>s.trim()).filter(Boolean).slice(0,9);
+  g.font='24px "Songti SC","Noto Serif SC",serif';g.fillStyle='#e6e0f4';
+  let y=496;
+  for(const ln of lines){
+    let s=ln;if(s.length>20)s=s.slice(0,19)+'…';
+    g.fillText(s,W/2,y);y+=40;
+  }
+  /* 星语 */
+  const star=lastHoro.text.match(/今日星语[：:]\s*(.+)/);
+  if(star){
+    g.fillStyle='#f2d488';g.font='italic 26px serif';
+    let s=star[1].trim();if(s.length>18)s=s.slice(0,17)+'…';
+    g.fillText('✦ '+s+' ✦',W/2,H-190);
+  }
+  g.fillStyle='#6f66a0';g.font='20px serif';
+  g.fillText('‥ 有点困 · AI 占星即兴推演 ‥',W/2,H-96);
+  return c;
+}
+$('btnShot').onclick=()=>{
+  if(!lastHoro)return;
+  $('shotImg').src=drawShareCard().toDataURL('image/png');
+  $('shotModal').classList.add('show');
+};
+$('shotClose').onclick=()=>$('shotModal').classList.remove('show');
+$('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList.remove('show');};
 $('btnBack').onclick=()=>location.href='../';
 </script>
 </body>

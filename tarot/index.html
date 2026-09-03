@@ -57,6 +57,14 @@
     </div>
     <div class="ai-status" id="aiStatus">🌙 塔罗师正在洗牌凝神……</div>
     <div class="parchment" id="readingText"></div>
+    <div class="followup" id="followup" style="display:none">
+      <div class="fu-head">✦ 意犹未尽？可基于这次牌面追问 <b id="fuLeft">3</b> 次</div>
+      <div class="fu-row">
+        <input id="fuInput" maxlength="80" placeholder="就这次的牌面问点什么…">
+        <button class="btn-glass" id="fuSend">问</button>
+      </div>
+      <div class="fu-note" id="fuNote"></div>
+    </div>
     <div class="reading-actions">
       <button class="btn-glass" id="btnSave">收藏本次解读</button>
       <button class="btn-glass" id="btnAgain">换一问再来</button>
