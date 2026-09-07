@@ -89,6 +89,19 @@ textarea#question::placeholder{color:#8d86b5;font-style:italic}
 textarea#question:focus{border-color:var(--gold);background:rgba(255,255,255,.06);
   box-shadow:0 0 0 3px rgba(240,207,130,.10), 0 10px 32px rgba(240,207,130,.06)}
 .count{font-size:.72rem;color:#a49cc9;margin-top:7px}
+/* ---------- 性别选择 ---------- */
+.gender-sel{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.gender-sel span{font-size:.78rem;color:#a79ecf;letter-spacing:.1em}
+.gender-btn{cursor:pointer;border-radius:999px;padding:7px 18px;font-family:inherit;font-size:.82rem;letter-spacing:.1em;
+  border:1px solid rgba(240,207,130,.24);color:#b9b1dd;
+  background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  transition:all .28s var(--spring-fast);transform:translateZ(0)}
+.gender-btn:hover{border-color:rgba(240,207,130,.5);color:var(--gold);background:rgba(240,207,130,.08);transform:translateY(-1px)}
+.gender-btn:active{transform:translateY(0) scale(.96)}
+.gender-btn.on{border-color:var(--gold);color:var(--gold);
+  background:linear-gradient(135deg,rgba(240,207,130,.18),rgba(240,207,130,.06));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 4px 16px rgba(240,207,130,.12)}
 .auto-note{min-height:1.5em;margin-top:14px;font-size:.8rem;line-height:1.7;
   color:var(--gold);letter-spacing:.06em;opacity:0;transform:translateY(4px);
   transition:opacity .5s,transform .5s;pointer-events:none}

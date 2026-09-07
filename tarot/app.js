@@ -35,7 +35,7 @@ const SPREADS=[
  {id:'five',name:'五张十字',slots:['现状','阻碍','根源','外部助力','发展趋势'],desc:'全面剖析复杂局面'},
  {id:'auto',name:'✨ AI 智能选阵',slots:null,desc:'由塔罗师判断你的问题'}];
 
-let curSpread=SPREADS[0],drawn=[],flipCount=0,readingBusy=false;
+let curSpread=SPREADS[0],userGender='男',targetGender='',drawn=[],flipCount=0,readingBusy=false;
 const $=id=>document.getElementById(id);
 
 /* ================= 深邃粒子星空 + 粒子月亮（可被打散） ================= */
@@ -297,6 +297,35 @@ function orient(){
 orient();addEventListener('resize',orient);addEventListener('orientationchange',()=>setTimeout(orient,80));
 
 /* ================= 界面初始化 ================= */
+// 用户性别选择
+$('genderSel').onclick=e=>{
+  const btn=e.target.closest('.gender-btn');if(!btn)return;
+  document.querySelectorAll('#genderSel .gender-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');userGender=btn.dataset.g;
+};
+document.querySelector('#genderSel .gender-btn[data-g="男"]').classList.add('on');
+// 问的对象性别选择
+$('targetSel').onclick=e=>{
+  const btn=e.target.closest('.gender-btn');if(!btn)return;
+  document.querySelectorAll('#targetSel .gender-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');targetGender=btn.dataset.g;
+};
+// 根据问题内容自动显示/隐藏目标选择器
+$('question').addEventListener('input',()=>{
+  const q=$('question').value.trim();
+  const hasOther=/他|她|对方|喜欢|暗恋|感情|恋爱|对象|男友|女友|老公|老婆|男朋友|女朋友/.test(q);
+  if(hasOther){$('targetSel').style.display='flex';}else{$('targetSel').style.display='none';targetGender='';}
+  // 重新默认选中
+  if(hasOther){
+    const firstBtn=$('targetSel').querySelector('.gender-btn');
+    if(firstBtn)firstBtn.classList.add('on');
+  }
+  // 更新字数统计
+  $('qCount').textContent=$('question').value.length;
+  // AI智能选阵防抖
+  if(curSpread.id==='auto')tryAutoPick(true);
+});
+// 创建牌阵选择芯片
 SPREADS.forEach(sp=>{
   const d=document.createElement('div');d.className='spread-chip'+(sp.id==='auto'?' sp-auto':'');
   d.innerHTML=sp.name+'<small>'+sp.desc+'</small>';
@@ -307,8 +336,6 @@ SPREADS.forEach(sp=>{
   $('spreadSel').appendChild(d);
 });
 $('spreadSel').firstChild.classList.add('active');
-$('question').addEventListener('input',()=>{$('qCount').textContent=$('question').value.length;
-  if(curSpread.id==='auto')tryAutoPick(true);});
 
 /* ================= AI 智能选阵（agnes-2.5-flash 判断问题） ================= */
 const PICK_SYS='你是资深塔罗占卜师助手。用户会给出一个占卜问题，请从以下牌阵中选择最合适的一个：'+
@@ -555,19 +582,39 @@ function buildPrompt(){
   const q=$('question').value.trim();
   const L=[];
   L.push('【占卜信息】'+now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日 星期'+wd+'，以下为求问者现场抽取的真实牌组。');
+  L.push('【求问者性别】'+userGender+'性');
+  if(targetGender){
+    if(targetGender==='自己'){
+      L.push('【求问对象】求问者是在问自己');
+    }else{
+      L.push('【求问对象】求问者在问对方，对方是'+targetGender+'性');
+    }
+  }else{
+    L.push('【求问对象】未指定具体对象');
+  }
   L.push('【牌阵】'+curSpread.name+'：'+curSpread.slots.join(' | '));
   L.push('【问题】'+(q?q:'（未提供具体问题。请围绕求问者近期整体状态与当下最重要的能量线索展开解读，并在结尾温和提示：聚焦更具体的问题会让指引更精准。）'));
   L.push('【抽牌结果】');
   drawn.forEach((d,i)=>L.push((i+1)+'. '+curSpread.slots[i]+'：《'+d.card.en+'》「'+d.card.zh+'」'+(d.maj?'（大阿卡纳）':'（小阿卡纳）')+'，'+(d.rev?'逆位':'正位')+'。韦特体系通行词义——'+(d.rev?('逆位通常指向：'+d.card.r):('正位通常指向：'+d.card.u))+'。'));
   return L.join('\n');
 }
-const SYS_PROMPT='你是一位经验丰富、口碑极好的华人专业塔罗师，人称"月下塔罗师"。你现在收到的是一套真实的韦特塔罗抽牌结果（含日期星期、牌阵、各位置的牌、正逆位与通行词义）。请严格基于这套给出的牌进行解读，绝不虚构或替换任何一张牌。\
-解读要求：\
-1. 先逐张解读：按位置顺序，每一张用一个简短段落，说明该牌的核心意象如何作用于该位置（紧扣给出的正/逆位词义并自然引申，不要机械罗列关键词），小标题格式如「### 过去｜愚者·正位」；\
-2. 再做整体解读：分析牌与牌之间的呼应、张力或矛盾，串联成一条清晰的叙事线回答提问者的疑问，点出症结；\
-3. 给出具体可行的建议或注意事项（可分条），语气诚恳务实，不说教也不危言耸听；若涉及健康、法律、财务等严肃事项，提示寻求专业人士帮助；\
-4. 结尾用「### 核心指引」小节收尾，两三句温暖有力的话。\
-排版要求：使用 Markdown 小标题与分段，关键结论可用**加粗**。全程中文，总长600~900字，像一位真正懂你的人认真为你解牌。';
+const SYS_PROMPT=`你是一位经验丰富、口碑极好的华人专业塔罗师，人称"月下塔罗师"。你现在收到的是一套真实的韦特塔罗抽牌结果（含日期星期、牌阵、各位置的牌、正逆位与通行词义）。请严格基于这套给出的牌进行解读，绝不虚构或替换任何一张牌。\
+解读要求：
+1. **保持绝对中立公正**：你是一位专业的占卜师，不是用户的心理按摩师。不要为了取悦用户而只说好听的话，不要回避问题，也不要总是给出乐观的结论。牌面怎么说的就怎么解读，逆位就是逆位的含义，不要强行正能量化；
+2. 先逐张解读：按位置顺序，每一张用一个简短段落，说明该牌的核心意象如何作用于该位置（紧扣给出的正/逆位词义并自然引申，不要机械罗列关键词），小标题格式如「### 过去｜愚者·正位」；
+3. 再做整体解读：分析牌与牌之间的呼应、张力或矛盾，串联成一条清晰的叙事线回答提问者的疑问，点出症结；如果牌面显示的是负面或警示信息，要如实告知，不要避重就轻；
+4. 给出具体可行的建议或注意事项（可分条），语气诚恳务实，不虚伪客套，不危言耸听；若涉及健康、法律、财务等严肃事项，提示寻求专业人士帮助；
+5. 结尾用「### 核心指引」小节收尾，两三句温暖有力的话。
+ 语气风格：
+- **真人感优先**：像一个真实的人说话，不是写文章。用普通人的口吻，偶尔有口语化的停顿、补刀、自我纠正
+- **生活化短句**：多说短句，少说长句。像朋友聊天一样，允许随性断句、话题跳转
+- **融入真实情绪**：可以吐槽、纠结、感慨，有血有肉，不是冷冰冰的分析机器
+- **生活化细节**：偶尔加一点生活里的比喻或场景，让解读更接地气
+- **不完美也没关系**：不用追求字字珠玑，有时候一句"嗯…这事儿吧，还真不好说"比长篇大论更有味道
+- **适当用语气词**："嗯…"、"哦"、"吖"、"嘛"、"诶"之类的，但别滥用，自然就好
+- **禁止AI腔**：不要"综上所述"、"值得注意的是"、"首先…其次…最后"这套；不要排比句堆砌；不要金句结尾；不要生硬的分点模板
+- **不要过度煽情**：真诚比煽情重要，别为了打动用户而刻意写什么"愿星光指引你"之类的话
+排版要求：使用 Markdown 小标题与分段，关键结论可用**加粗**。全程中文，总长600~900字，像一位真正懂你的人认真为你解牌——真诚比讨好更重要。`;
 
 /* ================= AI 调用 ================= */
 const STATUS_WORDS=['🌙 净手焚香，铺开牌阵……','🔮 牌面星辉流转，正在感应……','🕯️ 月光的低语流入笔尖……'];
@@ -821,11 +868,12 @@ async function sendFollowup(){
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
       body:JSON.stringify({model:MODEL,temperature:.8,max_tokens:1200,
         messages:[
-          {role:'system',content:'你是「月下塔罗师」。求问者刚完成一次塔罗占卜并已收到完整解读，现在可以就**这次牌面**继续追问，最多 3 次。\n'+
-            '【本次占卜】'+fuCtx+'\n'+
-            '【规则】1. 回答必须紧扣本次抽到的牌与已给出的解读，可以展开某张牌、某个位置、某段结论，也可以结合牌面给出更细的建议；\n'+
-            '2. 如果追问与本次占卜的问题和牌面明显无关（例如问别的占卜、闲聊、要求重新占卜、问与牌面无关的事实信息等），你必须婉拒：以塔罗师的口吻温和说明牌面能量只覆盖这一次占问，建议重新洗牌开一局，输出不超过 3 句话；\n'+
-            '3. 语气延续月下塔罗师风格，中文，100~300 字，不用 Markdown 标题，可用少量**加粗**。'},
+           {role:'system',content:'你是「月下塔罗师」。求问者刚完成一次塔罗占卜并已收到完整解读，现在可以就**这次牌面**继续追问，最多 3 次。\n'+
+             '【本次占卜】'+fuCtx+'\n'+
+             '【规则】1. 回答必须紧扣本次抽到的牌与已给出的解读，可以展开某张牌、某个位置、某段结论，也可以结合牌面给出更细的建议；\n'+
+             '2. 如果追问与本次占卜的问题和牌面明显无关（例如问别的占卜、闲聊、要求重新占卜、问与牌面无关的事实信息等），你必须婉拒：以塔罗师的口吻温和说明牌面能量只覆盖这一次占问，建议重新洗牌开一局，输出不超过 3 句话；\n'+
+             '3. 保持公正中立，不要为了迎合用户而只说好话。如果牌面显示的是警示或负面信息，如实告知；\n'+
+             '4. 【语气风格】延续月下塔罗师的真人感风格——像朋友聊天一样自然，允许口语化停顿（"嗯…"、"哦"、"嘛"），多用短句，融入真实情绪；禁止AI腔（"综上所述"、"值得注意的是"等）；不要过度煽情，真诚比漂亮话重要。中文，100~300 字，不用 Markdown 标题，可用少量**加粗**。'},
           {role:'user',content:'（占卜解读已完成，以下是解读全文）\n'+lastAns+'\n\n（求问者的追问）'+q}
         ]})});
     const j=await res.json();

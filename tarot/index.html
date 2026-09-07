@@ -46,6 +46,17 @@
     <label class="q-label" for="question">✧ 你想问什么（可留空）</label>
      <textarea id="question" maxlength="100" placeholder="例：最近这份工作要不要继续坚持？他对我是什么想法？……问题越具体，解读越贴合。"></textarea>
      <div class="count"><span id="qCount">0</span>/100</div>
+      <div class="gender-sel" id="genderSel">
+        <span style="font-size:.78rem;color:#a79ecf;letter-spacing:.1em">✦ 你是？</span>
+        <button class="gender-btn" data-g="男">♂ 男</button>
+        <button class="gender-btn" data-g="女">♀ 女</button>
+      </div>
+      <div class="gender-sel" id="targetSel" style="display:none">
+        <span style="font-size:.78rem;color:#a79ecf;letter-spacing:.1em">✦ 问的是？</span>
+        <button class="gender-btn" data-g="男">♂ 男</button>
+        <button class="gender-btn" data-g="女">♀ 女</button>
+        <button class="gender-btn" data-g="自己">◈ 我自己</button>
+      </div>
      <div class="auto-note" id="autoNote"></div>
      <div class="spreads" id="spreadSel"></div>
      <button class="btn-gold" id="btnStart">开 始 占 卜</button>
