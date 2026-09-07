@@ -112,7 +112,9 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 </head>
 <body>
 <canvas id="stars"></canvas>
-<button class="btn-back" id="btnBack">⌂ 首页</button>
+<button class="btn-back" id="btnBack">◂ 返回</button>
+<style>.btn-glass{padding:9px 18px;border-radius:999px;border:1px solid rgba(240,207,130,.35);background:rgba(255,255,255,.05);color:#f2d488;font-family:inherit;font-size:.8rem;letter-spacing:.08em;cursor:pointer}.btn-glass:active{transform:scale(.95);background:rgba(240,207,130,.1)}</style>
+<button class="btn-back" id="btnAstroHist" style="top:calc(env(safe-area-inset-top, 0px) + 58px);font-size:.78rem">📜 记录</button>
 
 <div class="portal">
   <header>
@@ -473,10 +475,9 @@ $('btnPairShot').onclick=()=>{
 };
 $('shotClose').onclick=()=>$('shotModal').classList.remove('show');
 $('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList.remove('show');};
-$('btnBack').onclick=()=>location.href='../';
+$('btnBack').onclick=()=>{if(history.length>1)history.back();else location.href='../';};
 </script>
 <script src="../../memory.js"></script>
-<button class="btn-back" id="btnBack">⌂ 首页</button>
 <button class="btn-back" id="btnAstroHist" style="top:calc(env(safe-area-inset-top, 0px) + 58px);font-size:.78rem">📜 记录</button>
 <div id="astroHistMask" style="position:fixed;inset:0;z-index:98;background:rgba(3,1,14,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px">
   <div style="width:min(560px,96%);max-height:80vh;display:flex;flex-direction:column;background:linear-gradient(155deg,rgba(255,255,255,.08),rgba(255,255,255,.025));border:1px solid rgba(240,207,130,.28);border-radius:18px;padding:18px">
