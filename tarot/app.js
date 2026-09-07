@@ -946,7 +946,7 @@ $('btnSave').onclick=function(){
 /* ================= 历史 ================= */
 function loadHist(){try{return JSON.parse(localStorage.getItem('tarot_hist_v1')||'[]')}catch(e){return[]}}
 function addToHistory(rec){const h=loadHist();h.unshift(Object.assign({fav:false},rec));localStorage.setItem('tarot_hist_v1',JSON.stringify(h.slice(0,50)));/* 同步到记忆库v2 */try{if(typeof mirrorToV2==='function')mirrorToV2('tarot',{question:rec.q,spread:rec.spread,cards:rec.cards,result:rec.text,time:rec.time});}catch(e){}}
-$('btnHome').onclick=()=>{if(history.length>1)history.back();else location.href='../';};
+$('btnHome').onclick=()=>{location.href='../';};
 $('btnHist').onclick=function(){
   const list=$('histList'),h=loadHist();
   list.innerHTML=h.length?'':'<div style="text-align:center;color:#8a81b8;padding:24px 0">还没有占卜记录</div>';
