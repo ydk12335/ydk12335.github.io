@@ -218,6 +218,7 @@ const HistoryManager = {
     m.updatedAt = Date.now();
     saveMemory(m);
     mirrorToV2('horoscope', item);
+    try{const h=JSON.parse(localStorage.getItem('astro_hist_v1')||'[]');h.unshift(item);localStorage.setItem('astro_hist_v1',JSON.stringify(h.slice(0,30)));}catch(e){}
     return item;
   },
   
@@ -237,6 +238,7 @@ const HistoryManager = {
     m.updatedAt = Date.now();
     saveMemory(m);
     mirrorToV2('pair', item);
+    try{const h=JSON.parse(localStorage.getItem('pair_hist_v1')||'[]');h.unshift(item);localStorage.setItem('pair_hist_v1',JSON.stringify(h.slice(0,30)));}catch(e){}
     return item;
   },
   
@@ -256,6 +258,7 @@ const HistoryManager = {
     m.updatedAt = Date.now();
     saveMemory(m);
     mirrorToV2('synastry', item);
+    try{const h=JSON.parse(localStorage.getItem('syn_hist_v1')||'[]');h.unshift(item);localStorage.setItem('syn_hist_v1',JSON.stringify(h.slice(0,30)));}catch(e){}
     return item;
   },
   

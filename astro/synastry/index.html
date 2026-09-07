@@ -490,6 +490,48 @@ $('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList
 $('btnBack').onclick=()=>location.href='../';
 </script>
 <script src="../../memory.js"></script>
+<button class="btn-back" id="btnBack">⌂ 首页</button>
+<button class="btn-back" id="btnAstroHist" style="top:calc(env(safe-area-inset-top, 0px) + 58px);font-size:.78rem">📜 记录</button>
+<div id="astroHistMask" style="position:fixed;inset:0;z-index:98;background:rgba(3,1,14,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="width:min(560px,96%);max-height:80vh;display:flex;flex-direction:column;background:linear-gradient(155deg,rgba(255,255,255,.08),rgba(255,255,255,.025));border:1px solid rgba(240,207,130,.28);border-radius:18px;padding:18px">
+    <h3 style="text-align:center;color:#f2d488;letter-spacing:.3em;font-weight:400;margin:0 0 12px;font-size:1rem">📜 记 录</h3>
+    <div id="astroHistList" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;user-select:text;-webkit-user-select:text"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:12px;flex:none;flex-wrap:wrap">
+      <button class="btn-glass" id="btnAstroHistCopy">☁️ 复制到记忆库</button>
+      <button class="btn-glass" id="btnAstroHistClose">关 闭</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var HKEY='syn_hist_v1';
+  var mask=document.getElementById('astroHistMask'),list=document.getElementById('astroHistList');
+  function loadH(){try{return JSON.parse(localStorage.getItem(HKEY)||'[]');}catch(e){return[];}}
+  function esc(t){var d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML;}
+  document.getElementById('btnAstroHist').onclick=function(){
+    var h=loadH();
+    list.innerHTML=h.length?'':'<div style="text-align:center;color:#8a81b8;padding:24px 0">还没有记录</div>';
+    h.forEach(function(r){
+      var d=document.createElement('div');
+      d.style.cssText='border:1px solid rgba(240,207,130,.15);border-radius:12px;padding:10px 12px;margin-bottom:8px;color:#d8d0ef;font-size:.8rem;line-height:1.7';
+      d.innerHTML='<b style="color:#f2d488">'+esc(r.title||'记录')+'</b><span style="color:#8a81b8;font-size:.68rem">　'+esc(r.date||'')+'</span><div style="color:#7d74a8;font-size:.72rem;max-height:60px;overflow:hidden">'+esc(String(r.result||'').slice(0,80))+'…</div>';
+      list.appendChild(d);
+    });
+    mask.style.display='flex';
+  };
+  document.getElementById('btnAstroHistClose').onclick=function(){mask.style.display='none';};
+  mask.addEventListener('click',function(e){if(e.target===mask)mask.style.display='none';});
+  document.getElementById('btnAstroHistCopy').onclick=function(){
+    var h=loadH();
+    if(!h.length){alert('还没有记录');return;}
+    var payload={moon_import:1,records:h.map(function(r){return{type:'story',title:r.title,note:(r.date?'日期：'+r.date+'\n':'')+(r.score?'契合度：'+r.score+'\n':'')+(r.rel?'关系：'+r.rel+'\n':'')+(r.sign?'星座：'+r.sign+'\n':'')+(r.result||''),createdAt:Date.now()};})};
+    var done=function(){alert('已复制 '+h.length+' 条记录\n请到记忆库点右上角 ⇩ 粘贴导入');};
+    var fb=function(t){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(JSON.stringify(payload)).then(done).catch(function(){fb(JSON.stringify(payload));done();});}
+    else{fb(JSON.stringify(payload));done();}
+  };
+})();
+</script>
 <script src="../../music-widget.js?v=1"></script>
 </body>
 </html>

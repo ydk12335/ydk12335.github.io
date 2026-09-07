@@ -976,6 +976,7 @@ $('btnHist').onclick=function(){
 };
 $('btnCloseHist').onclick=()=>$('histMask').classList.remove('open');
 $('histMask').onclick=e=>{if(e.target===$('histMask'))$('histMask').classList.remove('open')};
+$('btnHistCopyMem2').onclick=()=>{ $('btnHistCopyMem').click(); };
 $('btnHistCopyMem').onclick=()=>{
   const h=loadHist();
   if(!h.length){alert('还没有占卜记录');return;}
