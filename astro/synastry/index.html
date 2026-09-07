@@ -377,6 +377,14 @@ function miniMD(t){
   };
   function dispName(name,fallback){return hideName?(fallback+'座'):(name||fallback);}
 let synBusy=false,lastSyn=null;
+$('btnMemCopy').onclick=()=>{
+  const d=lastSyn;if(!d){alert('先推演一次合盘');return;}
+  const payload={moon_import:1,records:[{type:'story',title:'∞ 合盘 · '+(d.a||'')+' × '+(d.b||'')+(d.rel?'（'+d.rel+'）':''),note:(d.rel?'关系：'+d.rel+'\n':'')+(d.text||''),createdAt:Date.now()}]};
+  const done=()=>alert('已复制，请到记忆库点右上角 ⇩ 粘贴导入');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(JSON.stringify(payload)).then(done).catch(()=>{fallbackCopy(JSON.stringify(payload));done();});}
+  else{fallbackCopy(JSON.stringify(payload));done();}
+  function fallbackCopy(t){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+};
 $('btnGo').onclick=async()=>{
   if(synBusy)return;
   const a=SIGNS[selState.selA],b=SIGNS[selState.selB];

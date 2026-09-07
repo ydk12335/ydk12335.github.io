@@ -976,6 +976,12 @@ $('btnHist').onclick=function(){
 };
 $('btnCloseHist').onclick=()=>$('histMask').classList.remove('open');
 $('histMask').onclick=e=>{if(e.target===$('histMask'))$('histMask').classList.remove('open')};
+$('btnHistCopyMem').onclick=()=>{
+  const h=loadHist();
+  if(!h.length){alert('还没有占卜记录');return;}
+  const payload={moon_import:1,records:h.map(r=>({type:'story',title:'☽ 塔罗 · '+(r.spread||'占卜'),note:'时间：'+(r.time||'')+'\n问题：'+(r.q||'无')+'\n牌面：'+(r.cards||'')+'\n解读：'+(r.text||''),createdAt:Date.now()}))};
+  navigator.clipboard.writeText(JSON.stringify(payload)).then(()=>alert('已复制 '+h.length+' 条占卜记录\n请到记忆库点右上角 ⇩ 粘贴导入')).catch(()=>{const t=document.createElement('textarea');t.value=JSON.stringify(payload);document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();alert('已复制，请到记忆库点右上角 ⇩ 粘贴导入');});
+};
 $('btnClearHist').onclick=()=>{localStorage.removeItem('tarot_hist_v1');$('btnHist').click();};
 
 /* ---------- 公告 / 使用说明 ---------- */

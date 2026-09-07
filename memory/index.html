@@ -85,6 +85,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;appearance:none}
   <div class="header">
     <button class="icon-btn" id="btnBack">⌂</button>
     <h1>✦ 记忆网络</h1>
+    <button class="icon-btn" id="btnImport" title="导入">⇩</button>
     <button class="icon-btn" id="btnStats">∞</button>
   </div>
   <div id="stage"><div id="world"></div></div>
@@ -116,6 +117,18 @@ select.form-input{cursor:pointer;-webkit-appearance:none;appearance:none}
 
 <!-- AI 精炼中 -->
 <div id="aiLoading"><div class="ai-orb"></div><p>月光正在凝练这段记忆……</p></div>
+
+<!-- 导入面板 -->
+<div id="importPanel" style="position:fixed;inset:0;z-index:48;display:none;align-items:flex-end;background:rgba(3,2,10,.6);backdrop-filter:blur(3px)" onclick="if(event.target===this)this.style.display='none'">
+  <div style="width:100%;background:linear-gradient(to top,rgba(8,5,20,.99),rgba(8,5,20,.93));backdrop-filter:blur(20px);border-top:1px solid rgba(240,207,130,.2);border-radius:24px 24px 0 0;padding:18px 18px calc(28px + env(safe-area-inset-bottom))">
+    <div style="font-size:.85rem;color:#f0cf82;text-align:center;letter-spacing:.25em;margin-bottom:14px">⇩ 导入记忆</div>
+    <textarea id="importText" class="form-input" style="min-height:120px;user-select:text" placeholder="粘贴从塔罗/星座/配对/合盘页复制的内容…"></textarea>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-ghost" id="importCancel" style="flex:0 0 84px">取消</button>
+      <button class="btn btn-primary" id="importGo">一键点亮</button>
+    </div>
+  </div>
+</div>
 
 <div id="toast"></div>
 
@@ -388,6 +401,42 @@ document.getElementById('btnStats').onclick=function(){
 };
 let toastT=null;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);}
+
+/* ================= 导入 ================= */
+const importPanel=document.getElementById('importPanel');
+document.getElementById('btnImport').onclick=()=>{importPanel.style.display='flex';setTimeout(()=>document.getElementById('importText').focus(),100);};
+document.getElementById('importCancel').onclick=()=>importPanel.style.display='none';
+document.getElementById('importGo').onclick=()=>{
+  const txt=document.getElementById('importText').value.trim();
+  if(!txt){toast('先粘贴内容吧');return;}
+  let added=0;
+  try{
+    const j=JSON.parse(txt);
+    const recs=(j.moon_import&&Array.isArray(j.records))?j.records:(Array.isArray(j)?j:[]);
+    const db=dbLoad();
+    recs.forEach(r=>{
+      const sig='import|'+(r.title||'')+'|'+String(r.note||'').slice(0,40);
+      if(db.items.some(i=>i.sig===sig))return;
+      db.items.unshift({id:Date.now()+''+Math.floor(Math.random()*1000),type:r.type||'story',title:r.title||'✦ 导入的记忆',data:{note:r.note||''},createdAt:r.createdAt||Date.now(),source:'import',sig:sig});
+      added++;
+    });
+    if(added)dbSave(db);
+  }catch(e){
+    /* 非JSON：按纯文本自由记录导入 */
+    const db=dbLoad();
+    txt.split(/\n{2,}/).forEach(block=>{
+      const b=block.trim();if(!b)return;
+      const sig='importtxt|'+b.slice(0,40);
+      if(db.items.some(i=>i.sig===sig))return;
+      db.items.unshift({id:Date.now()+''+Math.floor(Math.random()*1000),type:'free',title:b.split('\n')[0].slice(0,12)||'✦ 导入',data:{note:b},createdAt:Date.now(),source:'import',sig:sig});
+      added++;
+    });
+    if(added)dbSave(db);
+  }
+  importPanel.style.display='none';document.getElementById('importText').value='';
+  buildNodes();
+  toast(added?('已点亮 '+added+' 颗星 ✦'):'没有新的记录可导入');
+};
 
 /* ================= 旧数据迁移 ================= */
 function migrateOldData(){

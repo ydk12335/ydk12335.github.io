@@ -161,6 +161,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
     <div class="p-foot">配对由 AI 观星师即兴推演 · 仅供娱乐参考</div>
     <div class="pair-share">
       <button class="soon-pill" id="btnPairCopy">📋 文字分享</button>
+      <button class="soon-pill" id="btnMemCopy">☁️ 存入记忆库</button>
       <button class="soon-pill" id="btnPairShot">📸 生成分享图</button>
     </div>
     <div class="privacy-bar" id="privacyBar">
@@ -359,6 +360,14 @@ function miniMD(t){
   };
   function dispName(name,fallback){return hideName?(fallback+'座'):(name||fallback);}
 let pairBusy=false,lastPair=null;
+$('btnMemCopy').onclick=()=>{
+  const d=lastPair;if(!d){alert('先推演一次配对');return;}
+  const payload={moon_import:1,records:[{type:'story',title:'☽ · '+(d.a||'')+' × '+(d.b||'')+(d.rel?'（'+d.rel+'）':''),note:(d.date?'日期：'+d.date+'\n':'')+(d.score?'契合度：'+d.score+'\n':'')+(d.rel?'关系：'+d.rel+'\n':'')+(d.text||''),createdAt:Date.now()}]};
+  const done=()=>alert('已复制，请到记忆库点右上角 ⇩ 粘贴导入');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(JSON.stringify(payload)).then(done).catch(()=>{fallbackCopy(JSON.stringify(payload));done();});}
+  else{fallbackCopy(JSON.stringify(payload));done();}
+  function fallbackCopy(t){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+};
 $('btnGo').onclick=async()=>{
   if(pairBusy)return;
   const a=SIGNS[selState.selA],b=SIGNS[selState.selB];

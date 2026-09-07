@@ -111,6 +111,7 @@ a.soon-pill:active{transform:scale(.95)}
     <div class="a-share" id="aShare" style="display:none">
       <button class="soon-pill share-btn" id="btnShot">📸 生成分享图</button>
       <button class="soon-pill share-btn" id="btnCopy">📋 文字分享</button>
+      <button class="soon-pill share-btn" id="btnHoroToMem">☁️ 存入记忆库</button>
     </div>
   </section>
 
@@ -308,6 +309,11 @@ async function pick(i){
   }
 }
 let lastHoro=null;
+$('btnHoroToMem').onclick=()=>{
+  if(!lastHoro){alert('先查询一次运势');return;}
+  const payload={moon_import:1,records:[{type:'story',title:'✦ 观星 · '+lastHoro.sign,note:(lastHoro.date||'')+'\n'+(lastHoro.text||''),createdAt:Date.now()}]};
+  navigator.clipboard.writeText(JSON.stringify(payload)).then(()=>alert('已复制，请到记忆库点右上角 ⇩ 粘贴导入')).catch(()=>{const t=document.createElement('textarea');t.value=JSON.stringify(payload);document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();alert('已复制，请到记忆库点右上角 ⇩ 粘贴导入');});
+};
 
 /* ================= 分享：文字 + 分享图 ================= */
 $('btnCopy').onclick=async()=>{
