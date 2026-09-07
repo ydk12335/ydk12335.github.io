@@ -376,8 +376,18 @@ $('btnGo').onclick=async()=>{
     const m=raw.match(/匹配指数[：:]\s*(\d{1,3})\s*%/);
     $('pScore').textContent=m?('✦ 匹配指数 '+m[1]+'% ✦'):'';
     $('pText').innerHTML=miniMD(raw.replace(/^匹配指数[：:].*$/m,'').trim());
-    lastPair={a:a[0],as:a[1],b:b[0],bs:b[1],na:nameA,nb:nameB,score:m?m[1]+'%':'',text:raw,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk};
-    $('pairNote').textContent='✦ 推演完成，可分享这份星辰缘分';
+lastPair={a:a[0],as:a[1],b:b[0],bs:b[1],na:nameA,nb:nameB,score:m?m[1]+'%':'',text:raw,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk};
+     $('pairNote').textContent='✦ 推演完成，可分享这份星辰缘分';
+     /* 保存到记忆库 */
+     if(typeof HistoryManager !== 'undefined') {
+       HistoryManager.savePair({
+         a: nameA || a[0],
+         b: nameB || b[0],
+         score: m?m[1]+'%':'',
+         result: raw,
+         date: d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'
+       });
+     }
   }catch(e){
     $('pText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再试一次</span>';
     $('pairNote').textContent='';

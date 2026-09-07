@@ -394,8 +394,18 @@ $('btnGo').onclick=async()=>{
     const j=await res.json();
     const raw=(j.choices[0].message.content||'').trim();
     $('pText').innerHTML=miniMD(raw);
-    lastSyn={a:a[0],as:a[1],b:b[0],bs:b[1],na:nameA,nb:nameB,rel:relType,text:raw};
-    $('pairNote').textContent='✦ 合盘完成，可分享这份解读';
+lastSyn={a:a[0],as:a[1],b:b[0],bs:b[1],na:nameA,nb:nameB,rel:relType,text:raw};
+     $('pairNote').textContent='✦ 合盘完成，可分享这份解读';
+     /* 保存到记忆库 */
+     if(typeof HistoryManager !== 'undefined') {
+       HistoryManager.saveSynastry({
+         a: nameA || a[0],
+         b: nameB || b[0],
+         rel: relType,
+         result: raw,
+         date: d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'
+       });
+     }
   }catch(e){
     $('pText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再试一次</span>';
     $('pairNote').textContent='';

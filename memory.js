@@ -303,7 +303,11 @@ const MemoryContext = {
   }
 };
 
-// 导出
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { getMemory, saveMemory, UserManager, HistoryManager, MemoryContext };
+// ==================== 导出（浏览器环境自动挂载到 window） ====================
+if (typeof window !== 'undefined') {
+  window.getMemory = getMemory;
+  window.saveMemory = saveMemory;
+  window.UserManager = UserManager;
+  window.HistoryManager = HistoryManager;
+  window.MemoryContext = MemoryContext;
 }

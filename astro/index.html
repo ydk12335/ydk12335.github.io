@@ -289,10 +289,18 @@ async function pick(i){
     const j=await res.json();
     if(my!==horoSeq)return;
     const raw=(j.choices[0].message.content||'').trim();
-    $('aText').innerHTML=miniMD(raw);
-    /* 记录本次运势供分享 */
-    lastHoro={sign:name,sym,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk,text:raw};
-    $('aShare').style.display='flex';
+     $('aText').innerHTML=miniMD(raw);
+     /* 记录本次运势供分享 */
+     lastHoro={sign:name,sym,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk,text:raw};
+     $('aShare').style.display='flex';
+     /* 保存到记忆库 */
+     if(typeof HistoryManager !== 'undefined') {
+       HistoryManager.saveHoroscope({
+         sign: name,
+         date: d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日',
+         result: raw
+       });
+     }
   }catch(e){
     if(my!==horoSeq)return;
     $('aShare').style.display='none';
@@ -367,10 +375,11 @@ $('btnShot').onclick=()=>{
   $('shotImg').src=drawShareCard().toDataURL('image/png');
   $('shotModal').classList.add('show');
 };
-$('shotClose').onclick=()=>$('shotModal').classList.remove('show');
-$('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList.remove('show');};
-$('btnBack').onclick=()=>location.href='../';
+  $('shotClose').onclick=()=>$('shotModal').classList.remove('show');
+  $('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList.remove('show');};
+  $('btnBack').onclick=()=>location.href='../';
 </script>
+<script src="../memory.js"></script>
 <script src="../music-widget.js?v=1"></script>
 </body>
 </html>

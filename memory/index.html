@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>月下记忆库</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Songti SC","Noto Serif SC",serif;color:#f2ede0;background:#05030f;overflow:hidden;user-select:none}
+canvas#stars{position:fixed;inset:0;z-index:0}
+#app{position:fixed;inset:0;z-index:1}
+.header{position:absolute;top:20px;left:0;right:0;text-align:center;z-index:10;pointer-events:none}
+.header h1{font-size:1.2rem;color:#f0cf82;letter-spacing:.4em;text-shadow:0 0 20px rgba(240,207,130,.4)}
+.header p{font-size:.65rem;color:rgba(240,207,130,.4);margin-top:6px}
+.graph-container{position:absolute;inset:0;overflow:hidden}
+.graph-inner{position:absolute;width:100%;height:100%}
+.node{position:absolute;border-radius:50%;cursor:pointer;transition:opacity .3s,transform .3s;display:flex;align-items:center;justify-content:center}
+.node:hover{filter:brightness(1.3)}
+.node-core{width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(240,207,130,.8),rgba(240,207,130,.2));box-shadow:0 0 20px rgba(240,207,130,.4);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#f0cf82}
+.node-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:.6rem;color:rgba(240,207,130,.6);white-space:nowrap}
+.back-btn{position:absolute;top:20px;left:20px;z-index:20;width:40px;height:40px;border-radius:50%;border:1px solid rgba(240,207,130,.2);background:rgba(10,8,30,.7);color:#f2ede0;font-size:1.2rem;cursor:pointer}
+.add-btn{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);width:56px;height:56px;border-radius:50%;border:2px solid rgba(240,207,130,.4);background:rgba(240,207,130,.1);color:#f0cf82;font-size:1.8rem;cursor:pointer;box-shadow:0 0 30px rgba(240,207,130,.2)}
+.add-btn:hover{background:rgba(240,207,130,.2);box-shadow:0 0 40px rgba(240,207,130,.4)}
+.stats-badge{position:absolute;top:20px;right:20px;z-index:20;background:rgba(10,8,30,.6);border:1px solid rgba(240,207,130,.15);border-radius:20px;padding:6px 14px;font-size:.7rem;color:rgba(240,207,130,.6)}
+.panel{position:absolute;bottom:0;left:0;right:0;z-index:30;background:linear-gradient(to top,rgba(5,3,15,.98) 60%,rgba(5,3,15,.9));backdrop-filter:blur(20px);border-top:1px solid rgba(240,207,130,.2);border-radius:24px 24px 0 0;padding:20px;max-height:75vh;overflow-y:auto;transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1)}
+.panel.open{transform:translateY(0)}
+.panel-handle{width:40px;height:4px;background:rgba(240,207,130,.3);border-radius:2px;margin:0 auto 16px}
+.panel-title{font-size:.9rem;color:#f0cf82;text-align:center;margin-bottom:16px;letter-spacing:.2em}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:.65rem;color:rgba(240,207,130,.5);margin-bottom:6px;letter-spacing:.1em}
+.form-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(240,207,130,.15);border-radius:8px;padding:10px 12px;color:#f2ede0;font-family:inherit;font-size:.85rem;outline:none}
+.form-input:focus{border-color:rgba(240,207,130,.4)}
+textarea.form-input{min-height:80px;resize:vertical;line-height:1.5}
+select.form-input{cursor:pointer}
+.btn-group{display:flex;gap:10px;margin-top:18px}
+.btn{flex:1;padding:12px;border-radius:10px;border:none;font-family:inherit;font-size:.85rem;cursor:pointer;letter-spacing:.08em}
+.btn-save{background:rgba(240,207,130,.15);color:#f0cf82;border:1px solid rgba(240,207,130,.3)}
+.btn-close{background:rgba(255,255,255,.04);color:rgba(240,207,130,.6);border:1px solid rgba(240,207,130,.15)}
+.btn-delete{background:rgba(255,80,80,.08);color:rgba(255,120,120,.6);border:1px solid rgba(255,80,80,.2)}
+.toast{position:absolute;top:70px;left:50%;transform:translateX(-50%) translateY(-10px);padding:8px 20px;border-radius:20px;background:rgba(10,8,30,.9);border:1px solid rgba(240,207,130,.25);color:#f0cf82;font-size:.75rem;opacity:0;transition:all .25s;z-index:50;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.08);opacity:.15}}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div id="app">
+  <div class="header">
+    <h1>✦ 记忆网络 ✦</h1>
+    <p>点击节点编辑 · 拖拽平移 · 滚轮缩放</p>
+  </div>
+  <button class="back-btn" id="btnBack">⌂</button>
+  <div class="stats-badge" id="statsBadge">0 条记忆</div>
+  <div class="graph-container" id="graphContainer">
+    <div class="graph-inner" id="graphInner"></div>
+  </div>
+  <button class="add-btn" id="addBtn">+</button>
+</div>
+<div class="panel" id="panel">
+  <div class="panel-handle"></div>
+  <div class="panel-title" id="panelTitle">编辑记忆</div>
+  <div id="panelContent"></div>
+  <div class="btn-group">
+    <button class="btn btn-delete" id="btnDelete">删除</button>
+    <button class="btn btn-close" id="btnClose">关闭</button>
+    <button class="btn btn-save" id="btnSave">保存</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="../memory.js"></script>
+<script>
+const cv=document.getElementById('stars'),ctx=cv.getContext('2d');
+let stars=[],shootingStars=[];
+function resize(){cv.width=window.innerWidth;cv.height=window.innerHeight;initStars();}
+function initStars(){
+  stars=[];
+  const count=Math.floor((cv.width*cv.height)/15000);
+  for(let i=0;i<count;i++){
+    stars.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.3+0.2,alpha:Math.random()*0.5+0.1,speed:Math.random()*0.003+0.001,phase:Math.random()*Math.PI*2});
+  }
+}
+function drawStars(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  stars.forEach(s=>{
+    s.phase+=s.speed;
+    const a=s.alpha*(0.6+0.4*Math.sin(s.phase));
+    ctx.globalAlpha=a;
+    ctx.fillStyle='#fff7e0';
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
+  });
+  if(Math.random()<0.002&&shootingStars.length<2){
+    shootingStars.push({x:Math.random()*cv.width,y:Math.random()*cv.height*0.3,vx:-5-Math.random()*5,vy:2+Math.random()*3,life:1});
+  }
+  shootingStars.forEach((s,i)=>{
+    s.x+=s.vx;s.y+=s.vy;s.life-=0.015;
+    if(s.life<=0){shootingStars.splice(i,1);return;}
+    ctx.globalAlpha=s.life*0.6;
+    ctx.strokeStyle='rgba(240,207,130,'+s.life+')';
+    ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(s.x,s.y);
+    ctx.lineTo(s.x-s.vx*40,s.y-s.vy*40);
+    ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+  requestAnimationFrame(drawStars);
+}
+window.addEventListener('resize',resize);resize();drawStars();
+
+const TYPES={personal:{label:'个人',icon:'◈',color:'#f0cf82'},tarot:{label:'塔罗',icon:'☽',color:'#a79ade'},astrology:{label:'星座',icon:'✦',color:'#f0cf82'},pairing:{label:'配对',icon:'⌘',color:'#e8b48f'}};
+let nodes=[],edges=[],camera={x:0,y:0,zoom:1},isDragging=false,dragStart={x:0,y:0},selectedNode=null,editingNode=null;
+
+function initNodes(){
+  const memory=getMemory();
+  nodes=[];edges=[];
+  const cx=window.innerWidth/2,cy=window.innerHeight/2;
+  nodes.push({id:'user',label:'我',type:TYPES.personal,x:cx,y:cy,z:1,isCenter:true,data:null,pulsePhase:Math.random()*Math.PI*2});
+  if(memory.tarot&&memory.tarot.length>0){
+    const cnt=Math.min(memory.tarot.length,6);
+    for(let i=0;i<cnt;i++){
+      const angle=(i/cnt)*Math.PI*2,dist=140+Math.random()*60;
+      nodes.push({id:'tarot-'+i,label:'塔罗',type:TYPES.tarot,x:cx+Math.cos(angle)*dist,y:cy+Math.sin(angle)*dist,z:0.6+Math.random()*0.35,isCenter:false,data:memory.tarot[i],pulsePhase:Math.random()*Math.PI*2});
+      edges.push({from:'user',to:'tarot-'+i});
+    }
+  }
+  if(memory.horoscope&&memory.horoscope.length>0){
+    const cnt=Math.min(memory.horoscope.length,5);
+    for(let i=0;i<cnt;i++){
+      const angle=(i/cnt)*Math.PI*2+Math.PI/5,dist=140+Math.random()*60;
+      nodes.push({id:'astro-'+i,label:'星座',type:TYPES.astrology,x:cx+Math.cos(angle)*dist,y:cy+Math.sin(angle)*dist,z:0.6+Math.random()*0.35,isCenter:false,data:memory.horoscope[i],pulsePhase:Math.random()*Math.PI*2});
+      edges.push({from:'user',to:'astro-'+i});
+    }
+  }
+  if(memory.pair&&memory.pair.length>0){
+    const cnt=Math.min(memory.pair.length,4);
+    for(let i=0;i<cnt;i++){
+      const angle=(i/cnt)*Math.PI*2+Math.PI/3,dist=140+Math.random()*60;
+      nodes.push({id:'pair-'+i,label:'配对',type:TYPES.pairing,x:cx+Math.cos(angle)*dist,y:cy+Math.sin(angle)*dist,z:0.6+Math.random()*0.35,isCenter:false,data:memory.pair[i],pulsePhase:Math.random()*Math.PI*2});
+      edges.push({from:'user',to:'pair-'+i});
+    }
+  }
+  renderNodes();updateStats();
+}
+
+function project(x,y,z){
+  const scale=camera.zoom*z;
+  return{x:(x-camera.x)*scale+window.innerWidth/2,y:(y-camera.y)*scale+window.innerHeight/2,scale};
+}
+
+function renderNodes(){
+  const inner=document.getElementById('graphInner');
+  inner.innerHTML='';
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
+  edges.forEach(e=>{
+    const fromNode=nodes.find(n=>n.id===e.from);
+    const toNode=nodes.find(n=>n.id===e.to);
+    if(!fromNode||!toNode)return;
+    const from=project(fromNode.x,fromNode.y,fromNode.z);
+    const to=project(toNode.x,toNode.y,toNode.z);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',from.x);line.setAttribute('y1',from.y);
+    line.setAttribute('x2',to.x);line.setAttribute('y2',to.y);
+    line.setAttribute('stroke','rgba(240,207,130,0.12)');
+    line.setAttribute('stroke-width',Math.max(0.5,from.scale*to.scale*0.8));
+    svg.appendChild(line);
+  });
+  inner.appendChild(svg);
+  nodes.forEach(node=>{
+    const p=project(node.x,node.y,node.z);
+    const size=node.isCenter?56:38*node.z;
+    const el=document.createElement('div');
+    el.className='node';
+    el.style.cssText='left:'+p.x-size/2+'px;top:'+p.y-size/2+'px;width:'+size+'px;height:'+size+'px;opacity:'+(0.3+node.z*0.7)+';transform:scale('+p.scale+');transform-origin:center;cursor:pointer';
+    const pulse=document.createElement('div');
+    pulse.style.cssText='position:absolute;inset:-8px;border-radius:50%;border:1px solid '+node.type.color+';animation:pulse '+(2+Math.random()*2)+'s ease-in-out infinite';
+    el.appendChild(pulse);
+    const core=document.createElement('div');
+    core.className='node-core';
+    core.style.cssText='background:radial-gradient(circle at 30% 30%,'+node.type.color+'cc,'+node.type.color+'33);box-shadow:0 0 '+(15*node.z)+'px '+node.type.color+'66;font-size:'+(node.isCenter?'1.5':'1')+'rem';
+    core.textContent=node.type.icon;
+    el.appendChild(core);
+    const label=document.createElement('div');
+    label.className='node-label';
+    label.style.cssText='color:'+node.type.color+'bb;font-size:'+(0.55+node.z*0.1)+'rem';
+    label.textContent=node.label;
+    el.appendChild(label);
+    el.onclick=function(e){e.stopPropagation();selectNode(node);};
+    inner.appendChild(el);
+  });
+  if(!document.getElementById('neuron-anim')){
+    const style=document.createElement('style');style.id='neuron-anim';
+    style.textContent='@keyframes pulse{0%,100%{transform:scale(1);opacity:.25}50%{transform:scale(1.1);opacity:.08}}';
+    document.head.appendChild(style);
+  }
+}
+
+function selectNode(node){selectedNode=node;editingNode=node;openPanel(node);renderNodes();}
+
+function openPanel(node){
+  const panel=document.getElementById('panel');
+  const title=document.getElementById('panelTitle');
+  const content=document.getElementById('panelContent');
+  title.textContent=node.type.label;
+  let html='';
+  if(node.type===TYPES.personal){
+    const u=node.data||{};
+    html='<div class="form-group"><label class="form-label">称呼</label><input class="form-input" id="field-name" value="'+(u.name||'')+'" placeholder="你的名字"></div>';
+    html+='<div class="form-group"><label class="form-label">生日</label><input class="form-input" id="field-birthday" type="date" value="'+(u.birthday||'')+'"></div>';
+    html+='<div class="form-group"><label class="form-label">性格关键词</label><input class="form-input" id="field-traits" value="'+(u.traits||'')+'" placeholder="如：内向、敏感"></div>';
+    html+='<div class="form-group"><label class="form-label">关于我</label><textarea class="form-input" id="field-bio" placeholder="写下你想让月亮知道的事...">'+(u.bio||'')+'</textarea></div>';
+  }else if(node.type===TYPES.tarot){
+    const d=node.data||{};
+    html='<div class="form-group"><label class="form-label">占卜问题</label><input class="form-input" id="field-q" value="'+(d.question||'')+'" placeholder="输入问题"></div>';
+    html+='<div class="form-group"><label class="form-label">牌阵</label><input class="form-input" id="field-spread" value="'+(d.spread||'')+'" placeholder="如：三张时序"></div>';
+    html+='<div class="form-group"><label class="form-label">结果</label><textarea class="form-input" id="field-result" placeholder="粘贴解读...">'+(d.result||'')+'</textarea></div>';
+  }else if(node.type===TYPES.astrology){
+    const d=node.data||{};
+    html='<div class="form-group"><label class="form-label">星座</label><input class="form-input" id="field-sign" value="'+(d.sign||'')+'" placeholder="如：天蝎座"></div>';
+    html+='<div class="form-group"><label class="form-label">运势</label><textarea class="form-input" id="field-result" placeholder="粘贴运势内容...">'+(d.result||'')+'</textarea></div>';
+  }else if(node.type===TYPES.pairing){
+    const d=node.data||{};
+    html='<div class="form-group"><label class="form-label">配对双方</label><input class="form-input" id="field-a" value="'+(d.a||'')+'" placeholder="第一位"></div>';
+    html+='<div class="form-group"><label class="form-label"></label><input class="form-input" id="field-b" value="'+(d.b||'')+'" placeholder="第二位"></div>';
+    html+='<div class="form-group"><label class="form-label">匹配指数</label><input class="form-input" id="field-score" value="'+(d.score||'')+'" placeholder="如：85%"></div>';
+    html+='<div class="form-group"><label class="form-label">解读</label><textarea class="form-input" id="field-result" placeholder="粘贴解读内容...">'+(d.result||'')+'</textarea></div>';
+  }
+  content.innerHTML=html;
+  panel.classList.add('open');
+}
+
+function closePanel(){document.getElementById('panel').classList.remove('open');selectedNode=null;editingNode=null;renderNodes();}
+
+function saveNode(){
+  if(!editingNode)return;
+  const memory=getMemory(),d=editingNode.data||{};
+  if(editingNode.type===TYPES.personal){
+    d.name=document.getElementById('field-name')?.value||'';
+    d.birthday=document.getElementById('field-birthday')?.value||'';
+    d.traits=document.getElementById('field-traits')?.value||'';
+    d.bio=document.getElementById('field-bio')?.value||'';
+    if(!memory.user)memory.user={};
+    Object.assign(memory.user,d);
+    memory.user.updatedAt=Date.now();
+    UserManager.saveUser(memory.user);
+  }else if(editingNode.type===TYPES.tarot){
+    d.question=document.getElementById('field-q')?.value||'';
+    d.spread=document.getElementById('field-spread')?.value||'';
+    d.result=document.getElementById('field-result')?.value||'';
+    if(!memory.tarot)memory.tarot=[];
+    memory.tarot.unshift(d);
+    saveMemory(memory);
+  }else if(editingNode.type===TYPES.astrology){
+    d.sign=document.getElementById('field-sign')?.value||'';
+    d.result=document.getElementById('field-result')?.value||'';
+    if(!memory.horoscope)memory.horoscope=[];
+    memory.horoscope.unshift(d);
+    saveMemory(memory);
+  }else if(editingNode.type===TYPES.pairing){
+    d.a=document.getElementById('field-a')?.value||'';
+    d.b=document.getElementById('field-b')?.value||'';
+    d.score=document.getElementById('field-score')?.value||'';
+    d.result=document.getElementById('field-result')?.value||'';
+    if(!memory.pair)memory.pair=[];
+    memory.pair.unshift(d);
+    saveMemory(memory);
+  }
+  showToast('已保存');closePanel();initNodes();
+}
+
+function deleteNode(){
+  if(!editingNode)return;
+  if(!confirm('确定删除这条记忆？'))return;
+  const memory=getMemory(),id=editingNode.id;
+  if(id==='user'){UserManager.clearUser();}
+  else if(id.startsWith('tarot-')){const i=parseInt(id.split('-')[1]);memory.tarot.splice(i,1);}
+  else if(id.startsWith('astro-')){const i=parseInt(id.split('-')[1]);memory.horoscope.splice(i,1);}
+  else if(id.startsWith('pair-')){const i=parseInt(id.split('-')[1]);memory.pair.splice(i,1);}
+  saveMemory(memory);showToast('已删除');closePanel();initNodes();
+}
+
+function addNode(){
+  const newNode={id:'new-'+Date.now(),label:'新记忆',type:TYPES.tarot,x:window.innerWidth/2,y:window.innerHeight/2,z:0.7,isCenter:false,data:{date:new Date().toLocaleDateString('zh-CN')},pulsePhase:Math.random()*Math.PI*2};
+  nodes.push(newNode);
+  edges.push({from:'user',to:newNode.id});
+  selectNode(newNode);
+}
+
+function updateStats(){const stats=HistoryManager.getStats();document.getElementById('statsBadge').textContent=stats.total+' 条记忆';}
+
+function showToast(msg){const toast=document.getElementById('toast');toast.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1500);}
+
+const gc=document.getElementById('graphContainer');
+gc.addEventListener('pointerdown',(e)=>{if(e.target.closest('.node'))return;isDragging=true;dragStart={x:e.clientX-camera.x,y:e.clientY-camera.y};gc.setPointerCapture(e.pointerId);});
+gc.addEventListener('pointermove',(e)=>{if(!isDragging)return;camera.x=e.clientX-dragStart.x;camera.y=e.clientY-dragStart.y;renderNodes();});
+gc.addEventListener('pointerup',()=>{isDragging=false;});
+gc.addEventListener('wheel',(e)=>{e.preventDefault();const delta=e.deltaY>0?0.92:1.08;camera.zoom=Math.max(0.3,Math.min(3,camera.zoom*delta));renderNodes();},{passive:false});
+
+document.getElementById('btnBack').onclick=()=>location.href='../';
+document.getElementById('btnClose').onclick=closePanel;
+document.getElementById('btnSave').onclick=saveNode;
+document.getElementById('btnDelete').onclick=deleteNode;
+document.getElementById('addBtn').onclick=addNode;
+gc.addEventListener('click',(e)=>{if(!e.target.closest('.node'))closePanel();});
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape')closePanel();});
+
+initNodes();
+window.addEventListener('resize',()=>{resize();initNodes();});
+</script>
+</body>
+</html>

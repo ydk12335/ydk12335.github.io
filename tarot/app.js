@@ -583,6 +583,14 @@ function buildPrompt(){
   const L=[];
   L.push('【占卜信息】'+now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日 星期'+wd+'，以下为求问者现场抽取的真实牌组。');
   L.push('【求问者性别】'+userGender+'性');
+  // 添加记忆库中的用户信息
+  if(typeof UserManager !== 'undefined' && UserManager.getUser()) {
+    const userInfo = UserManager.getUser();
+    if(userInfo.name) L.push('【求问者称呼】'+userInfo.name);
+    if(userInfo.zodiac) L.push('【求问者星座】'+userInfo.zodiac);
+    if(userInfo.traits) L.push('【求问者性格】'+userInfo.traits);
+    if(userInfo.bio) L.push('【关于求问者】'+userInfo.bio);
+  }
   if(targetGender){
     if(targetGender==='自己'){
       L.push('【求问对象】求问者是在问自己');
