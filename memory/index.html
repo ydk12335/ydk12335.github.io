@@ -389,8 +389,48 @@ document.getElementById('btnStats').onclick=function(){
 let toastT=null;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);}
 
+/* ================= 旧数据迁移 ================= */
+function migrateOldData(){
+  try{
+    const raw=localStorage.getItem('sleepy_space_memory');
+    if(!raw)return 0;
+    const old=JSON.parse(raw);
+    const db=dbLoad();
+    let added=0;
+    const ensure=(obj)=>{
+      // 去重：按 source+sig
+      if(!obj.sig)return false;
+      if(db.items.some(i=>i.source===obj.source&&i.sig===obj.sig))return false;
+      db.items.unshift(obj);added++;return true;
+    };
+    /* 用户信息 */
+    if(old.user){
+      const u=old.user,p=[];
+      if(u.name)p.push('名字：'+u.name);
+      if(u.gender)p.push('性别：'+u.gender);
+      if(u.birthday)p.push('生日：'+u.birthday);
+      if(u.zodiac)p.push('星座：'+u.zodiac);
+      if(p.length)ensure({type:'traits',title:'◈ 个人档案',data:{note:p.join('；')},createdAt:u.createdAt||Date.now(),source:'personal',sig:'personal'});
+      if(u.birthday&&!db.items.some(i=>i.source==='birthday'))
+        ensure({type:'birthday',title:'🎂 生日',data:{note:String(u.birthday)},createdAt:u.createdAt||Date.now(),source:'birthday',sig:'birthday'});
+    }
+    /* 塔罗 */
+    (old.tarot||[]).forEach(r=>ensure({type:'story',title:'☽ 塔罗 · '+(r.spread||'占卜'),data:{note:'问题：'+(r.question||'无')+'\n牌面：'+(Array.isArray(r.cards)?r.cards.join(' / '):(r.cards||''))+'\n解读：'+(r.result||'')},createdAt:Date.now(),source:'tarot',sig:'tarot|'+(r.id||r.date+r.time)}));
+    /* 星座运势 */
+    (old.horoscope||[]).forEach(r=>ensure({type:'story',title:'✦ 观星 · '+(r.sign||''),data:{note:(r.date||'')+'\n'+(r.result||'')},createdAt:Date.now(),source:'horoscope',sig:'horoscope|'+(r.id||r.date)}));
+    /* 配对 */
+    (old.pair||[]).forEach(r=>ensure({type:'story',title:'⌘ 配对 · '+(r.a||'')+' × '+(r.b||''),data:{note:'契合度：'+(r.score||'?')+'\n'+(r.result||'')},createdAt:Date.now(),source:'pair',sig:'pair|'+(r.id||r.date)}));
+    /* 合盘 */
+    (old.synastry||[]).forEach(r=>ensure({type:'story',title:'∞ 合盘 · '+(r.a||'')+' × '+(r.b||''),data:{note:(r.rel?'关系：'+r.rel+'\n':'')+(r.result||'')},createdAt:Date.now(),source:'synastry',sig:'synastry|'+(r.id||r.date)}));
+    if(added)dbSave(db);
+    return added;
+  }catch(e){console.warn('迁移失败',e);return 0;}
+}
+
 /* ================= 启动 ================= */
+const migrated=migrateOldData();
 buildNodes();
+if(migrated)setTimeout(()=>toast('已点亮 '+migrated+' 颗旧记忆的星 ✦'),600);
 </script>
 </body>
 </html>

@@ -340,6 +340,11 @@ function miniMD(t){
   function readInfo(suffix){
     const n=($('name'+suffix).value||'').trim();
     const dt=parseDate($('birth'+suffix).value);
+    /* 生日自动写入记忆库 */
+    if(dt && typeof mirrorToV2==='function'){
+      const bstr=dt.y+'年'+dt.mo+'月'+dt.d+'日';
+      try{ mirrorToV2('birthday', (n?n+'的生日：':(suffix==='A'?'我的生日：':'TA的生日：'))+bstr); }catch(e){}
+    }
     let part='';
     if(n)part+='，名字/称呼：「'+n+'」';
     if(dt)part+='，生日：'+dt.y+'年'+dt.mo+'月'+dt.d+'日（'+dt.y+'年生，现约'+(new Date().getFullYear()-dt.y)+'岁）';
@@ -461,6 +466,7 @@ $('shotClose').onclick=()=>$('shotModal').classList.remove('show');
 $('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList.remove('show');};
 $('btnBack').onclick=()=>location.href='../';
 </script>
+<script src="../../memory.js"></script>
 <script src="../../music-widget.js?v=1"></script>
 </body>
 </html>

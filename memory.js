@@ -5,6 +5,68 @@
 
 const MEMORY_KEY = 'sleepy_space_memory';
 
+// ==================== 同步到记忆库v2 ====================
+function mirrorToV2(type, data) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const key = 'sleepy_space_memory_v2';
+    const v2 = JSON.parse(localStorage.getItem(key) || '{"items":[]}');
+    if (!v2.items) v2.items = [];
+    let title = '', note = '', vtype = 'story';
+    if (type === 'personal' || type === 'birthday') {
+      if (!data) return;
+      if (type === 'birthday') {
+        title = '🎂 生日';
+        note = String(data);
+        vtype = 'birthday';
+        if (v2.items.some(i => i.source === 'birthday' && i.data.note === note)) return;
+      } else {
+        const parts = [];
+        if (data.name) parts.push('名字：' + data.name);
+        if (data.gender) parts.push('性别：' + data.gender);
+        if (data.birthday) parts.push('生日：' + data.birthday);
+        if (data.zodiac) parts.push('星座：' + data.zodiac);
+        if (!parts.length) return;
+        title = '◈ 个人档案';
+        note = parts.join('；');
+        vtype = 'traits';
+        if (v2.items.some(i => i.source === 'personal' && i.data.note === note)) return;
+      }
+    } else {
+      if (type === 'tarot') {
+        title = '☽ 塔罗 · ' + (data.spread || '占卜');
+        note = '问题：' + (data.question || '无') + '\n牌面：' + (Array.isArray(data.cards) ? data.cards.join(' / ') : (data.cards || '')) + '\n解读：' + (data.result || '');
+      } else if (type === 'horoscope') {
+        title = '✦ 观星 · ' + (data.sign || '');
+        note = (data.date || '') + '\n' + (data.result || '');
+      } else if (type === 'pair') {
+        title = '⌘ 配对 · ' + (data.a || '') + ' × ' + (data.b || '');
+        note = '契合度：' + (data.score || '?') + '\n' + (data.result || '');
+      } else if (type === 'synastry') {
+        title = '∞ 合盘 · ' + (data.a || '') + ' × ' + (data.b || '');
+        note = (data.rel ? '关系：' + data.rel + '\n' : '') + (data.result || '');
+      }
+      // 去重：同类型同标题同日期
+      const sig = title + '|' + (data.date || '') + '|' + (data.time || '');
+      if (v2.items.some(i => i.source === type && (i.sig || '') === sig)) return;
+      var sigVal = sig;
+    }
+    v2.items.unshift({
+      id: Date.now() + '' + Math.floor(Math.random() * 1000),
+      type: vtype,
+      title: title,
+      data: { note: note },
+      createdAt: Date.now(),
+      source: type,
+      sig: sigVal || 'auto'
+    });
+    localStorage.setItem(key, JSON.stringify(v2));
+  } catch (e) {
+    console.warn('mirrorToV2 失败:', e);
+  }
+}
+
+
 // ==================== 数据结构 ====================
 // {
 //   user: {
@@ -67,6 +129,8 @@ const UserManager = {
     Object.assign(m.user, info);
     m.updatedAt = Date.now();
     saveMemory(m);
+    if (info.birthday) mirrorToV2('birthday', info.birthday);
+    mirrorToV2('personal', m.user);
   },
   
   clearUser() {
@@ -136,6 +200,7 @@ const HistoryManager = {
     if (m.tarot.length > 50) m.tarot = m.tarot.slice(0, 50);
     m.updatedAt = Date.now();
     saveMemory(m);
+    mirrorToV2('tarot', item);
     return item;
   },
   
@@ -152,6 +217,7 @@ const HistoryManager = {
     if (m.horoscope.length > 30) m.horoscope = m.horoscope.slice(0, 30);
     m.updatedAt = Date.now();
     saveMemory(m);
+    mirrorToV2('horoscope', item);
     return item;
   },
   
@@ -170,6 +236,7 @@ const HistoryManager = {
     if (m.pair.length > 30) m.pair = m.pair.slice(0, 30);
     m.updatedAt = Date.now();
     saveMemory(m);
+    mirrorToV2('pair', item);
     return item;
   },
   
@@ -188,6 +255,7 @@ const HistoryManager = {
     if (m.synastry.length > 30) m.synastry = m.synastry.slice(0, 30);
     m.updatedAt = Date.now();
     saveMemory(m);
+    mirrorToV2('synastry', item);
     return item;
   },
   
@@ -262,7 +330,7 @@ const MemoryContext = {
     if (m.tarot.length > 0) {
       parts.push('【最近占卜】');
       m.tarot.slice(0, limit).forEach(r => {
-        parts.push(`• ${r.date} ${r.time}：${r.question || '(无问题)} -> ${r.spread || '(未知牌阵)'}`);
+        parts.push(`• ${r.date} ${r.time}：${r.question || '(无问题)'} -> ${r.spread || '(未知牌阵)'}`);
       });
     }
     
@@ -307,6 +375,7 @@ const MemoryContext = {
 if (typeof window !== 'undefined') {
   window.getMemory = getMemory;
   window.saveMemory = saveMemory;
+  window.mirrorToV2 = mirrorToV2;
   window.UserManager = UserManager;
   window.HistoryManager = HistoryManager;
   window.MemoryContext = MemoryContext;
