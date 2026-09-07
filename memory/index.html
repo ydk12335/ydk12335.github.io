@@ -414,7 +414,12 @@ function migrateOldData(){
       if(u.birthday&&!db.items.some(i=>i.source==='birthday'))
         ensure({type:'birthday',title:'🎂 生日',data:{note:String(u.birthday)},createdAt:u.createdAt||Date.now(),source:'birthday',sig:'birthday'});
     }
-    /* 塔罗 */
+    /* 塔罗（旧版独立存储 tarot_hist_v1） */
+    try{
+      const th=JSON.parse(localStorage.getItem('tarot_hist_v1')||'[]');
+      if(Array.isArray(th))th.forEach(r=>ensure({type:'story',title:'☽ 塔罗 · '+(r.spread||'占卜'),data:{note:'时间：'+(r.time||'')+'\n问题：'+(r.q||'无')+'\n牌面：'+(r.cards||'')+'\n解读：'+(r.text||'')},createdAt:Date.now(),source:'tarot',sig:'taroth|'+(r.time||'')+'|'+(r.q||'')}));
+    }catch(e){}
+    /* 塔罗（memory.js 里的，若有） */
     (old.tarot||[]).forEach(r=>ensure({type:'story',title:'☽ 塔罗 · '+(r.spread||'占卜'),data:{note:'问题：'+(r.question||'无')+'\n牌面：'+(Array.isArray(r.cards)?r.cards.join(' / '):(r.cards||''))+'\n解读：'+(r.result||'')},createdAt:Date.now(),source:'tarot',sig:'tarot|'+(r.id||r.date+r.time)}));
     /* 星座运势 */
     (old.horoscope||[]).forEach(r=>ensure({type:'story',title:'✦ 观星 · '+(r.sign||''),data:{note:(r.date||'')+'\n'+(r.result||'')},createdAt:Date.now(),source:'horoscope',sig:'horoscope|'+(r.id||r.date)}));
