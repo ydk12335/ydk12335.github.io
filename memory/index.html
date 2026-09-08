@@ -26,6 +26,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .node-label{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);font-size:.62rem;white-space:nowrap;letter-spacing:.05em;text-shadow:0 1px 4px rgba(0,0,0,.8)}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:.35}50%{transform:scale(1.12);opacity:.1}}
 #emptyHint{position:absolute;left:50%;top:58%;transform:translateX(-50%);text-align:center;color:rgba(240,207,130,.45);font-size:.78rem;line-height:2;pointer-events:none;letter-spacing:.1em}
+#centerHint{position:absolute;left:50%;top:64px;transform:translateX(-50%);font-size:.6rem;color:rgba(240,207,130,.38);letter-spacing:.18em;pointer-events:none;z-index:19;white-space:nowrap}
 
 /* ===== 底部 + 按钮 ===== */
 #addBtn{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:58px;height:58px;border-radius:50%;border:2px solid rgba(240,207,130,.45);background:radial-gradient(circle at 32% 30%,rgba(240,207,130,.25),rgba(240,207,130,.05));color:#f0cf82;font-size:1.9rem;cursor:pointer;box-shadow:0 0 28px rgba(240,207,130,.2);z-index:20;line-height:1}
@@ -76,6 +77,28 @@ select.form-input{cursor:pointer;-webkit-appearance:none;appearance:none}
 .ai-orb{width:52px;height:52px;border-radius:50%;border:2px solid rgba(240,207,130,.25);border-top-color:#f0cf82;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #aiLoading p{font-size:.78rem;color:rgba(240,207,130,.7);letter-spacing:.15em}
+
+/* ===== 人格分析面板 ===== */
+#analysis{position:fixed;inset:0;z-index:52;display:none;flex-direction:column;background:linear-gradient(180deg,rgba(6,4,18,.99),rgba(10,7,26,.99));backdrop-filter:blur(6px)}
+#analysis.open{display:flex}
+.an-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid rgba(240,207,130,.12);flex:0 0 auto}
+.an-head h2{font-size:.92rem;color:#f0cf82;letter-spacing:.22em;font-weight:400;text-shadow:0 0 16px rgba(240,207,130,.35)}
+.an-head .an-sub{font-size:.58rem;color:rgba(240,207,130,.45);letter-spacing:.14em;margin-top:4px}
+.an-close{width:34px;height:34px;border-radius:50%;border:1px solid rgba(240,207,130,.2);background:transparent;color:rgba(242,237,224,.7);font-size:1rem;cursor:pointer}
+.an-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 20px calc(24px + env(safe-area-inset-bottom));user-select:text}
+.an-body::-webkit-scrollbar{width:3px}
+.an-body::-webkit-scrollbar-thumb{background:rgba(240,207,130,.25);border-radius:3px}
+.an-body h3{font-size:.86rem;color:#f0cf82;letter-spacing:.12em;margin:22px 0 9px;padding-left:11px;border-left:2px solid rgba(240,207,130,.55);font-weight:400}
+.an-body h3:first-child{margin-top:0}
+.an-body p{font-size:.84rem;line-height:1.95;color:rgba(242,237,224,.88);margin-bottom:9px;letter-spacing:.02em}
+.an-body li{font-size:.84rem;line-height:1.9;color:rgba(242,237,224,.85);margin:0 0 6px 18px;list-style:none;position:relative}
+.an-body li:before{content:'✦';position:absolute;left:-16px;color:rgba(240,207,130,.55);font-size:.62rem;top:.28em}
+.an-body strong{color:#f0cf82;font-weight:600}
+.an-body em{color:#a79ade;font-style:normal}
+.an-foot{display:flex;gap:10px;padding:12px 18px calc(16px + env(safe-area-inset-bottom));border-top:1px solid rgba(240,207,130,.12);flex:0 0 auto;background:rgba(6,4,18,.9)}
+.an-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;height:70%;text-align:center}
+.an-loading .an-orb{width:64px;height:64px;border-radius:50%;border:2px solid rgba(240,207,130,.2);border-top-color:#f0cf82;animation:spin 1s linear infinite}
+.an-loading p{font-size:.76rem;color:rgba(240,207,130,.65);letter-spacing:.16em;line-height:2}
 </style>
 </head>
 <body>
@@ -92,6 +115,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;appearance:none}
     </div>
   </div>
   <div id="stage"><div id="world"></div></div>
+  <div id="centerHint">✦ 点中间的大星 · 让我读懂你 ✦</div>
   <div id="emptyHint" style="display:none">这里还没有记忆<br>点击下方 ＋ 埋下第一颗星</div>
   <button id="addBtn">+</button>
 </div>
@@ -120,6 +144,22 @@ select.form-input{cursor:pointer;-webkit-appearance:none;appearance:none}
 
 <!-- AI 精炼中 -->
 <div id="aiLoading"><div class="ai-orb"></div><p>月光正在凝练这段记忆……</p></div>
+
+<!-- 人格分析面板 -->
+<div id="analysis">
+  <div class="an-head">
+    <div>
+      <h2>◈ 你的人格星图</h2>
+      <div class="an-sub">由全部记忆推演 · AI 深度解读</div>
+    </div>
+    <button class="an-close" id="anClose">✕</button>
+  </div>
+  <div class="an-body" id="anBody"></div>
+  <div class="an-foot">
+    <button class="btn btn-ghost" id="anCopy" style="flex:0 0 96px">复制</button>
+    <button class="btn btn-primary" id="anRedo">重新分析</button>
+  </div>
+</div>
 
 <!-- 导入面板 -->
 <div id="importPanel" style="position:fixed;inset:0;z-index:48;display:none;align-items:flex-end;background:rgba(3,2,10,.6);backdrop-filter:blur(3px)" onclick="if(event.target===this)this.style.display='none'">
@@ -206,6 +246,7 @@ function buildNodes(){
     nodes.push({id:it.id,label:_lb,type:it.type,x:Math.cos(ang)*dist,y:Math.sin(ang)*dist,z:.55+Math.random()*.4,size:36,data:it});
   });
   document.getElementById('emptyHint').style.display=db.items.length?'none':'block';
+  document.getElementById('centerHint').style.display=db.items.length?'block':'none';
   render();
 }
 
@@ -241,7 +282,7 @@ function render(){
     el.innerHTML='<div class="node-ring" style="border:1px solid '+T.color+'"></div>'+
       '<div class="node-core" style="background:radial-gradient(circle at 32% 28%,#fff8,'+T.color+'dd 45%,'+T.color+'55);box-shadow:0 0 '+(n.z*22).toFixed(0)+'px '+T.color+'66;font-size:'+(n.size*.42).toFixed(0)+'px">'+T.icon+'</div>'+
       '<div class="node-label" style="color:'+T.color+'cc">'+escapeHtml(n.label)+'</div>';
-    el.addEventListener('click',function(e){e.stopPropagation();if(!dragMoved)openEdit(n);});
+    el.addEventListener('click',function(e){e.stopPropagation();if(!dragMoved){if(n.id==='center')openAnalysis();else openEdit(n);}});
     world.appendChild(el);
   });
 }
@@ -347,6 +388,96 @@ async function aiRefine(payload){
   }catch(e){}
   return null;
 }
+
+/* ================= 人格深度分析 ================= */
+function buildAnalysisMaterial(){
+  const db=dbLoad();
+  const items=db.items||[];
+  const notSrc=['personal','birthday','tarot','horoscope','pair','synastry'];
+  const line=i=>'- '+(i.title||'')+(i.data&&i.data.note?('：'+String(i.data.note).replace(/\n+/g,' / ')):'');
+  const sec=(name,arr)=>arr&&arr.length?('【'+name+'】（'+arr.length+'条）\n'+arr.map(line).join('\n')+'\n\n'):'';
+  const pick=f=>items.filter(f);
+  let s='';
+  s+=sec('个人档案与生日',pick(i=>i.source==='personal'||i.source==='birthday'));
+  s+=sec('塔罗占卜记录',pick(i=>i.source==='tarot'));
+  s+=sec('星座运势',pick(i=>i.source==='horoscope'));
+  s+=sec('星座配对',pick(i=>i.source==='pair'));
+  s+=sec('星座合盘',pick(i=>i.source==='synastry'));
+  s+=sec('其他故事与自定义记录',pick(i=>notSrc.indexOf(i.source)<0));
+  return {text:s.trim(),count:items.length};
+}
+
+function mdToHtml(md){
+  const inline=t=>escapeHtml(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*]+?)\*/g,'$1<em>$2</em>');
+  const lines=String(md||'').split('\n');
+  let html='',inList=false;
+  const closeList=()=>{if(inList){html+='</ul>';inList=false;}};
+  for(let raw of lines){
+    const line=raw.replace(/\s+$/,'');
+    if(!line.trim()){closeList();continue;}
+    let m;
+    if((m=line.match(/^\s*#{1,6}\s*(.+)$/))){closeList();html+='<h3>'+inline(m[1])+'</h3>';continue;}
+    if((m=line.match(/^\s*[-*•]\s+(.+)$/))){if(!inList){html+='<ul>';inList=true;}html+='<li>'+inline(m[1])+'</li>';continue;}
+    closeList();
+    html+='<p>'+inline(line)+'</p>';
+  }
+  closeList();
+  return html;
+}
+
+let lastAnalysisText='';
+function openAnalysis(){
+  document.getElementById('analysis').classList.add('open');
+  runAnalysis();
+}
+async function runAnalysis(){
+  const body=document.getElementById('anBody');
+  const mat=buildAnalysisMaterial();
+  if(!mat.count){
+    body.innerHTML='<div class="an-loading"><p>夜空还没有记忆<br>先记录一些，我才能读懂你 ✦</p></div>';
+    return;
+  }
+  body.innerHTML='<div class="an-loading"><div class="an-orb"></div><p>正在读取 '+mat.count+' 颗记忆的星光……<br>月光会替你把它读成你</p></div>';
+  const sys='你是「月下记忆」的占星与心理洞察者。下面是一个人记录的全部记忆素材（个人档案、塔罗占卜、星座运势、配对合盘、故事等）。请你像一位既懂占星又懂心理学的老朋友，彻底地分析这个人。\n'+
+    '要求：\n'+
+    '1. 只依据素材里的线索推理，可以大胆但要说清依据；拒绝空洞的星座套话。\n'+
+    '2. 语气温柔但犀利、克制、有洞察力，像深夜长谈，不煽情、不说教。\n'+
+    '3. 用 Markdown 输出，只用 ## 标题和 - 列表，不要用表格，不要用代码块。\n'+
+    '4. 必须包含以下六个部分，标题照抄：\n'+
+    '## 一、核心性格底色\n'+
+    '## 二、情感模式与喜欢的人\n'+
+    '（重点：TA 在感情里的真实需求；容易心动与退缩的点；暗恋对象/喜欢的人的可能画像与性格特征；TA 表达喜欢的方式；容易被什么打动或劝退）\n'+
+    '## 三、事业与学业倾向\n'+
+    '## 四、内心需求与软肋\n'+
+    '## 五、最近的状态（从占卜与运势记录推断）\n'+
+    '## 六、给 TA 的三句话\n'+
+    '5. 每个部分至少 3 条具体内容，尽量引用素材里的具体问题或事件。';
+  let txt='';
+  try{
+    const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
+      body:JSON.stringify({model:MODEL,temperature:.85,max_tokens:4000,
+        messages:[{role:'system',content:sys},{role:'user',content:'这是我全部的记录：\n\n'+mat.text}]})});
+    const j=await res.json();
+    if(j.choices&&j.choices[0])txt=j.choices[0].message.content.trim();
+  }catch(e){}
+  if(!txt){
+    body.innerHTML='<div class="an-loading"><p>月光被云遮住了……<br>点下方「重新分析」再试一次</p></div>';
+    return;
+  }
+  lastAnalysisText=txt;
+  body.innerHTML=mdToHtml(txt);
+  body.scrollTop=0;
+}
+
+document.getElementById('anClose').onclick=()=>document.getElementById('analysis').classList.remove('open');
+document.getElementById('anRedo').onclick=()=>runAnalysis();
+document.getElementById('anCopy').onclick=()=>{
+  if(!lastAnalysisText){toast('还没有分析结果');return;}
+  const done=()=>toast('已复制分析结果');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(lastAnalysisText).then(done).catch(()=>{const t=document.createElement('textarea');t.value=lastAnalysisText;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();done();});}
+  else{const t=document.createElement('textarea');t.value=lastAnalysisText;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();done();}
+};
 
 /* ================= 保存 / 删除 ================= */
 document.getElementById('btnSave').onclick=async function(){
