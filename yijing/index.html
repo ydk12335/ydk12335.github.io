@@ -164,6 +164,38 @@ body[data-phase="day"]::after,body[data-phase="dusk"]::after{
   border-radius:12px;padding:12px 8px;color:var(--ivory);font-family:inherit;font-size:1rem;
   text-align:center;outline:none;user-select:text;letter-spacing:.16em}
 .numRow input:focus{border-color:rgba(var(--gold-rgb),.45);background:rgba(var(--gold-rgb),.04)}
+
+/* ===== 液态玻璃（高透明度 · 强模糊 · 玻璃边缘高光） ===== */
+.guaBox,.txtBox,.reading,.qwrap textarea,.numRow input,.hbtn,.mbtn{
+  background:linear-gradient(150deg,rgba(var(--glass-rgb),.16),rgba(var(--glass-rgb),.05));
+  border-color:rgba(255,255,255,.2);
+  -webkit-backdrop-filter:blur(28px) saturate(190%);
+  backdrop-filter:blur(28px) saturate(190%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.36),
+             inset 0 -1px 0 rgba(255,255,255,.06),
+             0 10px 30px rgba(0,0,0,.14);
+}
+.castBtn,.aiBtn{
+  background:linear-gradient(150deg,rgba(var(--gold-rgb),.28),rgba(var(--gold-rgb),.06));
+  border-color:rgba(var(--gold-rgb),.45);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);
+  backdrop-filter:blur(26px) saturate(180%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.32),
+             inset 0 -1px 0 rgba(var(--gold-rgb),.12),
+             0 8px 26px rgba(0,0,0,.16),
+             0 0 24px rgba(var(--gold-rgb),.16);
+}
+.mbtn.on{
+  background:linear-gradient(150deg,rgba(var(--gold-rgb),.3),rgba(var(--gold-rgb),.08));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.36),0 0 18px rgba(var(--gold-rgb),.2);
+}
+.sheet{
+  background:linear-gradient(to top,rgba(8,5,20,.82),rgba(8,5,20,.68));
+  -webkit-backdrop-filter:blur(32px) saturate(170%);
+  backdrop-filter:blur(32px) saturate(170%);
+  border-top-color:rgba(255,255,255,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
+}
 </style>
 </head>
 <body>
@@ -650,12 +682,13 @@ async function aiRead(){
   const btn=$('btnAI');btn.disabled=true;btn.textContent='解卦中…';
   $('loading').classList.add('show');
   const q=cur.question||'（未提供具体问题，请围绕当下整体处境解读）';
-  const sys='你是一位精通《周易》的占卜者，语气沉静、通透、克制，不迷信不夸张，像一位深夜与人对坐的长者。\n'+
-    '要求：\n1. 紧扣用户所问，结合卦象、卦辞、动爻爻辞给出解读，说清依据。\n'+
-    '2. 用 Markdown 输出，只用 ## 标题和 - 列表，不要表格、不要代码块。\n'+
-    '3. 必须包含四部分，标题照抄：\n'+
-    '## 卦象总览\n## 针对所问的解读\n## 动爻与变卦的启示\n## 一句话赠言\n'+
-    '4. 每部分至少 2 条，总长控制在 500 字以内。';
+  const sys='你是精通《周易》的解卦人，像个懂行的老朋友，深夜陪人坐着聊卦。\n'+
+    '【语气风格】说人话，像真人聊天：短句为主，允许口语停顿，可以用"嗯…""其实吧""说白了""这事儿吧"这类词，自然就好，别滥用。\n'+
+    '可以有情绪、有态度，能点破就点破，别端着；真诚但不煽情，不写"愿星光指引你"这种话。\n'+
+    '【禁止】不要AI腔：不写"综上所述""值得注意的是""首先…其次…最后"，不堆排比，不硬凑金句，不套生硬的分点模板，不机械罗列关键词。\n'+
+    '【内容】紧扣用户所问，结合卦象、卦辞、动爻爻辞说清依据，把含义自然融进话里；能给建议就给，别含糊其辞。\n'+
+    '【排版】用 Markdown，可以有简短小标题和分段，关键结论**加粗**，全程中文，总长500字左右。\n'+
+    '大致这么走（标题不必照抄）：先说这卦大概在讲什么 → 结合所问细说 → 动爻/变卦的提醒 → 最后一句实在话。';
   const user='所问：'+q+'\n'+
     '起卦方式：'+(cur.methodText||'铜钱摇卦')+'\n'+
     '本卦：'+cur.benName+'（'+cur.benDetail+'）\n'+
