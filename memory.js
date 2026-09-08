@@ -34,7 +34,8 @@ function mirrorToV2(type, data) {
       }
     } else {
       if (type === 'tarot') {
-        title = '☽ 塔罗 · ' + (data.spread || '占卜');
+        var _q=(data.question||'').replace(/\s+/g,' ').slice(0,12);
+        title = '☽ 塔罗 · ' + (_q || data.spread || '占卜');
         note = '问题：' + (data.question || '无') + '\n牌面：' + (Array.isArray(data.cards) ? data.cards.join(' / ') : (data.cards || '')) + '\n解读：' + (data.result || '');
       } else if (type === 'horoscope') {
         title = '✦ 观星 · ' + (data.sign || '');

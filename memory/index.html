@@ -199,7 +199,8 @@ function buildNodes(){
     const T=TYPES[it.type]||TYPES.free;
     const ang=(idx/Math.max(db.items.length,4))*Math.PI*2- Math.PI/2;
     const dist=130+Math.random()*70;
-    nodes.push({id:it.id,label:it.title||T.label,type:it.type,x:Math.cos(ang)*dist,y:Math.sin(ang)*dist,z:.55+Math.random()*.4,size:36,data:it});
+    var _lb = it.title || ((it.data && it.data.note) ? String(it.data.note).split('\n')[0].slice(0,14) : T.label);
+    nodes.push({id:it.id,label:_lb,type:it.type,x:Math.cos(ang)*dist,y:Math.sin(ang)*dist,z:.55+Math.random()*.4,size:36,data:it});
   });
   document.getElementById('emptyHint').style.display=db.items.length?'none':'block';
   render();
@@ -407,40 +408,50 @@ const importPanel=document.getElementById('importPanel');
 document.getElementById('btnImport').onclick=()=>{importPanel.style.display='flex';setTimeout(()=>document.getElementById('importText').focus(),100);};
 document.getElementById('importCancel').onclick=()=>importPanel.style.display='none';
 document.getElementById('importGo').onclick=()=>{
-  const txt=document.getElementById('importText').value.trim();
-  if(!txt){toast('先粘贴内容吧');return;}
-  let added=0;
-  try{
-    const j=JSON.parse(txt);
-    const recs=(j.moon_import&&Array.isArray(j.records))?j.records:(Array.isArray(j)?j:[]);
-    const db=dbLoad();
-    recs.forEach(r=>{
-      const sig='import|'+(r.title||'')+'|'+String(r.note||'').slice(0,40);
-      if(db.items.some(i=>i.sig===sig))return;
-      db.items.unshift({id:Date.now()+''+Math.floor(Math.random()*1000),type:r.type||'story',title:r.title||'✦ 导入的记忆',data:{note:r.note||''},createdAt:r.createdAt||Date.now(),source:'import',sig:sig});
-      added++;
-    });
-    if(added)dbSave(db);
-  }catch(e){
-    /* 非JSON：按纯文本自由记录导入 */
-    const db=dbLoad();
-    txt.split(/\n{2,}/).forEach(block=>{
-      const b=block.trim();if(!b)return;
-      const sig='importtxt|'+b.slice(0,40);
-      if(db.items.some(i=>i.sig===sig))return;
-      db.items.unshift({id:Date.now()+''+Math.floor(Math.random()*1000),type:'free',title:b.split('\n')[0].slice(0,12)||'✦ 导入',data:{note:b},createdAt:Date.now(),source:'import',sig:sig});
-      added++;
-    });
-    if(added)dbSave(db);
+  const raw=document.getElementById('importText').value.trim();
+  if(!raw){toast('先粘贴内容吧');return;}
+  function h32(str){let h=5381;for(let i=0;i<str.length;i++){h=((h<<5)+h+str.charCodeAt(i))>>>0;}return h.toString(36);}
+  const db=dbLoad();
+  let added=0,dups=0;
+  function pushItem(type,title,note,createdAt){
+    const sig='imp|'+h32(title+'\u0000'+note);
+    if(db.items.some(i=>i.sig===sig)){dups++;return;}
+    db.items.unshift({id:Date.now()+''+Math.floor(Math.random()*100000),type:type||'story',title:title||'✦ 导入的记忆',data:{note:note||''},createdAt:createdAt||Date.now(),source:'import',sig:sig});
+    added++;
   }
+  let jsonTxt=null;
+  try{JSON.parse(raw);jsonTxt=raw;}catch(e){
+    const m=raw.match(/[\{\[][\s\S]*[\}\]]/);
+    if(m){try{JSON.parse(m[0]);jsonTxt=m[0];}catch(e2){}}
+  }
+  if(jsonTxt){
+    try{
+      const j=JSON.parse(jsonTxt);
+      const recs=(j&&j.moon_import&&Array.isArray(j.records))?j.records:(Array.isArray(j)?j:(Array.isArray(j&&j.items)?j.items:[]));
+      recs.forEach(r=>{
+        if(!r||typeof r!=='object')return;
+        const note=String(r.note!=null?r.note:((r.data&&r.data.note)||''));
+        pushItem(r.type,r.title,note,r.createdAt);
+      });
+    }catch(e){}
+  }
+  if(!added){
+    const blocks=raw.split(/\n{2,}|(?=☽ 塔罗|✦ 观星|⌘ 配对|∞ 合盘|🎂 生日|◈ 个人档案)/).map(b=>b.trim()).filter(Boolean);
+    blocks.forEach(b=>{
+      const first=b.split('\n')[0].replace(/^#+\s*/,'').slice(0,24);
+      pushItem('free',first||'✦ 导入',b);
+    });
+  }
+  if(added)dbSave(db);
   importPanel.style.display='none';document.getElementById('importText').value='';
   buildNodes();
-  toast(added?('已点亮 '+added+' 颗星 ✦'):'没有新的记录可导入');
+  toast(added?('已点亮 '+added+' 颗星 ✦'+(dups?(' ('+dups+' 条已存在)'):'')):('没有新记录，'+dups+' 条已存在'));
 };
 
 /* ================= 旧数据迁移 ================= */
 function migrateOldData(){
   try{
+  var NL=String.fromCharCode(10);
     const raw=localStorage.getItem('sleepy_space_memory');
     if(!raw)return 0;
     const old=JSON.parse(raw);
@@ -463,10 +474,23 @@ function migrateOldData(){
       if(u.birthday&&!db.items.some(i=>i.source==='birthday'))
         ensure({type:'birthday',title:'🎂 生日',data:{note:String(u.birthday)},createdAt:u.createdAt||Date.now(),source:'birthday',sig:'birthday'});
     }
+    /* 观星 / 配对 / 合盘 历史键 */
+    try{
+      const ah=JSON.parse(localStorage.getItem('astro_hist_v1')||'[]');
+      if(Array.isArray(ah))ah.forEach(r=>ensure({type:'story',title:r.title||('✦ 观星 · '+(r.sign||'')),data:{note:(r.date?'日期：'+r.date+NL:'')+(r.result||'')},createdAt:Date.now(),source:'horoscope',sig:'ah|'+(r.date||'')+'|'+(r.sign||'')}));
+    }catch(e){}
+    try{
+      const ph=JSON.parse(localStorage.getItem('pair_hist_v1')||'[]');
+      if(Array.isArray(ph))ph.forEach(r=>ensure({type:'story',title:r.title||('⌘ 配对 · '+(r.a||'')+' × '+(r.b||'')),data:{note:(r.date?'日期：'+r.date+NL:'')+(r.score?'契合度：'+r.score+NL:'')+(r.result||'')},createdAt:Date.now(),source:'pair',sig:'ph|'+(r.date||'')+'|'+(r.a||'')+'|'+(r.b||'')}));
+    }catch(e){}
+    try{
+      const sh=JSON.parse(localStorage.getItem('syn_hist_v1')||'[]');
+      if(Array.isArray(sh))sh.forEach(r=>ensure({type:'story',title:r.title||('∞ 合盘 · '+(r.a||'')+' × '+(r.b||'')),data:{note:(r.rel?'关系：'+r.rel+NL:'')+(r.result||'')},createdAt:Date.now(),source:'synastry',sig:'sh|'+(r.date||'')+'|'+(r.a||'')+'|'+(r.b||'')+'|'+(r.rel||'')}));
+    }catch(e){}
     /* 塔罗（旧版独立存储 tarot_hist_v1） */
     try{
       const th=JSON.parse(localStorage.getItem('tarot_hist_v1')||'[]');
-      if(Array.isArray(th))th.forEach(r=>ensure({type:'story',title:'☽ 塔罗 · '+(r.spread||'占卜'),data:{note:'时间：'+(r.time||'')+'\n问题：'+(r.q||'无')+'\n牌面：'+(r.cards||'')+'\n解读：'+(r.text||'')},createdAt:Date.now(),source:'tarot',sig:'taroth|'+(r.time||'')+'|'+(r.q||'')}));
+      if(Array.isArray(th))th.forEach(r=>ensure({type:'story',title:'☽ 塔罗 · '+((r.q||'').replace(/\s+/g,' ').slice(0,12)||r.spread||'占卜'),data:{note:'时间：'+(r.time||'')+'\n问题：'+(r.q||'无')+'\n牌面：'+(r.cards||'')+'\n解读：'+(r.text||'')},createdAt:Date.now(),source:'tarot',sig:'taroth|'+(r.time||'')+'|'+(r.q||'')}));
     }catch(e){}
     /* 塔罗（memory.js 里的，若有） */
     (old.tarot||[]).forEach(r=>ensure({type:'story',title:'☽ 塔罗 · '+(r.spread||'占卜'),data:{note:'问题：'+(r.question||'无')+'\n牌面：'+(Array.isArray(r.cards)?r.cards.join(' / '):(r.cards||''))+'\n解读：'+(r.result||'')},createdAt:Date.now(),source:'tarot',sig:'tarot|'+(r.id||r.date+r.time)}));
