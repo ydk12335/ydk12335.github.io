@@ -115,6 +115,32 @@ canvas#stars{position:fixed;inset:0;z-index:0}
   border-top-color:var(--gold);animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #loading p{font-size:.76rem;color:rgba(240,207,130,.7);letter-spacing:.14em}
+
+/* ===== 古风底纹：宣纸颗粒 + 四角暗晕 ===== */
+body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(rgba(255,240,200,.035) 1px,transparent 1px);
+  background-size:3px 3px}
+body::after{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 42%,transparent 46%,rgba(2,2,8,.62) 100%)}
+
+/* ===== 起卦方式 ===== */
+.methods{width:100%;max-width:520px;display:flex;gap:7px}
+.mbtn{flex:1;padding:9px 3px;border-radius:12px;border:1px solid rgba(240,207,130,.16);
+  background:rgba(255,255,255,.03);color:rgba(242,237,224,.6);font-family:inherit;font-size:.7rem;
+  letter-spacing:.08em;cursor:pointer;transition:.25s;display:flex;flex-direction:column;align-items:center;gap:3px}
+.mbtn .mi{font-size:1.05rem;line-height:1;filter:grayscale(.3)}
+.mbtn.on{border-color:rgba(240,207,130,.62);color:var(--gold);
+  background:linear-gradient(135deg,rgba(240,207,130,.2),rgba(240,207,130,.04));
+  box-shadow:0 0 16px rgba(240,207,130,.16)}
+.mbtn:active{transform:scale(.94)}
+.mdesc{width:100%;max-width:520px;font-size:.66rem;color:#b5abd8;letter-spacing:.06em;
+  text-align:center;line-height:1.75;min-height:2.4em;padding:0 8px}
+.numRow{width:100%;max-width:520px;display:none;gap:12px}
+.numRow.show{display:flex}
+.numRow input{flex:1;min-width:0;background:rgba(255,255,255,.045);border:1px solid rgba(240,207,130,.16);
+  border-radius:12px;padding:12px 8px;color:var(--ivory);font-family:inherit;font-size:1rem;
+  text-align:center;outline:none;user-select:text;letter-spacing:.16em}
+.numRow input:focus{border-color:rgba(240,207,130,.45);background:rgba(240,207,130,.04)}
 </style>
 </head>
 <body>
@@ -132,11 +158,24 @@ canvas#stars{position:fixed;inset:0;z-index:0}
     </div>
   </div>
 
-  <div class="sub">诚心默念所问之事 · 三枚铜钱摇六次成卦<br>周易六十四卦 · 动爻变卦 · AI 解卦</div>
+  <div class="sub">诚心默念所问之事 · 择一起卦之法<br>周易六十四卦 · 动爻变卦 · AI 解卦</div>
 
   <div class="qwrap">
     <label>所问何事（可留空）</label>
     <textarea id="question" placeholder="如：这段感情还有可能吗 / 这份工作要不要接…"></textarea>
+  </div>
+
+  <div class="methods" id="methods">
+    <button class="mbtn on" data-m="coin"><span class="mi">🪙</span>铜钱</button>
+    <button class="mbtn" data-m="time"><span class="mi">🕰</span>时间</button>
+    <button class="mbtn" data-m="num"><span class="mi">🔢</span>数字</button>
+    <button class="mbtn" data-m="yarrow"><span class="mi">🌾</span>蓍草</button>
+    <button class="mbtn" data-m="heart"><span class="mi">♡</span>心动</button>
+  </div>
+  <div class="mdesc" id="mdesc">三枚铜钱掷六次 · 老阳老阴为动爻</div>
+  <div class="numRow" id="numRow">
+    <input id="num1" type="tel" inputmode="numeric" placeholder="上卦数" maxlength="8">
+    <input id="num2" type="tel" inputmode="numeric" placeholder="下卦数" maxlength="8">
   </div>
 
   <button class="castBtn" id="btnCast">摇 卦</button>
@@ -180,7 +219,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
   </div>
 </div>
 
-<div id="loading"><div class="orb"></div><p>铜钱落地，卦象渐显……</p></div>
+<div id="loading"><div class="orb"></div><p>凝神静气，卦象渐显……</p></div>
 <div id="toast"></div>
 
 <script src="../memory.js"></script>
@@ -198,21 +237,70 @@ const YAO_POS=['初','二','三','四','五','上'];
 
 let GUA=null, cur=null;
 
-/* ================= 星空背景 ================= */
+/* ================= 古风水墨背景 ================= */
 const cv=document.getElementById('stars'),ctx=cv.getContext('2d');
-let stars=[];
-function resizeStars(){cv.width=innerWidth;cv.height=innerHeight;stars=[];
-  const n=Math.floor(cv.width*cv.height/14000);
-  for(let i=0;i<n;i++)stars.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.2+.2,a:Math.random()*.5+.1,sp:Math.random()*.003+.001,ph:Math.random()*7});}
-function drawStars(){
-  ctx.clearRect(0,0,cv.width,cv.height);
-  for(const s of stars){s.ph+=s.sp;
-    ctx.globalAlpha=s.a*(.5+.5*Math.sin(s.ph*1000));
-    ctx.fillStyle=s.r>1.1?'#bcd7ff':'#fff7e0';
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,7);ctx.fill();}
-  ctx.globalAlpha=1;requestAnimationFrame(drawStars);
+let petals=[],mist=[],W,H;
+function resizeStars(){W=cv.width=innerWidth;H=cv.height=innerHeight;
+  /* 落梅 */
+  petals=[];const n=Math.max(14,Math.floor(W/30));
+  for(let i=0;i<n;i++)petals.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2.4+1.3,
+    vy:Math.random()*.32+.16,vx:(Math.random()-.5)*.32,a:Math.random()*.45+.2,
+    rot:Math.random()*7,vr:(Math.random()-.5)*.02,ph:Math.random()*7});
+  /* 流雾 */
+  mist=[];for(let i=0;i<5;i++)mist.push({x:Math.random()*W,y:(.34+Math.random()*.5)*H,
+    w:W*(.5+Math.random()*.75),h:H*(.04+Math.random()*.05),
+    v:Math.random()*.14+.04,a:Math.random()*.055+.025});
 }
-addEventListener('resize',resizeStars);resizeStars();requestAnimationFrame(drawStars);
+function drawMountain(baseY,peakY,color,seed){
+  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,baseY);
+  const step=W/7;
+  for(let i=0;i<=7;i++){
+    const x=i*step;
+    const h=peakY+(Math.sin(i*1.7+seed*3)*.16+Math.cos(i*.9+seed)*.12)*H*.16;
+    if(i===0)ctx.lineTo(x,h);
+    else{const px=(i-1)*step;const py=peakY+(Math.sin((i-1)*1.7+seed*3)*.16+Math.cos((i-1)*.9+seed)*.12)*H*.16;
+      ctx.quadraticCurveTo((px+x)/2,(py+h)/2-H*.03,x,h);}
+  }
+  ctx.lineTo(W,baseY);ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
+}
+function drawScene(t){
+  /* 墨色夜空 */
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0b0a1a');g.addColorStop(.5,'#101126');g.addColorStop(1,'#05040d');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  /* 明月 */
+  const mx=W*.76,my=H*.19,mr=Math.min(W,H)*.082;
+  const mg=ctx.createRadialGradient(mx,my,0,mx,my,mr*3.6);
+  mg.addColorStop(0,'rgba(240,228,185,.34)');mg.addColorStop(.5,'rgba(200,190,150,.07)');mg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(mx,my,mr*3.6,0,7);ctx.fill();
+  ctx.fillStyle='rgba(246,238,212,.92)';ctx.beginPath();ctx.arc(mx,my,mr,0,7);ctx.fill();
+  ctx.fillStyle='rgba(198,188,150,.22)';
+  ctx.beginPath();ctx.arc(mx-mr*.32,my-mr*.22,mr*.17,0,7);ctx.fill();
+  ctx.beginPath();ctx.arc(mx+mr*.34,my+mr*.16,mr*.11,0,7);ctx.fill();
+  ctx.beginPath();ctx.arc(mx+mr*.1,my+mr*.42,mr*.07,0,7);ctx.fill();
+  /* 远山三层（水墨剪影） */
+  drawMountain(H*.60,H*.50,'rgba(22,26,48,.85)',1);
+  drawMountain(H*.73,H*.42,'rgba(14,17,34,.92)',2);
+  drawMountain(H*.88,H*.34,'rgba(7,9,20,.98)',3);
+  /* 流雾 */
+  mist.forEach(m=>{m.x-=m.v;if(m.x<-m.w)m.x=W+m.w;
+    const cg=ctx.createRadialGradient(m.x+m.w/2,m.y,0,m.x+m.w/2,m.y,m.w/2);
+    cg.addColorStop(0,'rgba(198,208,230,'+m.a+')');cg.addColorStop(1,'rgba(198,208,230,0)');
+    ctx.fillStyle=cg;ctx.beginPath();ctx.ellipse(m.x+m.w/2,m.y,m.w/2,m.h,0,0,7);ctx.fill();});
+  /* 落梅 */
+  petals.forEach(p=>{
+    p.y+=p.vy;p.x+=p.vx+Math.sin(t/1500+p.ph)*.28;p.rot+=p.vr;
+    if(p.y>H+10){p.y=-10;p.x=Math.random()*W;}
+    if(p.x<-12)p.x=W+12;if(p.x>W+12)p.x=-12;
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+    ctx.globalAlpha=p.a;ctx.fillStyle='#e8b9c9';
+    ctx.beginPath();ctx.ellipse(0,0,p.r,p.r*.58,0,0,7);ctx.fill();
+    ctx.restore();
+  });
+  ctx.globalAlpha=1;
+  requestAnimationFrame(drawScene);
+}
+addEventListener('resize',resizeStars);resizeStars();requestAnimationFrame(drawScene);
 
 /* ================= 工具 ================= */
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
@@ -241,6 +329,89 @@ function computeFromLines(lines){
   return {ben,bian,moving};
 }
 
+/* ---- 先天八卦：数 → 自下而上阴阳 bits ---- */
+const XIANTIAN_BITS={1:[1,1,1],2:[1,1,0],3:[1,0,1],4:[1,0,0],5:[0,1,1],6:[0,1,0],7:[0,0,1],8:[0,0,0]};
+const XIANTIAN_NAME={1:'乾',2:'兑',3:'离',4:'震',5:'巽',6:'坎',7:'艮',8:'坤'};
+const SHICHEN=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const CN_NUM={'零':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
+function cnToNum(s){
+  if(s==null)return NaN;
+  s=String(s).trim().replace(/[年月日]/g,'');
+  if(!s)return NaN;
+  if(/^\d+$/.test(s))return parseInt(s,10);
+  if(s==='十')return 10;
+  let n=0;
+  if(s[0]==='廿'){n=20;s=s.slice(1);}
+  else if(s[0]==='卅'){n=30;s=s.slice(1);}
+  else if(s[0]==='初'){s=s.slice(1);}
+  if(s.includes('十')){const a=s.split('十');n+=(a[0]?CN_NUM[a[0]]:1)*10+(a[1]?(CN_NUM[a[1]]||0):0);return n;}
+  for(const ch of s){if(CN_NUM[ch]!=null)n+=CN_NUM[ch];}
+  return n||NaN;
+}
+function yearZhiNum(yName){const z=String(yName||'').slice(-1);const i=SHICHEN.indexOf(z);return i>=0?i+1:0;}
+function shichenNum(h){return Math.floor(((h+1)%24)/2)+1;}
+function bitsToLines(bits,moving){return bits.map((b,i)=>moving.indexOf(i)>=0?(b?9:6):(b?7:8));}
+
+/* ---- 各起卦法 ---- */
+function castByCoin(){return {lines:castSix(),method:'coin',detail:'三枚铜钱掷六次 · 老阳老阴为动爻'};}
+
+function castByTime(){
+  const now=new Date();
+  let yName='',mStr='',dStr='';
+  try{
+    const f=new Intl.DateTimeFormat('zh-u-ca-chinese',{year:'numeric',month:'long',day:'numeric'});
+    for(const p of f.formatToParts(now)){
+      if(p.type==='yearName')yName=p.value;
+      else if(p.type==='month')mStr=p.value;
+      else if(p.type==='day')dStr=p.value;
+    }
+  }catch(e){}
+  const yz=yearZhiNum(yName)||((now.getFullYear())%12+1);
+  let mo=cnToNum(mStr); if(!mo||isNaN(mo))mo=now.getMonth()+1;
+  let day=cnToNum(dStr); if(!day||isNaN(day))day=now.getDate();
+  const sc=shichenNum(now.getHours());
+  const up=((yz+mo+day-1)%8)+1;
+  const low=((yz+mo+day+sc-1)%8)+1;
+  const mv=((yz+mo+day+sc-1)%6)+1;
+  const bits=XIANTIAN_BITS[low].concat(XIANTIAN_BITS[up]);
+  return {lines:bitsToLines(bits,[mv-1]),method:'time',
+    detail:'时间起卦 · '+((yName||'')+'年')+mStr+dStr+'日 '+SHICHEN[sc-1]+'时　上'+XIANTIAN_NAME[up]+' 下'+XIANTIAN_NAME[low]+' 动'+mv+'爻'};
+}
+
+function castByNum(){
+  const n1=parseInt($('num1').value,10),n2=parseInt($('num2').value,10);
+  if(isNaN(n1)||isNaN(n2)){toast('请先输入两个数字');return null;}
+  const up=((n1-1)%8+8)%8+1;
+  const low=((n2-1)%8+8)%8+1;
+  const mv=((n1+n2-1)%6+6)%6+1;
+  const bits=XIANTIAN_BITS[low].concat(XIANTIAN_BITS[up]);
+  return {lines:bitsToLines(bits,[mv-1]),method:'num',
+    detail:'数字起卦 · '+n1+' / '+n2+'　上'+XIANTIAN_NAME[up]+' 下'+XIANTIAN_NAME[low]+' 动'+mv+'爻'};
+}
+
+/* 大衍筮法概率：老阳9=3/16 少阳7=5/16 少阴8=7/16 老阴6=1/16 */
+function yarrowToss(){const r=Math.random()*16;if(r<1)return 6;if(r<4)return 9;if(r<11)return 8;return 7;}
+function castByYarrow(){
+  const a=[];for(let i=0;i<6;i++)a.push(yarrowToss());
+  return {lines:a,method:'yarrow',detail:'大衍筮法 · 五十蓍草，其用四十有九'};
+}
+
+function castByHeart(){
+  const a=[];for(let i=0;i<6;i++)a.push(toss());
+  return {lines:a,method:'heart',detail:'心念起卦 · 一念既起，六爻自成'};
+}
+
+function castByMethod(m){
+  switch(m){
+    case 'coin':return castByCoin();
+    case 'time':return castByTime();
+    case 'num':return castByNum();
+    case 'yarrow':return castByYarrow();
+    case 'heart':return castByHeart();
+    default:return castByCoin();
+  }
+}
+
 /* ================= 渲染 ================= */
 function hexHtml(bits,moving,casting){
   let h='<div class="hex'+(casting?' casting':'')+'">';
@@ -258,11 +429,14 @@ function triText(bits){ /* bits[0..2] 下卦，bits[3..5] 上卦 */
   return TRISYM[hi]+TRIGRAM[hi]+' / '+TRISYM[lo]+TRIGRAM[lo];
 }
 
-/* ================= 摇卦主流程 ================= */
+/* ================= 主流程 ================= */
+let METHOD='coin';
 async function doCast(){
   const btn=$('btnCast');
-  btn.disabled=true;btn.textContent='摇卦中…';
-  const lines=castSix();
+  const res=castByMethod(METHOD);
+  if(!res)return;
+  const lines=res.lines, detail=res.detail;
+  btn.disabled=true;btn.textContent='起卦中…';
   const {ben,bian,moving}=computeFromLines(lines);
   const benX=ben.join(''), bianX=bian.join('');
   const benG=findGua(benX), bianG=findGua(bianX);
@@ -293,6 +467,7 @@ async function doCast(){
   /* 卦辞 / 动爻爻辞 */
   const movingTexts=moving.map(i=>yaoLabel(lines[i],i)+'：'+(benG&&benG['yao-detail']?benG['yao-detail'][i]:''));
   let txt='';
+  txt+='<div class="mv" style="margin-bottom:9px;font-size:.74rem;opacity:.85">'+esc(detail)+'</div>';
   txt+='<div><span class="k">本卦</span>　'+esc(benName)+'　'+(benG?esc(benG['gua-detail']):'')+'</div>';
   if(movingTexts.length){
     txt+='<div style="margin-top:8px"><span class="k">动爻</span>　'+moving.map(i=>esc(yaoLabel(lines[i],i))).join('、')+'</div>';
@@ -308,6 +483,7 @@ async function doCast(){
   /* 组装记录并写入记忆库 */
   cur={
     id:Date.now(),
+    method:METHOD, methodText:detail,
     question:($('question').value||'').trim(),
     ben:benX, benName:benName, benDetail:benG?benG['gua-detail']:'',
     bian:bianX, bianName:bianName, bianDetail:bianG?bianG['gua-detail']:'',
@@ -322,7 +498,7 @@ async function doCast(){
 
   $('reading').classList.remove('show');
   $('reading').innerHTML='';
-  btn.disabled=false;btn.textContent='重新摇卦';
+  btn.disabled=false;btn.textContent='再起一卦';
 }
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
@@ -355,6 +531,7 @@ async function aiRead(){
     '## 卦象总览\n## 针对所问的解读\n## 动爻与变卦的启示\n## 一句话赠言\n'+
     '4. 每部分至少 2 条，总长控制在 500 字以内。';
   const user='所问：'+q+'\n'+
+    '起卦方式：'+(cur.methodText||'铜钱摇卦')+'\n'+
     '本卦：'+cur.benName+'（'+cur.benDetail+'）\n'+
     (cur.moving.length?('动爻：'+cur.moving.join('、')+'　'+cur.movingText+'\n'):'六爻皆静，以本卦断之\n')+
     (cur.bianName&&cur.bianName!==cur.benName?('变卦：'+cur.bianName+'（'+cur.bianDetail+'）'):'无变卦');
@@ -431,6 +608,27 @@ function fallbackCopy(txt){const t=document.createElement('textarea');t.value=tx
 
 /* ================= 事件绑定 ================= */
 $('btnBack').onclick=()=>{if(history.length>1)history.back();else location.href='../';};
+
+/* 起卦方式切换 */
+const MDESC={
+  coin:'三枚铜钱掷六次 · 老阳老阴为动爻',
+  time:'梅花易数 · 以农历年月日时起卦',
+  num:'梅花易数 · 输入两数，和取动爻',
+  yarrow:'大衍筮法 · 五十蓍草，其用四十有九',
+  heart:'心念起卦 · 一念既起，六爻自成'
+};
+const MCAST={coin:'摇 卦',time:'起 卦',num:'起 卦',yarrow:'演 卦',heart:'起 卦'};
+document.querySelectorAll('#methods .mbtn').forEach(b=>{
+  b.onclick=()=>{
+    METHOD=b.dataset.m;
+    document.querySelectorAll('#methods .mbtn').forEach(x=>x.classList.toggle('on',x===b));
+    $('mdesc').textContent=MDESC[METHOD]||'';
+    $('numRow').classList.toggle('show',METHOD==='num');
+    const cb=$('btnCast');
+    if(!cb.disabled)cb.textContent=MCAST[METHOD]||'起 卦';
+  };
+});
+
 $('btnCast').onclick=doCast;
 $('btnAI').onclick=aiRead;
 $('btnHist').onclick=()=>{renderHist();$('histMask').classList.add('open');};
