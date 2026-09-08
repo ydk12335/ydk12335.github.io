@@ -46,11 +46,33 @@ function mirrorToV2(type, data) {
       } else if (type === 'synastry') {
         title = '∞ 合盘 · ' + (data.a || '') + ' × ' + (data.b || '');
         note = (data.rel ? '关系：' + data.rel + '\n' : '') + (data.result || '');
+      } else if (type === 'yijing') {
+        vtype = 'yijing';
+        var _ben = data.benName || '本卦';
+        var _bian = data.bianName || '';
+        var _chg = (_bian && _bian !== _ben) ? (' → ' + _bian) : '';
+        title = '☯ 问卦 · ' + _ben + _chg;
+        note = '问题：' + (data.question || '无') + '\n本卦：' + _ben + (data.benDetail ? '（' + data.benDetail + '）' : '');
+        if (data.moving && data.moving.length) {
+          note += '\n动爻：' + data.moving.join('、') + (data.movingText ? '　' + data.movingText : '');
+        }
+        if (_chg) {
+          note += '\n变卦：' + _bian + (data.bianDetail ? '（' + data.bianDetail + '）' : '');
+        }
+        note += '\n解读：' + (data.result || '');
       }
-      // 去重：同类型同标题同日期
+      // 去重签名：同类型同标题同日期同时间
       const sig = title + '|' + (data.date || '') + '|' + (data.time || '');
-      if (v2.items.some(i => i.source === type && (i.sig || '') === sig)) return;
       var sigVal = sig;
+      // 若已存在同一条（如先摇卦后补 AI 解读），则原地更新而不是跳过
+      var _exist = v2.items.find(i => i.source === type && (i.sig || '') === sig);
+      if (_exist) {
+        _exist.title = title;
+        _exist.data = { title: title, note: note };
+        _exist.createdAt = Date.now();
+        localStorage.setItem(key, JSON.stringify(v2));
+        return;
+      }
     }
     v2.items.unshift({
       id: Date.now() + '' + Math.floor(Math.random() * 1000),
@@ -111,6 +133,7 @@ function createEmptyMemory() {
     horoscope: [],
     pair: [],
     synastry: [],
+    yijing: [],
     updatedAt: Date.now()
   };
 }
@@ -263,6 +286,41 @@ const HistoryManager = {
     return item;
   },
   
+  // 保存问卦（易经六爻）
+  saveYijing(record) {
+    const m = getMemory();
+    if (!m.yijing) m.yijing = [];
+    const item = {
+      id: record.id || Date.now(),
+      question: record.question || '',
+      ben: record.ben || '',
+      benName: record.benName || '',
+      benDetail: record.benDetail || '',
+      bian: record.bian || '',
+      bianName: record.bianName || '',
+      bianDetail: record.bianDetail || '',
+      moving: record.moving || [],
+      movingText: record.movingText || '',
+      lines: record.lines || [],
+      result: record.result || '',
+      date: record.date || this.getNowStr(),
+      time: record.time || this.getNowTime()
+    };
+    const idx = m.yijing.findIndex(r => r.id === item.id);
+    if (idx >= 0) m.yijing[idx] = item; else m.yijing.unshift(item);
+    if (m.yijing.length > 50) m.yijing = m.yijing.slice(0, 50);
+    m.updatedAt = Date.now();
+    saveMemory(m);
+    mirrorToV2('yijing', item);
+    try{
+      const h=JSON.parse(localStorage.getItem('yijing_hist_v1')||'[]');
+      const hi=h.findIndex(r=>r.id===item.id);
+      if(hi>=0)h[hi]=item;else h.unshift(item);
+      localStorage.setItem('yijing_hist_v1',JSON.stringify(h.slice(0,50)));
+    }catch(e){}
+    return item;
+  },
+  
   // 删除单条记录
   deleteRecord(type, id) {
     const m = getMemory();
@@ -283,6 +341,7 @@ const HistoryManager = {
       m.horoscope = [];
       m.pair = [];
       m.synastry = [];
+      m.yijing = [];
     }
     m.updatedAt = Date.now();
     saveMemory(m);
@@ -296,7 +355,8 @@ const HistoryManager = {
       horoscope: m.horoscope.length,
       pair: m.pair.length,
       synastry: m.synastry.length,
-      total: m.tarot.length + m.horoscope.length + m.pair.length + m.synastry.length
+      yijing: (m.yijing || []).length,
+      total: m.tarot.length + m.horoscope.length + m.pair.length + m.synastry.length + (m.yijing || []).length
     };
   },
   

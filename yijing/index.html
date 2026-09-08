@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>问卦 · 有点困</title>
+<style>
+:root{--gold:#f0cf82;--gold-dim:#a9956a;--ivory:#f2ede0;--purple:#c9b0e8}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;background:#05030f}
+body{font-family:"Songti SC","Noto Serif SC",serif;color:var(--ivory);overflow-x:hidden;user-select:none}
+canvas#stars{position:fixed;inset:0;z-index:0}
+.wrap{position:relative;z-index:2;min-height:100svh;display:flex;flex-direction:column;align-items:center;
+  padding:calc(20px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));gap:16px}
+.head{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between}
+.head .kick{font-size:.62rem;letter-spacing:.4em;text-indent:.4em;color:var(--gold-dim)}
+.head h1{font-size:1.35rem;letter-spacing:.28em;text-indent:.28em;color:var(--gold);font-weight:600;
+  text-shadow:0 0 22px rgba(240,207,130,.35)}
+.hbtn{background:linear-gradient(155deg,rgba(255,255,255,.14),rgba(255,255,255,.04));
+  backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.22);color:#f2ede0;border-radius:999px;
+  padding:8px 16px;font-size:.74rem;letter-spacing:.1em;cursor:pointer;font-family:inherit;transition:.25s;white-space:nowrap}
+.hbtn:active{transform:scale(.94)}
+.sub{font-size:.72rem;color:#b5abd8;letter-spacing:.12em;text-align:center;line-height:1.9}
+.qwrap{width:100%;max-width:520px}
+.qwrap label{display:block;font-size:.64rem;color:rgba(240,207,130,.55);letter-spacing:.14em;margin-bottom:7px}
+.qwrap textarea{width:100%;min-height:76px;resize:vertical;background:rgba(255,255,255,.045);
+  border:1px solid rgba(240,207,130,.16);border-radius:12px;padding:11px 13px;color:var(--ivory);
+  font-family:inherit;font-size:.9rem;outline:none;user-select:text;line-height:1.7}
+.qwrap textarea:focus{border-color:rgba(240,207,130,.45);background:rgba(240,207,130,.04)}
+
+.castBtn{width:100%;max-width:520px;padding:15px;border-radius:14px;border:1px solid rgba(240,207,130,.42);
+  background:linear-gradient(135deg,rgba(240,207,130,.22),rgba(240,207,130,.05));color:var(--gold);
+  font-family:inherit;font-size:.95rem;letter-spacing:.3em;text-indent:.3em;cursor:pointer;
+  box-shadow:0 0 26px rgba(240,207,130,.18);transition:.25s}
+.castBtn:active{transform:scale(.97)}
+.castBtn:disabled{opacity:.45}
+
+/* ===== 卦象区 ===== */
+.result{width:100%;max-width:520px;display:none;flex-direction:column;gap:14px}
+.result.show{display:flex}
+.guaRow{display:flex;gap:12px;justify-content:center}
+.guaBox{flex:1;max-width:230px;background:rgba(255,255,255,.028);border:1px solid rgba(240,207,130,.14);
+  border-radius:16px;padding:14px 12px 12px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.guaBox .g-tag{font-size:.58rem;letter-spacing:.24em;color:rgba(240,207,130,.5)}
+.guaBox .g-name{font-size:1.05rem;letter-spacing:.14em;color:var(--gold);text-shadow:0 0 14px rgba(240,207,130,.3)}
+.guaBox .g-tri{font-size:.6rem;color:#b5abd8;letter-spacing:.06em}
+.hex{display:flex;flex-direction:column;gap:7px;margin-top:4px;width:78px}
+.yao-row{display:flex;align-items:center;justify-content:center;gap:9px;height:11px;position:relative}
+.yao-row .bar{display:block;height:9px;border-radius:2px;background:linear-gradient(90deg,rgba(240,207,130,.85),rgba(240,207,130,.6));
+  box-shadow:0 0 8px rgba(240,207,130,.3);flex:1}
+.yao-row.yin .bar{flex:0 0 40%}
+.yao-row.moving .bar{background:linear-gradient(90deg,rgba(201,176,232,.95),rgba(201,176,232,.65));
+  box-shadow:0 0 12px rgba(201,176,232,.5)}
+.yao-row .chg{position:absolute;right:-16px;font-size:.6rem;color:var(--purple)}
+.hex.casting .yao-row .bar{animation:castPulse .5s ease-in-out infinite alternate}
+@keyframes castPulse{from{opacity:.3}to{opacity:1}}
+
+.txtBox{width:100%;background:rgba(255,255,255,.028);border:1px solid rgba(240,207,130,.12);
+  border-radius:14px;padding:13px 15px;font-size:.82rem;line-height:1.95;color:rgba(242,237,224,.88)}
+.txtBox .k{color:var(--gold);letter-spacing:.1em}
+.txtBox .mv{color:var(--purple)}
+
+.aiBtn{width:100%;padding:13px;border-radius:13px;border:1px solid rgba(240,207,130,.35);
+  background:rgba(255,255,255,.05);color:var(--gold);font-family:inherit;font-size:.85rem;
+  letter-spacing:.2em;cursor:pointer;transition:.25s}
+.aiBtn:active{transform:scale(.97)}
+.aiBtn:disabled{opacity:.5}
+
+.reading{width:100%;background:rgba(255,255,255,.03);border:1px solid rgba(240,207,130,.12);
+  border-radius:14px;padding:16px 17px;font-size:.85rem;line-height:1.98;color:rgba(242,237,224,.9);
+  user-select:text;display:none}
+.reading.show{display:block}
+.reading h3{font-size:.88rem;color:var(--gold);letter-spacing:.1em;margin:18px 0 8px;padding-left:10px;
+  border-left:2px solid rgba(240,207,130,.5);font-weight:400}
+.reading h3:first-child{margin-top:0}
+.reading li{list-style:none;margin:0 0 6px 16px;position:relative}
+.reading li:before{content:'·';position:absolute;left:-12px;color:rgba(240,207,130,.6)}
+.reading p{margin-bottom:8px}
+.reading strong{color:var(--gold)}
+
+/* ===== 遮罩 / 弹窗 ===== */
+.mask{position:fixed;inset:0;z-index:40;background:rgba(3,2,10,.68);backdrop-filter:blur(4px);
+  display:none;align-items:flex-end;justify-content:center}
+.mask.open{display:flex}
+.sheet{width:100%;max-width:560px;max-height:80vh;overflow-y:auto;background:linear-gradient(to top,rgba(8,5,20,.99),rgba(8,5,20,.94));
+  border-top:1px solid rgba(240,207,130,.2);border-radius:24px 24px 0 0;padding:18px 18px calc(26px + env(safe-area-inset-bottom));
+  animation:up .3s cubic-bezier(.4,0,.2,1)}
+@keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:translateY(0);opacity:1}}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sheet-h .t{font-size:.85rem;color:var(--gold);letter-spacing:.22em}
+.sheet-h .x{width:32px;height:32px;border-radius:50%;border:1px solid rgba(240,207,130,.2);
+  background:transparent;color:rgba(242,237,224,.7);font-size:.95rem;cursor:pointer}
+.hist-item{padding:11px 12px;border-radius:11px;background:rgba(255,255,255,.03);
+  border:1px solid rgba(240,207,130,.1);margin-bottom:9px;font-size:.78rem;line-height:1.7}
+.hist-item .hi-t{color:var(--gold);letter-spacing:.04em}
+.hist-item .hi-d{font-size:.6rem;color:rgba(240,207,130,.4);margin-top:3px}
+.hist-item .hi-p{color:rgba(242,237,224,.7);margin-top:5px;max-height:2.8em;overflow:hidden}
+.hist-empty{text-align:center;color:rgba(240,207,130,.4);font-size:.75rem;padding:30px 0;letter-spacing:.1em}
+.sheet-foot{display:flex;gap:10px;margin-top:14px}
+.btn{flex:1;padding:12px;border-radius:12px;border:none;font-family:inherit;font-size:.82rem;letter-spacing:.12em;cursor:pointer}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:linear-gradient(135deg,rgba(240,207,130,.3),rgba(200,155,60,.15));color:var(--gold);border:1px solid rgba(240,207,130,.35)}
+.btn-ghost{background:rgba(255,255,255,.04);color:rgba(240,207,130,.55);border:1px solid rgba(240,207,130,.15)}
+.btn-danger{background:rgba(255,80,80,.08);color:rgba(255,110,110,.7);border:1px solid rgba(255,80,80,.18)}
+
+#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-12px);padding:9px 22px;
+  border-radius:999px;background:rgba(12,9,32,.94);border:1px solid rgba(240,207,130,.3);color:var(--gold);
+  font-size:.74rem;letter-spacing:.08em;opacity:0;transition:all .28s;z-index:60;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+#loading{position:fixed;inset:0;z-index:55;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;
+  background:rgba(3,2,10,.78);backdrop-filter:blur(4px)}
+#loading.show{display:flex}
+#loading .orb{width:52px;height:52px;border-radius:50%;border:2px solid rgba(240,207,130,.25);
+  border-top-color:var(--gold);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:.76rem;color:rgba(240,207,130,.7);letter-spacing:.14em}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+
+<div class="wrap">
+  <div class="head">
+    <div>
+      <div class="kick">I CHING</div>
+      <h1>问 卦</h1>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="hbtn" id="btnHist">📜 记录</button>
+      <button class="hbtn" id="btnBack">◂ 返回</button>
+    </div>
+  </div>
+
+  <div class="sub">诚心默念所问之事 · 三枚铜钱摇六次成卦<br>周易六十四卦 · 动爻变卦 · AI 解卦</div>
+
+  <div class="qwrap">
+    <label>所问何事（可留空）</label>
+    <textarea id="question" placeholder="如：这段感情还有可能吗 / 这份工作要不要接…"></textarea>
+  </div>
+
+  <button class="castBtn" id="btnCast">摇 卦</button>
+
+  <div class="result" id="result">
+    <div class="guaRow">
+      <div class="guaBox">
+        <div class="g-tag">本 卦</div>
+        <div class="g-name" id="benName">—</div>
+        <div class="g-tri" id="benTri"></div>
+        <div class="hex" id="benHex"></div>
+      </div>
+      <div class="guaBox">
+        <div class="g-tag">变 卦</div>
+        <div class="g-name" id="bianName">—</div>
+        <div class="g-tri" id="bianTri"></div>
+        <div class="hex" id="bianHex"></div>
+      </div>
+    </div>
+
+    <div class="txtBox" id="guaText"></div>
+
+    <button class="aiBtn" id="btnAI">✦ 请 AI 解卦</button>
+    <div class="reading" id="reading"></div>
+  </div>
+</div>
+
+<!-- 历史记录 -->
+<div class="mask" id="histMask">
+  <div class="sheet">
+    <div class="sheet-h">
+      <div class="t">📜 问卦记录</div>
+      <button class="x" id="histClose">✕</button>
+    </div>
+    <div id="histList"></div>
+    <div class="sheet-foot">
+      <button class="btn btn-danger" id="histClear" style="flex:0 0 84px">清空</button>
+      <button class="btn btn-ghost" id="histCopy" style="flex:0 0 100px">☁️ 复制</button>
+      <button class="btn btn-primary" id="histCopyMem">☁️ 复制到记忆库</button>
+    </div>
+  </div>
+</div>
+
+<div id="loading"><div class="orb"></div><p>铜钱落地，卦象渐显……</p></div>
+<div id="toast"></div>
+
+<script src="../memory.js"></script>
+<script>
+'use strict';
+const API_BASE='https://apihub.agnes-ai.cn/v1';
+const API_KEY='sk-bnT8gvJweewxMFO2oOnzNof2qpqazpKYq1spx5EulZ11vfyZ';
+const MODEL='agnes-2.5-flash';
+const HKEY='yijing_hist_v1';
+
+/* 先天八卦：0坤 1震 2坎 3兑 4艮 5离 6巽 7乾 */
+const TRIGRAM=['坤','震','坎','兑','艮','离','巽','乾'];
+const TRISYM=['☷','☳','☵','☱','☶','☲','☴','☰'];
+const YAO_POS=['初','二','三','四','五','上'];
+
+let GUA=null, cur=null;
+
+/* ================= 星空背景 ================= */
+const cv=document.getElementById('stars'),ctx=cv.getContext('2d');
+let stars=[];
+function resizeStars(){cv.width=innerWidth;cv.height=innerHeight;stars=[];
+  const n=Math.floor(cv.width*cv.height/14000);
+  for(let i=0;i<n;i++)stars.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.2+.2,a:Math.random()*.5+.1,sp:Math.random()*.003+.001,ph:Math.random()*7});}
+function drawStars(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  for(const s of stars){s.ph+=s.sp;
+    ctx.globalAlpha=s.a*(.5+.5*Math.sin(s.ph*1000));
+    ctx.fillStyle=s.r>1.1?'#bcd7ff':'#fff7e0';
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,7);ctx.fill();}
+  ctx.globalAlpha=1;requestAnimationFrame(drawStars);
+}
+addEventListener('resize',resizeStars);resizeStars();requestAnimationFrame(drawStars);
+
+/* ================= 工具 ================= */
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
+function $(id){return document.getElementById(id);}
+function esc(t){const d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML;}
+function nowStr(){const d=new Date();return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';}
+function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+
+/* ================= 起卦 ================= */
+function toss(){let s=0;for(let i=0;i<3;i++)s+=(Math.random()<.5?2:3);return s;} /* 6/7/8/9 */
+function castSix(){const a=[];for(let i=0;i<6;i++)a.push(toss());return a;}
+function findGua(xiang){return GUA.gua.find(g=>g['gua-xiang']===xiang)||null;}
+function triIdx(bits){return bits[0]+bits[1]*2+bits[2]*4;} /* bits: 自下而上 */
+function yaoLabel(v,i){
+  const num=(v===7||v===9)?'九':'六';
+  if(i===0)return '初'+num;
+  if(i===5)return '上'+num;
+  return num+YAO_POS[i];
+}
+function computeFromLines(lines){
+  const ben=lines.map(v=>(v===7||v===9)?1:0);
+  const bian=lines.map(v=>{if(v===6)return 1;if(v===9)return 0;return v===7?1:0;});
+  const moving=[];
+  lines.forEach((v,i)=>{if(v===6||v===9)moving.push(i);});
+  return {ben,bian,moving};
+}
+
+/* ================= 渲染 ================= */
+function hexHtml(bits,moving,casting){
+  let h='<div class="hex'+(casting?' casting':'')+'">';
+  for(let i=5;i>=0;i--){
+    const bit=bits[i], mv=moving.indexOf(i)>=0;
+    h+='<div class="yao-row '+(bit?'yang':'yin')+(mv?' moving':'')+'">';
+    h+= bit ? '<i class="bar"></i>' : '<i class="bar"></i><i class="bar"></i>';
+    if(mv)h+='<span class="chg">'+(bit?'○':'✕')+'</span>';
+    h+='</div>';
+  }
+  return h+'</div>';
+}
+function triText(bits){ /* bits[0..2] 下卦，bits[3..5] 上卦 */
+  const lo=triIdx([bits[0],bits[1],bits[2]]), hi=triIdx([bits[3],bits[4],bits[5]]);
+  return TRISYM[hi]+TRIGRAM[hi]+' / '+TRISYM[lo]+TRIGRAM[lo];
+}
+
+/* ================= 摇卦主流程 ================= */
+async function doCast(){
+  const btn=$('btnCast');
+  btn.disabled=true;btn.textContent='摇卦中…';
+  const lines=castSix();
+  const {ben,bian,moving}=computeFromLines(lines);
+  const benX=ben.join(''), bianX=bian.join('');
+  const benG=findGua(benX), bianG=findGua(bianX);
+
+  /* 逐爻揭晓动画 */
+  const resultEl=$('result');resultEl.classList.add('show');
+  $('benName').textContent='…';$('bianName').textContent='…';
+  $('benTri').textContent='';$('bianTri').textContent='';
+  const empty=[0,0,0,0,0,0];
+  $('benHex').outerHTML=hexHtml(empty,[],true).replace('class="hex','id="benHex" class="hex');
+  await sleep(600);
+
+  for(let step=0;step<6;step++){
+    const partial=ben.map((b,i)=>i<=step?b:0);
+    $('benHex').outerHTML=hexHtml(partial,moving.filter(m=>m<=step),true).replace('class="hex','id="benHex" class="hex');
+    await sleep(180);
+  }
+  $('benHex').outerHTML=hexHtml(ben,moving,false).replace('class="hex','id="benHex" class="hex');
+  $('bianHex').outerHTML=hexHtml(bian,[],false).replace('class="hex','id="bianHex" class="hex');
+
+  const benName=benG?benG['gua-name']:'—';
+  const bianName=bianG?bianG['gua-name']:'—';
+  $('benName').textContent=benName;
+  $('bianName').textContent=(bianName===benName&&moving.length===0)?'（无变卦）':bianName;
+  $('benTri').textContent=triText(ben);
+  $('bianTri').textContent=triText(bian);
+
+  /* 卦辞 / 动爻爻辞 */
+  const movingTexts=moving.map(i=>yaoLabel(lines[i],i)+'：'+(benG&&benG['yao-detail']?benG['yao-detail'][i]:''));
+  let txt='';
+  txt+='<div><span class="k">本卦</span>　'+esc(benName)+'　'+(benG?esc(benG['gua-detail']):'')+'</div>';
+  if(movingTexts.length){
+    txt+='<div style="margin-top:8px"><span class="k">动爻</span>　'+moving.map(i=>esc(yaoLabel(lines[i],i))).join('、')+'</div>';
+    movingTexts.forEach(m=>{txt+='<div class="mv" style="margin-top:4px">· '+esc(m)+'</div>';});
+  }else{
+    txt+='<div style="margin-top:8px" class="mv">· 六爻皆静，以本卦卦辞断之</div>';
+  }
+  if(bianName!==benName){
+    txt+='<div style="margin-top:8px"><span class="k">变卦</span>　'+esc(bianName)+'　'+(bianG?esc(bianG['gua-detail']):'')+'</div>';
+  }
+  $('guaText').innerHTML=txt;
+
+  /* 组装记录并写入记忆库 */
+  cur={
+    id:Date.now(),
+    question:($('question').value||'').trim(),
+    ben:benX, benName:benName, benDetail:benG?benG['gua-detail']:'',
+    bian:bianX, bianName:bianName, bianDetail:bianG?bianG['gua-detail']:'',
+    moving:moving.map(i=>yaoLabel(lines[i],i)),
+    movingText:movingTexts.join('　'),
+    lines:lines,
+    result:'',
+    date:nowStr(), time:nowTime()
+  };
+  saveRecord();
+  toast('卦已成 · 已记入记忆库 ☯');
+
+  $('reading').classList.remove('show');
+  $('reading').innerHTML='';
+  btn.disabled=false;btn.textContent='重新摇卦';
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+/* ================= 记录存取 ================= */
+function loadHist(){try{return JSON.parse(localStorage.getItem(HKEY)||'[]');}catch(e){return [];}}
+function saveRecord(){
+  if(!cur)return;
+  if(typeof HistoryManager!=='undefined'&&HistoryManager.saveYijing){
+    HistoryManager.saveYijing(cur);
+  }else{
+    const h=loadHist();
+    const i=h.findIndex(r=>r.id===cur.id);
+    if(i>=0)h[i]=cur;else h.unshift(cur);
+    try{localStorage.setItem(HKEY,JSON.stringify(h.slice(0,50)));}catch(e){}
+    if(typeof mirrorToV2==='function')mirrorToV2('yijing',cur);
+  }
+}
+
+/* ================= AI 解卦 ================= */
+async function aiRead(){
+  if(!cur){toast('先摇一卦吧');return;}
+  const btn=$('btnAI');btn.disabled=true;btn.textContent='解卦中…';
+  $('loading').classList.add('show');
+  const q=cur.question||'（未提供具体问题，请围绕当下整体处境解读）';
+  const sys='你是一位精通《周易》的占卜者，语气沉静、通透、克制，不迷信不夸张，像一位深夜与人对坐的长者。\n'+
+    '要求：\n1. 紧扣用户所问，结合卦象、卦辞、动爻爻辞给出解读，说清依据。\n'+
+    '2. 用 Markdown 输出，只用 ## 标题和 - 列表，不要表格、不要代码块。\n'+
+    '3. 必须包含四部分，标题照抄：\n'+
+    '## 卦象总览\n## 针对所问的解读\n## 动爻与变卦的启示\n## 一句话赠言\n'+
+    '4. 每部分至少 2 条，总长控制在 500 字以内。';
+  const user='所问：'+q+'\n'+
+    '本卦：'+cur.benName+'（'+cur.benDetail+'）\n'+
+    (cur.moving.length?('动爻：'+cur.moving.join('、')+'　'+cur.movingText+'\n'):'六爻皆静，以本卦断之\n')+
+    (cur.bianName&&cur.bianName!==cur.benName?('变卦：'+cur.bianName+'（'+cur.bianDetail+'）'):'无变卦');
+  let txt='';
+  try{
+    const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
+      body:JSON.stringify({model:MODEL,temperature:.85,max_tokens:3000,
+        messages:[{role:'system',content:sys},{role:'user',content:user}]})});
+    const j=await res.json();
+    if(j.choices&&j.choices[0])txt=j.choices[0].message.content.trim();
+  }catch(e){}
+  $('loading').classList.remove('show');
+  btn.disabled=false;btn.textContent='✦ 请 AI 解卦';
+  if(!txt){toast('卦象未明，稍后再试一次');return;}
+  cur.result=txt;
+  $('reading').innerHTML=mdToHtml(txt);
+  $('reading').classList.add('show');
+  saveRecord();
+  toast('解卦已写入记忆库 ☯');
+}
+
+function mdToHtml(md){
+  const inline=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  const lines=String(md||'').split('\n');
+  let html='',inList=false;
+  const closeList=()=>{if(inList){html+='</ul>';inList=false;}};
+  for(let raw of lines){
+    const line=raw.replace(/\s+$/,'');
+    if(!line.trim()){closeList();continue;}
+    let m;
+    if((m=line.match(/^\s*#{1,6}\s*(.+)$/))){closeList();html+='<h3>'+inline(m[1])+'</h3>';continue;}
+    if((m=line.match(/^\s*[-*•]\s+(.+)$/))){if(!inList){html+='<ul>';inList=true;}html+='<li>'+inline(m[1])+'</li>';continue;}
+    closeList();html+='<p>'+inline(line)+'</p>';
+  }
+  closeList();return html;
+}
+
+/* ================= 历史弹窗 ================= */
+function renderHist(){
+  const h=loadHist();
+  const list=$('histList');
+  if(!h.length){list.innerHTML='<div class="hist-empty">还没有问卦记录</div>';return;}
+  list.innerHTML=h.map(r=>{
+    const name=(r.benName||'')+((r.bianName&&r.bianName!==r.benName)?(' → '+r.bianName):'');
+    const p=(r.question?('问：'+r.question+'　'):'')+('本卦：'+name)+(r.moving&&r.moving.length?('　动爻：'+r.moving.join('、')):'');
+    return '<div class="hist-item"><div class="hi-t">☯ '+esc(name)+'</div>'+
+      '<div class="hi-d">'+esc((r.date||'')+' '+(r.time||''))+'</div>'+
+      '<div class="hi-p">'+esc(p)+'</div></div>';
+  }).join('');
+}
+function copyHist(){
+  const h=loadHist();
+  if(!h.length){toast('还没有记录');return null;}
+  const payload={moon_import:1,records:h.map(r=>({
+    type:'yijing',
+    title:'☯ 问卦 · '+(r.benName||'')+((r.bianName&&r.bianName!==r.benName)?(' → '+r.bianName):''),
+    note:'问题：'+(r.question||'无')+'\n本卦：'+(r.benName||'')+(r.benDetail?('（'+r.benDetail+'）'):'')
+      +(r.moving&&r.moving.length?('\n动爻：'+r.moving.join('、')+(r.movingText?('　'+r.movingText):'')):'')
+      +(r.bianName&&r.bianName!==r.benName?('\n变卦：'+r.bianName+(r.bianDetail?('（'+r.bianDetail+'）'):'')):'')
+      +'\n解读：'+(r.result||''),
+    createdAt:Date.now()
+  }))};
+  return JSON.stringify(payload);
+}
+function doCopy(){
+  const txt=copyHist();
+  if(!txt)return;
+  const done=()=>toast('已复制 '+loadHist().length+' 条记录');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{fallbackCopy(txt);done();});}
+  else{fallbackCopy(txt);done();}
+}
+function fallbackCopy(txt){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();}
+
+/* ================= 事件绑定 ================= */
+$('btnBack').onclick=()=>{if(history.length>1)history.back();else location.href='../';};
+$('btnCast').onclick=doCast;
+$('btnAI').onclick=aiRead;
+$('btnHist').onclick=()=>{renderHist();$('histMask').classList.add('open');};
+$('histClose').onclick=()=>$('histMask').classList.remove('open');
+$('histMask').onclick=e=>{if(e.target===$('histMask'))$('histMask').classList.remove('open');};
+$('histClear').onclick=()=>{if(!confirm('清空全部问卦记录吗？'))return;localStorage.removeItem(HKEY);renderHist();toast('记录已清空');};
+$('histCopy').onclick=doCopy;
+$('histCopyMem').onclick=()=>{doCopy();toast('已复制 · 到记忆库点 ⇩ 粘贴导入');};
+
+/* ================= 启动：加载卦象数据 ================= */
+fetch('gua.json').then(r=>r.json()).then(d=>{
+  GUA=d;
+}).catch(()=>{
+  toast('卦象数据加载失败，请刷新重试');
+});
+</script>
+</body>
+</html>

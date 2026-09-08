@@ -30,11 +30,11 @@
         <div class="p-name">记忆库</div>
         <div class="p-desc">查看你的记忆网络</div>
       </a>
-     <div class="p-card p-soon"><div class="card-fx"></div>
-       <div class="p-ico">☾</div>
-       <div class="p-name">敬请期待</div>
-       <div class="p-desc">新的板块正在酝酿</div>
-     </div>
+     <a class="p-card" href="yijing/"><div class="card-fx"></div>
+       <div class="p-ico">☯</div>
+       <div class="p-name">易经问卦</div>
+       <div class="p-desc">铜钱摇卦 · 六十四卦解读</div>
+     </a>
    </div>
 
   <div class="weather-bar">
@@ -384,7 +384,8 @@ document.getElementById('wSound').onclick=()=>{
   }
 };
 /* 换天气时若开着雨声，跟随新天气调音量 */
-document.getElementById('wToggle').addEventListener('click',()=>{
+const _wToggle=document.getElementById('wToggle');
+if(_wToggle)_wToggle.addEventListener('click',()=>{
   if(rainOn){stopRain();if(curWeather.rain>0)startRain();}
 });
 </script>

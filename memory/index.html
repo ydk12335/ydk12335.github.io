@@ -200,6 +200,7 @@ function dbDelete(id){const db=dbLoad();db.items=db.items.filter(i=>i.id!==id);d
 /* ================= 类型定义 ================= */
 const TYPES={
   core:{label:'核心记忆',icon:'🌙',color:'#ffd97a',desc:'AI 总结的你'},
+  yijing:{label:'问卦',icon:'☯',color:'#c9b0e8',desc:'易经六爻'},
   birthday:{label:'生日',icon:'🎂',color:'#f0cf82',desc:'重要的日子'},
   traits:{label:'性格',icon:'◈',color:'#a79ade',desc:'我是什么样的'},
   story:{label:'故事',icon:'📖',color:'#e8b48f',desc:'一段难忘经历'},
@@ -257,8 +258,9 @@ function buildNodes(){
   if(cnt('horoscope'))parts.push('✦星座'+cnt('horoscope'));
   if(cnt('pair'))parts.push('⌘配对'+cnt('pair'));
   if(cnt('synastry'))parts.push('∞合盘'+cnt('synastry'));
+  if(cnt('yijing'))parts.push('☯问卦'+cnt('yijing'));
   if(cnt('personal')||cnt('birthday'))parts.push('◈档案');
-  const other=db.items.length-cnt('tarot')-cnt('horoscope')-cnt('pair')-cnt('synastry')-cnt('personal')-cnt('birthday')-cnt('core');
+  const other=db.items.length-cnt('tarot')-cnt('horoscope')-cnt('pair')-cnt('synastry')-cnt('yijing')-cnt('personal')-cnt('birthday')-cnt('core');
   if(other>0)parts.push('✎其他'+other);
   const ch=document.getElementById('centerHint');
   ch.textContent=parts.length?('已收录 '+db.items.length+' 条 · '+parts.join(' · ')):'';
@@ -357,7 +359,7 @@ function openEdit(node,newType){
   panelTitle.textContent=(isNew?'新增 · ':'')+T.icon+' '+T.label;
   const d=node?(node.data||{}):{};
   let html='';
-  const SRC={personal:'个人档案',birthday:'生日',tarot:'塔罗占卜',horoscope:'星座运势',pair:'星座配对',synastry:'星座合盘',import:'导入',core:'AI 核心记忆'};
+  const SRC={personal:'个人档案',birthday:'生日',tarot:'塔罗占卜',horoscope:'星座运势',pair:'星座配对',synastry:'星座合盘',yijing:'易经问卦',import:'导入',core:'AI 核心记忆'};
   if(node&&node.source){
     const label=SRC[node.source]||node.source;
     const when=node.createdAt?new Date(node.createdAt).toLocaleString('zh-CN',{hour12:false}):'';
@@ -417,7 +419,7 @@ async function aiRefine(payload){
 function buildAnalysisMaterial(){
   const db=dbLoad();
   const items=db.items||[];
-  const notSrc=['personal','birthday','tarot','horoscope','pair','synastry'];
+  const notSrc=['personal','birthday','tarot','horoscope','pair','synastry','yijing'];
   const line=i=>'- '+(i.title||'')+(i.data&&i.data.note?('：'+String(i.data.note).replace(/\n+/g,' / ')):'');
   const sec=(name,arr)=>arr&&arr.length?('【'+name+'】（'+arr.length+'条）\n'+arr.map(line).join('\n')+'\n\n'):'';
   const pick=f=>items.filter(f);
@@ -427,6 +429,7 @@ function buildAnalysisMaterial(){
   s+=sec('星座运势',pick(i=>i.source==='horoscope'));
   s+=sec('星座配对',pick(i=>i.source==='pair'));
   s+=sec('星座合盘',pick(i=>i.source==='synastry'));
+  s+=sec('易经问卦',pick(i=>i.source==='yijing'));
   s+=sec('其他故事与自定义记录',pick(i=>notSrc.indexOf(i.source)<0));
   return {text:s.trim(),count:items.length};
 }
@@ -586,7 +589,7 @@ document.getElementById('btnStats').onclick=function(){
   const db=dbLoad();
   const items=db.items||[];
   if(!items.length){alert('夜空还是空的');return;}
-  const SRC={personal:'个人档案',birthday:'生日',tarot:'塔罗占卜',horoscope:'星座运势',pair:'星座配对',synastry:'星座合盘',import:'导入',core:'AI 核心记忆'};
+  const SRC={personal:'个人档案',birthday:'生日',tarot:'塔罗占卜',horoscope:'星座运势',pair:'星座配对',synastry:'星座合盘',yijing:'易经问卦',import:'导入',core:'AI 核心记忆'};
   const counts={};
   items.forEach(i=>{const k=i.source||'other';counts[k]=(counts[k]||0)+1;});
   const head=Object.keys(counts).map(k=>'· '+(SRC[k]||'手动记录')+'：'+counts[k]+' 条').join('\n');
@@ -706,6 +709,19 @@ function migrateOldData(){
     try{
       const sh=JSON.parse(localStorage.getItem('syn_hist_v1')||'[]');
       if(Array.isArray(sh))sh.forEach(r=>ensure({type:'story',title:r.title||('∞ 合盘 · '+(r.a||'')+' × '+(r.b||'')),data:{note:(r.rel?'关系：'+r.rel+NL:'')+(r.result||'')},createdAt:Date.now(),source:'synastry',sig:'sh|'+(r.date||'')+'|'+(r.a||'')+'|'+(r.b||'')+'|'+(r.rel||'')}));
+    }catch(e){}
+    /* 问卦（易经六爻 yijing_hist_v1） */
+    try{
+      const yh=JSON.parse(localStorage.getItem('yijing_hist_v1')||'[]');
+      if(Array.isArray(yh))yh.forEach(r=>{
+        var _b=r.benName||'',_bi=r.bianName||'';
+        var _t='☯ 问卦 · '+_b+((_bi&&_bi!==_b)?(' → '+_bi):'');
+        var _n='问题：'+(r.question||'无')+NL+'本卦：'+_b+(r.benDetail?('（'+r.benDetail+'）'):'');
+        if(r.moving&&r.moving.length)_n+=NL+'动爻：'+r.moving.join('、')+(r.movingText?('　'+r.movingText):'');
+        if(_bi&&_bi!==_b)_n+=NL+'变卦：'+_bi+(r.bianDetail?('（'+r.bianDetail+'）'):'');
+        _n+=NL+'解读：'+(r.result||'');
+        ensure({type:'yijing',title:_t,data:{title:_t,note:_n},createdAt:Date.now(),source:'yijing',sig:'yh|'+(r.id||(r.date+r.time))});
+      });
     }catch(e){}
     /* 塔罗（旧版独立存储 tarot_hist_v1） */
     try{
