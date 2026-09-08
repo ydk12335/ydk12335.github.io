@@ -56,7 +56,7 @@ function mirrorToV2(type, data) {
       id: Date.now() + '' + Math.floor(Math.random() * 1000),
       type: vtype,
       title: title,
-      data: { note: note },
+      data: { title: title, note: note },
       createdAt: Date.now(),
       source: type,
       sig: sigVal || 'auto'

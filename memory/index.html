@@ -85,8 +85,11 @@ select.form-input{cursor:pointer;-webkit-appearance:none;appearance:none}
   <div class="header">
     <button class="icon-btn" id="btnBack">⌂</button>
     <h1>✦ 记忆网络</h1>
-    <button class="icon-btn" id="btnImport" title="导入">⇩</button>
-    <button class="icon-btn" id="btnStats">∞</button>
+    <div style="display:flex;gap:8px">
+      <button class="icon-btn" id="btnImport" title="导入">⇩</button>
+      <button class="icon-btn" id="btnClearAll" title="清空全部记忆">🗑</button>
+      <button class="icon-btn" id="btnStats">∞</button>
+    </div>
   </div>
   <div id="stage"><div id="world"></div></div>
   <div id="emptyHint" style="display:none">这里还没有记忆<br>点击下方 ＋ 埋下第一颗星</div>
@@ -407,35 +410,57 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 const importPanel=document.getElementById('importPanel');
 document.getElementById('btnImport').onclick=()=>{importPanel.style.display='flex';setTimeout(()=>document.getElementById('importText').focus(),100);};
 document.getElementById('importCancel').onclick=()=>importPanel.style.display='none';
+
+/* ================= 清空全部 ================= */
+document.getElementById('btnClearAll').onclick=()=>{
+  const db=dbLoad();
+  if(!db.items.length){toast('夜空已经是空的');return;}
+  if(!confirm('确定要让整片夜空熄灭吗？\n将删除全部 '+db.items.length+' 颗记忆，且无法恢复。'))return;
+  localStorage.removeItem(STORE_KEY);
+  buildNodes();
+  toast('夜空已清空');
+};
+
+/* 内容指纹：与已有节点比对，避免重复导入 */
+function noteHash(t,n){let h=5381,s=String(t||'')+'\u0000'+String(n||'');for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))>>>0;}return h.toString(36);}
+
 document.getElementById('importGo').onclick=()=>{
   const raw=document.getElementById('importText').value.trim();
   if(!raw){toast('先粘贴内容吧');return;}
-  function h32(str){let h=5381;for(let i=0;i<str.length;i++){h=((h<<5)+h+str.charCodeAt(i))>>>0;}return h.toString(36);}
   const db=dbLoad();
   let added=0,dups=0;
   function pushItem(type,title,note,createdAt){
-    const sig='imp|'+h32(title+'\u0000'+note);
-    if(db.items.some(i=>i.sig===sig)){dups++;return;}
-    db.items.unshift({id:Date.now()+''+Math.floor(Math.random()*100000),type:type||'story',title:title||'✦ 导入的记忆',data:{note:note||''},createdAt:createdAt||Date.now(),source:'import',sig:sig});
+    note=String(note||'').trim();
+    title=String(title||'').trim();
+    if(!title&&!note)return;
+    if(!title)title=note.split('\n')[0].slice(0,20)||'✦ 导入的记忆';
+    const sig='imp|'+noteHash(title,note);
+    /* 双保险去重：①同 sig ②同标题+同内容（跨来源也去重） */
+    const hh=noteHash(title,note);
+    if(db.items.some(i=>i.sig===sig||noteHash(i.title,i.data&&i.data.note)===hh)){dups++;return;}
+    db.items.unshift({id:Date.now()+''+Math.floor(Math.random()*100000),type:type||'story',title:title,data:{title:title,note:note},createdAt:createdAt||Date.now(),source:'import',sig:sig});
     added++;
   }
+  /* 先尝试当作 JSON 解析（从任意位置提取） */
   let jsonTxt=null;
   try{JSON.parse(raw);jsonTxt=raw;}catch(e){
     const m=raw.match(/[\{\[][\s\S]*[\}\]]/);
     if(m){try{JSON.parse(m[0]);jsonTxt=m[0];}catch(e2){}}
   }
+  const looksJson=/^[\s\uFEFF]*[\{\[]/.test(raw)||raw.indexOf('moon_import')>=0;
   if(jsonTxt){
     try{
       const j=JSON.parse(jsonTxt);
       const recs=(j&&j.moon_import&&Array.isArray(j.records))?j.records:(Array.isArray(j)?j:(Array.isArray(j&&j.items)?j.items:[]));
       recs.forEach(r=>{
         if(!r||typeof r!=='object')return;
-        const note=String(r.note!=null?r.note:((r.data&&r.data.note)||''));
-        pushItem(r.type,r.title,note,r.createdAt);
+        const note=String(r.note!=null?r.note:((r.data&&r.data.note)||r.text||r.result||''));
+        pushItem(r.type||'story',r.title||(r.data&&r.data.title),note,r.createdAt);
       });
     }catch(e){}
   }
-  if(!added){
+  /* 只有确认不是 JSON 时，才走纯文本分块回退 */
+  if(!added&&!looksJson){
     const blocks=raw.split(/\n{2,}|(?=☽ 塔罗|✦ 观星|⌘ 配对|∞ 合盘|🎂 生日|◈ 个人档案)/).map(b=>b.trim()).filter(Boolean);
     blocks.forEach(b=>{
       const first=b.split('\n')[0].replace(/^#+\s*/,'').slice(0,24);
@@ -445,22 +470,27 @@ document.getElementById('importGo').onclick=()=>{
   if(added)dbSave(db);
   importPanel.style.display='none';document.getElementById('importText').value='';
   buildNodes();
-  toast(added?('已点亮 '+added+' 颗星 ✦'+(dups?(' ('+dups+' 条已存在)'):'')):('没有新记录，'+dups+' 条已存在'));
+  if(added)toast('已点亮 '+added+' 颗星 ✦'+(dups?(' ('+dups+' 条已存在)'):''));
+  else if(dups)toast('没有新记录，'+dups+' 条已存在');
+  else if(looksJson)toast('内容格式不对，请重新复制一次');
+  else toast('没有可导入的内容');
 };
 
 /* ================= 旧数据迁移 ================= */
 function migrateOldData(){
   try{
   var NL=String.fromCharCode(10);
-    const raw=localStorage.getItem('sleepy_space_memory');
-    if(!raw)return 0;
-    const old=JSON.parse(raw);
+    var raw=localStorage.getItem('sleepy_space_memory');
+    var old={};
+    if(raw){try{old=JSON.parse(raw)||{};}catch(e){old={};}}
     const db=dbLoad();
     let added=0;
     const ensure=(obj)=>{
-      // 去重：按 source+sig
+      // 去重：①同 source+sig ②同标题+同内容（与导入/自动同步的记录也去重）
       if(!obj.sig)return false;
       if(db.items.some(i=>i.source===obj.source&&i.sig===obj.sig))return false;
+      var _h=noteHash(obj.title,obj.data&&obj.data.note);
+      if(db.items.some(i=>noteHash(i.title,i.data&&i.data.note)===_h))return false;
       db.items.unshift(obj);added++;return true;
     };
     /* 用户信息 */
