@@ -31,6 +31,9 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 /* ===== 底部 + 按钮 ===== */
 #addBtn{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:58px;height:58px;border-radius:50%;border:2px solid rgba(240,207,130,.45);background:radial-gradient(circle at 32% 30%,rgba(240,207,130,.25),rgba(240,207,130,.05));color:#f0cf82;font-size:1.9rem;cursor:pointer;box-shadow:0 0 28px rgba(240,207,130,.2);z-index:20;line-height:1}
 #addBtn:active{transform:translateX(-50%) scale(.92)}
+#sumBtn{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);padding:10px 22px;border-radius:999px;border:1px solid rgba(240,207,130,.42);background:linear-gradient(135deg,rgba(240,207,130,.2),rgba(240,207,130,.05));color:#f0cf82;font-family:inherit;font-size:.76rem;letter-spacing:.16em;cursor:pointer;box-shadow:0 0 22px rgba(240,207,130,.18);z-index:20;white-space:nowrap}
+#sumBtn:active{transform:translateX(-50%) scale(.94)}
+#sumBtn:disabled{opacity:.5}
 
 /* ===== 类型选择弹窗 ===== */
 .sheet-mask{position:fixed;inset:0;background:rgba(3,2,10,.6);z-index:40;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(3px)}
@@ -115,8 +118,9 @@ select.form-input{cursor:pointer;-webkit-appearance:none;appearance:none}
     </div>
   </div>
   <div id="stage"><div id="world"></div></div>
-  <div id="centerHint">✦ 点中间的大星 · 让我读懂你 ✦</div>
+  <div id="centerHint"></div>
   <div id="emptyHint" style="display:none">这里还没有记忆<br>点击下方 ＋ 埋下第一颗星</div>
+  <button id="sumBtn">✦ 总结记忆</button>
   <button id="addBtn">+</button>
 </div>
 
@@ -195,6 +199,7 @@ function dbDelete(id){const db=dbLoad();db.items=db.items.filter(i=>i.id!==id);d
 
 /* ================= 类型定义 ================= */
 const TYPES={
+  core:{label:'核心记忆',icon:'🌙',color:'#ffd97a',desc:'AI 总结的你'},
   birthday:{label:'生日',icon:'🎂',color:'#f0cf82',desc:'重要的日子'},
   traits:{label:'性格',icon:'◈',color:'#a79ade',desc:'我是什么样的'},
   story:{label:'故事',icon:'📖',color:'#e8b48f',desc:'一段难忘经历'},
@@ -246,7 +251,19 @@ function buildNodes(){
     nodes.push({id:it.id,label:_lb,type:it.type,x:Math.cos(ang)*dist,y:Math.sin(ang)*dist,z:.55+Math.random()*.4,size:36,data:it});
   });
   document.getElementById('emptyHint').style.display=db.items.length?'none':'block';
-  document.getElementById('centerHint').style.display=db.items.length?'block':'none';
+  const cnt=src=>db.items.filter(i=>i.source===src).length;
+  const parts=[];
+  if(cnt('tarot'))parts.push('☽塔罗'+cnt('tarot'));
+  if(cnt('horoscope'))parts.push('✦星座'+cnt('horoscope'));
+  if(cnt('pair'))parts.push('⌘配对'+cnt('pair'));
+  if(cnt('synastry'))parts.push('∞合盘'+cnt('synastry'));
+  if(cnt('personal')||cnt('birthday'))parts.push('◈档案');
+  const other=db.items.length-cnt('tarot')-cnt('horoscope')-cnt('pair')-cnt('synastry')-cnt('personal')-cnt('birthday')-cnt('core');
+  if(other>0)parts.push('✎其他'+other);
+  const ch=document.getElementById('centerHint');
+  ch.textContent=parts.length?('已收录 '+db.items.length+' 条 · '+parts.join(' · ')):'';
+  ch.style.display=parts.length?'block':'none';
+  document.getElementById('sumBtn').style.display=db.items.length?'block':'none';
   render();
 }
 
@@ -282,7 +299,7 @@ function render(){
     el.innerHTML='<div class="node-ring" style="border:1px solid '+T.color+'"></div>'+
       '<div class="node-core" style="background:radial-gradient(circle at 32% 28%,#fff8,'+T.color+'dd 45%,'+T.color+'55);box-shadow:0 0 '+(n.z*22).toFixed(0)+'px '+T.color+'66;font-size:'+(n.size*.42).toFixed(0)+'px">'+T.icon+'</div>'+
       '<div class="node-label" style="color:'+T.color+'cc">'+escapeHtml(n.label)+'</div>';
-    el.addEventListener('click',function(e){e.stopPropagation();if(!dragMoved){if(n.id==='center')openAnalysis();else openEdit(n);}});
+    el.addEventListener('click',function(e){e.stopPropagation();if(!dragMoved){if(n.id==='center'||n.type==='core')showCore();else openEdit(n);}});
     world.appendChild(el);
   });
 }
@@ -326,6 +343,7 @@ function openTypeSheet(){typeMask.classList.add('open');typeSheet.classList.add(
 function closeTypeSheet(){typeMask.classList.remove('open');typeSheet.classList.remove('open');}
 typeMask.onclick=closeTypeSheet;
 document.getElementById('addBtn').onclick=openTypeSheet;
+document.getElementById('sumBtn').onclick=openAnalysis;
 
 /* ================= 编辑面板 ================= */
 const panel=document.getElementById('panel'),panelTitle=document.getElementById('panelTitle'),panelBody=document.getElementById('panelBody');
@@ -339,6 +357,12 @@ function openEdit(node,newType){
   panelTitle.textContent=(isNew?'新增 · ':'')+T.icon+' '+T.label;
   const d=node?(node.data||{}):{};
   let html='';
+  const SRC={personal:'个人档案',birthday:'生日',tarot:'塔罗占卜',horoscope:'星座运势',pair:'星座配对',synastry:'星座合盘',import:'导入',core:'AI 核心记忆'};
+  if(node&&node.source){
+    const label=SRC[node.source]||node.source;
+    const when=node.createdAt?new Date(node.createdAt).toLocaleString('zh-CN',{hour12:false}):'';
+    html+='<div style="font-size:.6rem;color:rgba(240,207,130,.5);letter-spacing:.06em;margin-bottom:12px;padding:7px 11px;border-radius:8px;background:rgba(240,207,130,.05);border:1px solid rgba(240,207,130,.12)">来源：'+escapeHtml(label)+(when?' · '+escapeHtml(when):'')+'</div>';
+  }
   if(typeKey==='birthday'){
     html=fInput('日期','f-date','date',d.date||'')+
          fInput('这个人 / 事件','f-who','text',d.who||'','如：我的生日、妈妈的生日')+
@@ -426,9 +450,35 @@ function mdToHtml(md){
 }
 
 let lastAnalysisText='';
+function getCoreItem(){const db=dbLoad();return (db.items||[]).find(i=>i.type==='core');}
+function saveCore(txt){
+  const db=dbLoad();
+  db.items=(db.items||[]).filter(i=>i.type!=='core');
+  db.items.unshift({id:'core',type:'core',title:'🌙 核心记忆 · AI 总结',data:{title:'🌙 核心记忆 · AI 总结',note:txt},createdAt:Date.now(),source:'core',sig:'core'});
+  dbSave(db);
+  buildNodes();
+}
 function openAnalysis(){
   document.getElementById('analysis').classList.add('open');
+  if(getCoreItem() && !confirm('已经有核心记忆了，重新总结会覆盖它。\n继续重新分析吗？')){
+    showCore();
+    return;
+  }
   runAnalysis();
+}
+/* 点中间的大星：查看已保存的核心记忆（不重新分析） */
+function showCore(){
+  const body=document.getElementById('anBody');
+  document.getElementById('analysis').classList.add('open');
+  const core=getCoreItem();
+  if(!core||!core.data||!core.data.note){
+    lastAnalysisText='';
+    body.innerHTML='<div class="an-loading"><p>还没有核心记忆<br>点下方「✦ 总结记忆」让我读懂你</p></div>';
+    return;
+  }
+  lastAnalysisText=core.data.note;
+  body.innerHTML=mdToHtml(core.data.note);
+  body.scrollTop=0;
 }
 async function runAnalysis(){
   const body=document.getElementById('anBody');
@@ -468,6 +518,9 @@ async function runAnalysis(){
   lastAnalysisText=txt;
   body.innerHTML=mdToHtml(txt);
   body.scrollTop=0;
+  /* 分析完成：自动写入核心记忆 */
+  saveCore(txt);
+  toast('已写入核心记忆 🌙');
 }
 
 document.getElementById('anClose').onclick=()=>document.getElementById('analysis').classList.remove('open');
@@ -531,8 +584,14 @@ document.getElementById('btnDelete').onclick=function(){
 document.getElementById('btnBack').onclick=()=>location.href='../';
 document.getElementById('btnStats').onclick=function(){
   const db=dbLoad();
-  const lines=db.items.length?db.items.map(i=>'• '+(i.data.whisper||i.title||TYPES[i.type].label)).join('\n'):'夜空还是空的';
-  alert('✦ 记忆 '+db.items.length+' 颗 ✦\n\n'+lines);
+  const items=db.items||[];
+  if(!items.length){alert('夜空还是空的');return;}
+  const SRC={personal:'个人档案',birthday:'生日',tarot:'塔罗占卜',horoscope:'星座运势',pair:'星座配对',synastry:'星座合盘',import:'导入',core:'AI 核心记忆'};
+  const counts={};
+  items.forEach(i=>{const k=i.source||'other';counts[k]=(counts[k]||0)+1;});
+  const head=Object.keys(counts).map(k=>'· '+(SRC[k]||'手动记录')+'：'+counts[k]+' 条').join('\n');
+  const lines=items.map(i=>'• '+((i.data&&i.data.whisper)||i.title||TYPES[i.type].label)).join('\n');
+  alert('✦ 记忆 '+items.length+' 颗 ✦\n\n【来源统计】\n'+head+'\n\n【全部记忆】\n'+lines);
 };
 let toastT=null;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);}
