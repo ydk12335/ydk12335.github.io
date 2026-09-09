@@ -109,6 +109,11 @@ const AUTH_HTML = `
 
 const AUTH_CSS = `
 /* ===== 登录弹窗（公告同款居中玻璃卡片） ===== */
+/* 全局：禁止蓝色选区/长按高亮（按钮和交互元素） */
+button,a,.w-chip,.p-card,.hbtn,.mbtn,.guaBox,.auth-modal,.uw-fab,.mu-fab{
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;outline:none}
+button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
 .auth-mask{position:fixed;inset:0;z-index:300;background:rgba(5,3,16,.45);
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   display:flex;align-items:center;justify-content:center;padding:20px;
@@ -116,10 +121,10 @@ const AUTH_CSS = `
 @keyframes authFade{from{opacity:0}to{opacity:1}}
 .auth-modal{width:min(380px,94%);max-height:min(88vh,720px);overflow-y:auto;
   border-radius:26px;padding:26px 24px;text-align:center;
-  background:linear-gradient(155deg,rgba(255,255,255,.09),rgba(255,255,255,.03));
-  border:1px solid rgba(240,207,130,.28);
-  backdrop-filter:blur(14px) saturate(130%);-webkit-backdrop-filter:blur(14px) saturate(130%);
-  box-shadow:0 28px 72px rgba(4,2,18,.55), inset 0 1px 0 rgba(255,255,255,.12);
+  background:rgba(255,255,255,.11);
+  border:none;
+  backdrop-filter:blur(28px) saturate(190%);-webkit-backdrop-filter:blur(28px) saturate(190%);
+  box-shadow:0 28px 72px rgba(4,2,18,.45), inset 0 1px 0 rgba(255,255,255,.3);
   animation:authPop .38s cubic-bezier(.16,1,.3,1)}
 @keyframes authPop{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:none}}
 .auth-title{font-size:1.08rem;color:#f0cf82;letter-spacing:.2em;margin-bottom:6px;font-weight:600}
@@ -143,12 +148,15 @@ const AUTH_CSS = `
 .form-input::placeholder{color:#8d86b5}
 .form-input:focus{border-color:rgba(240,207,130,.5);box-shadow:0 0 0 3px rgba(240,207,130,.10)}
 .auth-btn-primary{width:100%;padding:13px;border-radius:999px;border:none;font-family:inherit;font-size:.9rem;
-  letter-spacing:.15em;cursor:pointer;margin-top:4px;transition:.2s;color:#fffbef;font-weight:600;
-  background:linear-gradient(165deg,rgba(255,238,196,.32),rgba(240,207,130,.08) 44%,rgba(198,150,74,.18));
-  border:1px solid rgba(255,240,205,.34);
-  box-shadow:inset 0 1.5px 0 rgba(255,253,240,.45), 0 8px 24px rgba(240,207,130,.16)}
-.auth-btn-primary:active{transform:scale(.97)}
-.auth-btn-primary:disabled{opacity:.4}
+  letter-spacing:.15em;cursor:pointer;margin-top:4px;color:#fffbef;font-weight:600;
+  background:linear-gradient(165deg,rgba(255,238,196,.38),rgba(240,207,130,.14) 44%,rgba(198,150,74,.22));
+  border:none;
+  box-shadow:inset 0 1.5px 0 rgba(255,253,240,.45), 0 8px 24px rgba(240,207,130,.15);
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .25s, filter .25s;
+  -webkit-tap-highlight-color:transparent}
+.auth-btn-primary:hover{filter:brightness(1.12);box-shadow:inset 0 1.5px 0 rgba(255,253,240,.55), 0 10px 30px rgba(240,207,130,.3)}
+.auth-btn-primary:active{transform:scale(.94);filter:brightness(.95)}
+.auth-btn-primary:disabled{opacity:.4;transform:none}
 .auth-btn-ghost{width:100%;padding:12px;border-radius:999px;font-family:inherit;font-size:.85rem;
   letter-spacing:.12em;cursor:pointer;margin-top:10px;transition:.2s;
   background:rgba(255,255,255,.05);color:rgba(240,207,130,.7);border:1px solid rgba(240,207,130,.18)}
@@ -449,10 +457,12 @@ function initAuth() {
       document.getElementById('userEmail').textContent = user.email;
       showAvatar(user.user_metadata?.avatar || null);
       showStep(4);
-      mask.style.display = 'flex';   // 已登录：展示资料，可关闭
+      /* 点过悬浮球才打开资料弹窗 */
+      if (sessionStorage.getItem('open_auth')) { mask.style.display = 'flex'; sessionStorage.removeItem('open_auth'); }
+      else mask.style.display = 'none';
     } else {
       locked = true;
-      mask.style.display = 'flex';
+      mask.style.display = 'flex';   // 未登录：强制弹登录，必须登录才能用
     }
   })();
 }

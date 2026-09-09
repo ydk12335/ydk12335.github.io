@@ -4,10 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>月下记忆库</title>
+<link rel="preconnect" href="https://fonts.loli.net">
+<link rel="preconnect" href="https://fonts.loli.net">
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&display=swap">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
-body{font-family:"Songti SC","Noto Serif SC",serif;color:#f2ede0;background:#05030f;user-select:none}
+body{font-family:"Ma Shan Zheng","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi","楷体",serif;color:#f2ede0;background:#05030f;user-select:none}
 canvas#stars{position:fixed;inset:0;z-index:0}
 #app{position:fixed;inset:0;z-index:1}
 
@@ -746,5 +749,6 @@ const migrated=migrateOldData();
 buildNodes();
 if(migrated)setTimeout(()=>toast('已点亮 '+migrated+' 颗旧记忆的星 ✦'),600);
 </script>
+<script src="../user-widget.js?v=1"></script>
 </body>
 </html>

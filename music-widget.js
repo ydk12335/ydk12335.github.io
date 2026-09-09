@@ -11,16 +11,18 @@
   var seg=location.pathname.replace(/\/[^\/]*$/,'').split('/').filter(Boolean);
   var pre='';for(var i=0;i<seg.length;i++)pre+='../';
 
-  /* ---------- 样式（塔罗同款） ---------- */
+/* ---------- 样式（塔罗同款） ---------- */
   var css=document.createElement('style');
   css.textContent=[
     '.mu-fab{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));right:16px;z-index:9000;',
-    'width:42px;height:42px;border-radius:50%;border:1px solid rgba(240,207,130,.3);',
-    'background:rgba(255,255,255,.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);',
+    'width:42px;height:42px;border-radius:50%;border:none;',
+    'background:linear-gradient(160deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.08) 100%);',
+    'backdrop-filter:blur(24px) saturate(200%) brightness(1.08);-webkit-backdrop-filter:blur(24px) saturate(200%) brightness(1.08);',
     'color:#f0cf82;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;',
-    'transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.35)}',
-    '.mu-fab:active{transform:scale(.92);background:rgba(240,207,130,.14)}',
-    '.mu-fab.on{border-color:rgba(240,207,130,.7);box-shadow:0 0 14px rgba(240,207,130,.35)}',
+    'transition:all .3s;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.08), 0 6px 24px rgba(0,0,0,.32);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;outline:none}',
+    '.mu-fab:active{transform:scale(.92)}',
+    '.mu-fab:focus,.mu-fab:focus-visible{outline:none}',
+    '.mu-fab.on{border:none;background:linear-gradient(160deg,rgba(255,255,255,.28) 0%,rgba(255,255,255,.12) 100%);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.12),0 0 18px rgba(240,207,130,.32)}',
     '.mu-mask{position:fixed;inset:0;z-index:9001;background:rgba(5,3,18,.7);backdrop-filter:blur(6px);',
     '-webkit-backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:18px}',
     '.mu-mask.open{display:flex}',
@@ -257,6 +259,38 @@
   };
   $id('muClose').onclick=()=>mask.classList.remove('open');
   mask.onclick=e=>{if(e.target===mask)mask.classList.remove('open');};
-  fab.onclick=()=>{mask.classList.add('open');loadTracks();};
   loadTracks();
+  /* 悬浮按钮拖动（贴边吸留，防误触） */
+  (function(){
+    var pos=null;
+    try{pos=JSON.parse(localStorage.getItem('uw_pos_muFab'));}catch(e){}
+    if(pos){fab.style.left=pos.x+'px';fab.style.top=pos.y+'px';fab.style.right='auto';fab.style.bottom='auto';}
+    var dragging=false,moved=false,sx=0,sy=0,ox=0,oy=0;
+    function down(x,y){dragging=true;moved=false;var r=fab.getBoundingClientRect();ox=r.left;oy=r.top;sx=x;sy=y;fab.style.transition='none';}
+    function move(x,y){
+      if(!dragging)return;
+      if(Math.abs(x-sx)>6||Math.abs(y-sy)>6)moved=true;
+      var nx=Math.max(6,Math.min(window.innerWidth-48,ox+x-sx));
+      var ny=Math.max(6,Math.min(window.innerHeight-48,oy+y-sy));
+      fab.style.left=nx+'px';fab.style.top=ny+'px';fab.style.right='auto';fab.style.bottom='auto';
+    }
+    function up(){
+      if(!dragging)return;dragging=false;fab.style.transition='';
+      if(moved){
+        var r=fab.getBoundingClientRect();
+        var cx=r.left+r.width/2;
+        var nx=(cx<window.innerWidth/2)?10:window.innerWidth-r.width-10;
+        fab.style.transition='left .3s cubic-bezier(.22,1,.36,1)';
+        fab.style.left=nx+'px';
+        setTimeout(function(){fab.style.transition='';},320);
+        try{localStorage.setItem('uw_pos_muFab',JSON.stringify({x:nx,y:r.top}));}catch(e){}
+      }else{mask.classList.add('open');loadTracks();}
+    }
+    fab.addEventListener('touchstart',function(e){down(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+    fab.addEventListener('touchmove',function(e){move(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+    fab.addEventListener('touchend',up);
+    fab.addEventListener('mousedown',function(e){down(e.clientX,e.clientY);});
+    document.addEventListener('mousemove',function(e){move(e.clientX,e.clientY);});
+    document.addEventListener('mouseup',up);
+  })();
 })();

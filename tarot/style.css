@@ -12,7 +12,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{min-height:100%}
 body{
-  font-family:"Noto Serif SC","Songti SC",STSong,"SimSun",serif;
+  font-family:"Ma Shan Zheng","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi","楷体",serif;
   color:var(--ivory);
   background:
     radial-gradient(1200px 700px at 80% -14%, rgba(108,76,208,.20), transparent 60%),

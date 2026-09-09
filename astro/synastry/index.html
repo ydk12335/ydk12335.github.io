@@ -4,10 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>星座合盘 · 有点困</title>
+<link rel="preconnect" href="https://fonts.loli.net">
+<link rel="preconnect" href="https://fonts.loli.net">
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&display=swap">
 <style>
 :root{--gold:#f0cf82;--gold-dim:#a9956a;--ivory:#f2ede0}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:"Songti SC","Noto Serif SC",serif;color:var(--ivory);background:#05030f;overflow-x:hidden}
+body{font-family:"Ma Shan Zheng","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi","楷体",serif;color:var(--ivory);background:#05030f;overflow-x:hidden}
 canvas#stars{position:fixed;inset:0;z-index:0}
 .btn-back{position:fixed;top:max(14px,env(safe-area-inset-top));left:16px;z-index:10;
   background:rgba(20,12,44,.55);border:1px solid rgba(240,207,130,.3);color:#e8dcc0;
@@ -121,7 +124,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 <canvas id="stars"></canvas>
 <button class="btn-back" id="btnBack">◂ 返回</button>
 <style>
-#btnAstroHist{position:fixed;top:calc(56px + env(safe-area-inset-top,0px));left:16px;z-index:10;
+#btnAstroHist{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:110px;z-index:10;
   background:rgba(20,12,44,.55);border:1px solid rgba(240,207,130,.3);color:#e8dcc0;
   border-radius:999px;padding:8px 18px;font-size:.8rem;letter-spacing:.15em;cursor:pointer;
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:inherit}
@@ -569,5 +572,6 @@ $('btnBack').onclick=()=>{if(history.length>1)history.back();else location.href=
 </script>
 <script src="../../memory.js"></script>
 <script src="../../music-widget.js?v=1"></script>
+<script src="../../user-widget.js?v=1"></script>
 </body>
 </html>

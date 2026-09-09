@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>有点困 · Sleepy Space</title>
-<link rel="stylesheet" href="style.css?v=rev6">
+<link rel="preconnect" href="https://fonts.loli.net">
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&display=swap">
+<link rel="stylesheet" href="style.css?v=rev9">
 </head>
 <body>
 <canvas id="sky"></canvas>
@@ -51,7 +53,6 @@
       <button class="w-chip" id="wWeather"><span id="wWeatherLabel">天气</span></button>
       <button class="w-chip" id="wTime"><span id="wTimeLabel">时间</span></button>
       <button class="w-chip" id="wSound">🔇 静音</button>
-      <button class="w-chip" id="btnUser" title="登录" style="display:none">👤</button>
     </div>
   <div class="wheel-mask" id="wheelMask">
     <div class="wheel" id="wheel">
@@ -99,20 +100,31 @@ function buildRain(){drops=[];splashes=[];if(!curWeather||!curWeather.rain)retur
 /* ===== 时间问候 ===== */
 /* ===== 时间问候：问候 + 贴心一句 ===== */
 const GREET_POOLS=[
-  {h:[0,5],  g:'凌晨好', t:'夜深了，早点休息吧'},
-  {h:[5,7],  g:'早上好', t:'天刚亮，再眯一会儿也行'},
-  {h:[7,9],  g:'早上好', t:'新的一天，吃好早餐'},
-  {h:[9,12], g:'上午好', t:'加油，事情会顺利的'},
-  {h:[12,13],g:'中午好', t:'记得吃午饭，别饿着'},
-  {h:[13,15],g:'中午好', t:'午饭后小憩一会儿吧'},
-  {h:[15,18],g:'下午好', t:'累了就歇一歇，喝口水'},
-  {h:[18,19],g:'傍晚好', t:'天色渐晚，早点回家'},
-  {h:[19,23],g:'晚上好', t:'辛苦一天了，放松一下'},
-  {h:[23,24],g:'晚上好', t:'夜深了，早点休息吧'}
+  {h:[0,5],  g:'凌晨好', t:'夜深了，早点休息吧！'},
+  {h:[5,7],  g:'早上好', t:'天刚亮，再眯一会儿也行～'},
+  {h:[7,9],  g:'早上好', t:'新的一天，吃好早餐呀！'},
+  {h:[9,12], g:'上午好', t:'加油，事情会顺利的！'},
+  {h:[12,13],g:'中午好', t:'记得吃午饭，别饿着！'},
+  {h:[13,15],g:'中午好', t:'午饭后小憩一会儿吧～'},
+  {h:[15,18],g:'下午好', t:'累了就歇一歇，喝口水！'},
+  {h:[18,19],g:'傍晚好', t:'天色渐晚，早点回家呀～'},
+  {h:[19,23],g:'晚上好', t:'辛苦一天了，放松一下吧！'},
+  {h:[23,24],g:'晚上好', t:'夜深了，早点休息吧！'}
 ];
+/* 登录用户名（供祝福语使用） */
+let greetName='';
+try{
+  for(const k in localStorage){
+    if(k.indexOf('sb-')===0 && k.indexOf('-auth-token')>0){
+      const t=JSON.parse(localStorage.getItem(k));
+      if(t&&t.user)greetName=(t.user.user_metadata&&t.user.user_metadata.display_name)||((t.user.email||'').split('@'))[0]||'';
+      break;
+    }
+  }
+}catch(e){}
 function greetWord(h){
-  for(const p of GREET_POOLS){if(h>=p.h[0]&&h<p.h[1])return p.g+'，'+p.t;}
-  return '晚上好，夜深了早点休息吧';
+  for(const p of GREET_POOLS){if(h>=p.h[0]&&h<p.h[1])return greetName?p.g+' '+greetName+'，'+p.t:p.g+'，'+p.t;}
+  return greetName?'晚上好 '+greetName+'，夜深了早点休息吧！':'晚上好，夜深了早点休息吧！';
 }
 function tickGreet(){
   const el=document.getElementById('gClock');if(!el)return;
@@ -400,22 +412,10 @@ if(_wToggle)_wToggle.addEventListener('click',()=>{
   if(rainOn){stopRain();if(curWeather.rain>0)startRain();}
 });
 </script>
-<script src="music-widget.js?v=1"></script>
+<script src="music-widget.js?v=4"></script>
 <script src="supabase-config.js?v=3"></script>
-<script src="auth.js?v=3"></script>
-<script>
-/* 登录入口按钮 */
-(async function(){
-  const user = await getCurrentUser();
-  const btn = document.getElementById('btnUser');
-  if (btn && user) {
-    btn.style.display = '';
-    btn.addEventListener('click', () => {
-      document.getElementById('authMask').style.display = 'flex';
-    });
-  }
-})();
-</script>
+<script src="user-widget.js?v=10"></script>
+<script src="auth.js?v=7"></script>
 
 </body>
 </html>

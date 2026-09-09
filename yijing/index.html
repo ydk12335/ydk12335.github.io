@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>问卦 · 有点困</title>
+<link rel="preconnect" href="https://fonts.loli.net">
+<link rel="preconnect" href="https://fonts.loli.net">
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&display=swap">
 <style>
 :root{
   --gold:#f0cf82;--gold-rgb:240,207,130;--gold-dim:#a9956a;
@@ -29,7 +32,7 @@ body[data-phase="day"] .txtBox,body[data-phase="dusk"] .txtBox{color:var(--ivory
 body[data-phase="day"] .mbtn,body[data-phase="dusk"] .mbtn{color:rgba(var(--glass-rgb),.72)}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{min-height:100%;background:#05030f}
-body{font-family:"Songti SC","Noto Serif SC",serif;color:var(--ivory);overflow-x:hidden;user-select:none}
+body{font-family:"Ma Shan Zheng","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi","楷体",serif;color:var(--ivory);overflow-x:hidden;user-select:none}
 canvas#stars{position:fixed;inset:0;z-index:0}
 .wrap{position:relative;z-index:2;min-height:100svh;display:flex;flex-direction:column;align-items:center;
   padding:calc(20px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));gap:16px}
@@ -804,5 +807,6 @@ fetch('gua.json').then(r=>r.json()).then(d=>{
   toast('卦象数据加载失败，请刷新重试');
 });
 </script>
+<script src="../user-widget.js?v=1"></script>
 </body>
 </html>
