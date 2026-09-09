@@ -94,7 +94,8 @@ const AUTH_HTML = `
     <!-- 已登录 -->
     <div id="authLogout" style="display:none">
       <div class="user-avatar" id="userAvatar">?<div class="avatar-edit">换</div></div>
-      <input type="file" id="avatarInput" accept="image/*" style="display:none">
+      <input type="file" id="avatarInput" accept="image/*"
+        style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0.01">
       <div class="user-name" id="userName">用户</div>
       <div class="user-email" id="userEmail"></div>
       <div class="avatar-tip">点头像可更换</div>
