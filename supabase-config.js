@@ -167,6 +167,34 @@ function scheduleUpload() {
 window.uploadSnapshot = uploadSnapshot;
 window.downloadSnapshot = downloadSnapshot;
 
+/** 上传头像：压缩成 96px base64 存入用户元数据 */
+async function uploadAvatar(file) {
+  const dataUrl = await new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
+  const compressed = await new Promise((res) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = 96; c.height = 96;
+      const ctx = c.getContext('2d');
+      // 居中裁剪成方形
+      const s = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 96, 96);
+      res(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.src = dataUrl;
+  });
+  const sb = await initSupabase();
+  const { error } = await sb.auth.updateUser({ data: { avatar: compressed } });
+  if (error) throw error;
+  return compressed;
+}
+
+window.uploadAvatar = uploadAvatar;
 window.getCurrentUser = getCurrentUser;
 window.signOut = signOut;
 window.sendVerificationCode = sendVerificationCode;

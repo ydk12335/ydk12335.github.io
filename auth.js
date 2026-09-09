@@ -93,9 +93,11 @@ const AUTH_HTML = `
 
     <!-- 已登录 -->
     <div id="authLogout" style="display:none">
-      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-avatar" id="userAvatar">?<div class="avatar-edit">换</div></div>
+      <input type="file" id="avatarInput" accept="image/*" style="display:none">
       <div class="user-name" id="userName">用户</div>
       <div class="user-email" id="userEmail"></div>
+      <div class="avatar-tip">点头像可更换</div>
       <button class="auth-btn-danger" id="btnSignOut">退出登录</button>
       <div class="auth-footer"><a href="#" id="authClose4">关闭</a></div>
     </div>
@@ -152,7 +154,14 @@ const AUTH_CSS = `
 .auth-footer a:hover{color:#f0cf82}
 .auth-tip{font-size:.75rem;color:rgba(240,207,130,.55);margin-bottom:12px;text-align:center;line-height:1.7}
 .user-avatar{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#f0cf82,#c9a04c);
-  color:#0a0815;font-size:1.4rem;font-weight:bold;display:flex;align-items:center;justify-content:center;margin:14px auto 10px}
+  color:#0a0815;font-size:1.4rem;font-weight:bold;display:flex;align-items:center;justify-content:center;margin:14px auto 10px;
+  position:relative;cursor:pointer;overflow:hidden;user-select:none;background-size:cover;background-position:center;
+  transition:.2s;box-shadow:0 4px 16px rgba(240,207,130,.2)}
+.user-avatar:active{transform:scale(.95)}
+.user-avatar .avatar-edit{position:absolute;right:0;bottom:0;width:20px;height:20px;border-radius:50%;
+  background:rgba(10,8,21,.85);color:#f0cf82;font-size:.55rem;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(240,207,130,.4)}
+.avatar-tip{font-size:.64rem;color:rgba(240,207,130,.35);text-align:center;margin:-2px 0 8px}
 .user-name{font-size:.98rem;color:#f0cf82;text-align:center;margin-bottom:4px;font-weight:600;letter-spacing:.08em}
 .user-email{font-size:.76rem;color:rgba(240,207,130,.5);text-align:center;margin-bottom:6px;word-break:break-all}
 `;
@@ -362,6 +371,37 @@ function initAuth() {
     close(); location.reload();
   });
 
+  // ===== 头像上传 =====
+  const avatarEl = document.getElementById('userAvatar');
+  const avatarInput = document.getElementById('avatarInput');
+  const editBadge = '<div class="avatar-edit">换</div>';
+  const showAvatar = (url) => {
+    if (url) {
+      avatarEl.style.backgroundImage = `url(${url})`;
+      avatarEl.textContent = '';
+    } else {
+      avatarEl.style.backgroundImage = '';
+      avatarEl.textContent = name0;
+    }
+    avatarEl.insertAdjacentHTML('beforeend', editBadge);
+  };
+  let name0 = '?';
+  avatarEl.addEventListener('click', () => avatarInput.click());
+  avatarInput.addEventListener('change', async () => {
+    const file = avatarInput.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) return toast('图片太大了，换张小一点的');
+    toast('头像上传中…');
+    try {
+      const url = await window.uploadAvatar(file);
+      showAvatar(url);
+      toast('头像已更新 ✨');
+    } catch (e) {
+      toast('上传失败：' + (e.message || '再试试'));
+    }
+    avatarInput.value = '';
+  });
+
   // 退出
   document.getElementById('btnSignOut').addEventListener('click', async () => {
     // 退出前把最新本地数据推上云端，防丢失
@@ -385,9 +425,10 @@ function initAuth() {
         return;
       }
       const name = user.user_metadata?.display_name || user.email?.split('@')[0] || '旅人';
+      name0 = name[0].toUpperCase();
       document.getElementById('userName').textContent = name;
       document.getElementById('userEmail').textContent = user.email;
-      document.getElementById('userAvatar').textContent = name[0].toUpperCase();
+      showAvatar(user.user_metadata?.avatar || null);
       showStep(4);
       mask.style.display = 'flex';   // 已登录：展示资料，可关闭
     } else {
