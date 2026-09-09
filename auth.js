@@ -364,6 +364,9 @@ function initAuth() {
 
   // 退出
   document.getElementById('btnSignOut').addEventListener('click', async () => {
+    // 退出前把最新本地数据推上云端，防丢失
+    try { await uploadSnapshot(); } catch (e) {}
+    sessionStorage.removeItem('cloud_restored');
     await signOut();
     close(); location.reload();
   });
@@ -372,6 +375,15 @@ function initAuth() {
   (async () => {
     const user = await getCurrentUser();
     if (user) {
+      // 云端同步：云端有快照→下载替换本地；云端为空→首次把本地上传
+      let synced = false;
+      try { synced = await downloadSnapshot(); } catch (e) { console.warn('同步失败', e); }
+      if (synced && !sessionStorage.getItem('cloud_restored')) {
+        sessionStorage.setItem('cloud_restored', '1');
+        toast('记忆已从云端恢复 ☁');
+        location.reload();   // 替换后刷新，让所有模块读到新数据
+        return;
+      }
       const name = user.user_metadata?.display_name || user.email?.split('@')[0] || '旅人';
       document.getElementById('userName').textContent = name;
       document.getElementById('userEmail').textContent = user.email;
