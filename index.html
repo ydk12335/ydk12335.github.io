@@ -47,11 +47,12 @@
      </div>
    </div>
 
-  <div class="weather-bar">
-    <button class="w-chip" id="wWeather"><span id="wWeatherLabel">天气</span></button>
-    <button class="w-chip" id="wTime"><span id="wTimeLabel">时间</span></button>
-    <button class="w-chip" id="wSound">🔇 静音</button>
-  </div>
+<div class="weather-bar">
+      <button class="w-chip" id="wWeather"><span id="wWeatherLabel">天气</span></button>
+      <button class="w-chip" id="wTime"><span id="wTimeLabel">时间</span></button>
+      <button class="w-chip" id="wSound">🔇 静音</button>
+      <button class="w-chip" id="btnUser" title="登录" style="display:none">👤</button>
+    </div>
   <div class="wheel-mask" id="wheelMask">
     <div class="wheel" id="wheel">
       <div class="wheel-pointer"></div>
@@ -400,6 +401,21 @@ if(_wToggle)_wToggle.addEventListener('click',()=>{
 });
 </script>
 <script src="music-widget.js?v=1"></script>
+<script src="supabase-config.js?v=3"></script>
+<script src="auth.js?v=3"></script>
+<script>
+/* 登录入口按钮 */
+(async function(){
+  const user = await getCurrentUser();
+  const btn = document.getElementById('btnUser');
+  if (btn && user) {
+    btn.style.display = '';
+    btn.addEventListener('click', () => {
+      document.getElementById('authMask').style.display = 'flex';
+    });
+  }
+})();
+</script>
 
 </body>
 </html>
