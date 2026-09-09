@@ -11,6 +11,7 @@ const AUTH_HTML = `
 
     <!-- 登录模式切换 -->
     <div class="auth-tabs" id="authTabs">
+      <div class="auth-tab-slider" id="tabSlider"></div>
       <button class="auth-tab active" data-mode="password">密码登录</button>
       <button class="auth-tab" data-mode="code">验证码登录</button>
       <button class="auth-tab" data-mode="register">注 册</button>
@@ -124,11 +125,17 @@ const AUTH_CSS = `
 .auth-title{font-size:1.08rem;color:#f0cf82;letter-spacing:.2em;margin-bottom:6px;font-weight:600}
 .auth-subtitle{font-size:.72rem;color:rgba(240,207,130,.5);margin-bottom:20px;line-height:1.6}
 .auth-tabs{display:flex;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
-  border-radius:999px;padding:4px;margin-bottom:18px}
+  border-radius:999px;padding:4px;margin-bottom:18px;position:relative}
 .auth-tab{flex:1;padding:9px 0;border:none;border-radius:999px;background:transparent;
-  color:rgba(240,207,130,.5);font-family:inherit;font-size:.78rem;letter-spacing:.1em;cursor:pointer;transition:.2s}
-.auth-tab.active{background:linear-gradient(165deg,rgba(255,238,196,.28),rgba(240,207,130,.1));
-  color:#fffbef;font-weight:600;border:1px solid rgba(255,240,205,.3)}
+  color:rgba(240,207,130,.5);font-family:inherit;font-size:.78rem;letter-spacing:.1em;cursor:pointer;
+  transition:color .3s cubic-bezier(.4,0,.2,1);position:relative;z-index:1;user-select:none;-webkit-tap-highlight-color:transparent}
+.auth-tab.active{color:#fffbef;font-weight:600}
+.auth-tab-slider{position:absolute;top:4px;bottom:4px;border-radius:999px;z-index:0;
+  background:linear-gradient(165deg,rgba(255,238,196,.28),rgba(240,207,130,.1));
+  border:1px solid rgba(255,240,205,.3);
+  box-shadow:0 2px 12px rgba(240,207,130,.18), inset 0 1px 0 rgba(255,255,255,.15);
+  transition:left .38s cubic-bezier(.34,1.3,.5,1), width .38s cubic-bezier(.34,1.3,.5,1);
+  pointer-events:none}
 .form-group{margin-bottom:14px;text-align:left}
 .form-label{display:block;font-size:.64rem;color:rgba(240,207,130,.5);margin-bottom:6px;letter-spacing:.1em}
 .form-input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);
@@ -213,10 +220,19 @@ function initAuth() {
     logoutView.style.display = n === 4 ? 'block' : 'none';
   };
 
-  // 模式切换
+  // 模式切换（带滑块动画）
+  const tabSlider = document.getElementById('tabSlider');
+  const moveSlider = (tab, animate = true) => {
+    if (!tab || !tabSlider) return;
+    tabSlider.style.transition = animate ? '' : 'none';
+    tabSlider.style.left = tab.offsetLeft + 'px';
+    tabSlider.style.width = tab.offsetWidth + 'px';
+    if (!animate) requestAnimationFrame(() => tabSlider.style.transition = '');
+  };
   tabs.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => {
     mode = t.dataset.mode;
     tabs.querySelectorAll('.auth-tab').forEach(x => x.classList.toggle('active', x === t));
+    moveSlider(t);
     pwdGroup.style.display = mode === 'password' ? 'block' : 'none';
     btnLogin.style.display = mode === 'password' ? 'block' : 'none';
     btnSendCode.style.display = mode === 'code' ? 'block' : 'none';
@@ -224,6 +240,8 @@ function initAuth() {
     clearInterval(countdown);
     if (mode === 'code') { btnSendCode.disabled = false; btnSendCode.textContent = '发送验证码'; }
   }));
+  // 初始定位（不播动画）
+  moveSlider(tabs.querySelector('.auth-tab.active'), false);
 
   const close = () => { if (!locked) mask.style.display = 'none'; };
   ['authClose1', 'authCloseR', 'authClose2', 'authClose3', 'authClose4'].forEach(id =>
