@@ -93,6 +93,80 @@ async function registerWithEmail(email, password, username) {
   return data;
 }
 
+/** ========== 云端记忆同步（快照方案） ========== */
+const SNAP_TYPE = 'snapshot';
+
+async function uploadSnapshot() {
+  try {
+    const sb = await initSupabase();
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.user) return false;   // 未登录不传
+    const payload = {
+      memory: localStorage.getItem('sleepy_space_memory') || '',
+      memoryV2: localStorage.getItem('sleepy_space_memory_v2') || '',
+      astro: localStorage.getItem('astro_hist_v1') || '',
+      pair: localStorage.getItem('pair_hist_v1') || '',
+      syn: localStorage.getItem('syn_hist_v1') || '',
+      yj: localStorage.getItem('yijing_hist_v1') || ''
+    };
+    const row = {
+      user_id: session.user.id,
+      type: SNAP_TYPE,
+      title: 'memory_snapshot',
+      note: JSON.stringify(payload),
+      source: 'auto',
+      sig: 'v1'
+    };
+    // 有旧快照则更新，否则插入
+    const { data: existing } = await sb.from('memories')
+      .select('id').eq('user_id', session.user.id).eq('type', SNAP_TYPE).maybeSingle();
+    if (existing?.id) {
+      const { error } = await sb.from('memories').update({ note: row.note, updated_at: new Date().toISOString() }).eq('id', existing.id);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from('memories').insert(row);
+      if (error) throw error;
+    }
+    return true;
+  } catch (e) {
+    console.warn('云端上传失败:', e);
+    return false;
+  }
+}
+
+/** 登录后拉取云端快照并替换本地 */
+async function downloadSnapshot() {
+  try {
+    const sb = await initSupabase();
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.user) return false;
+    const { data, error } = await sb.from('memories')
+      .select('note').eq('user_id', session.user.id).eq('type', SNAP_TYPE).maybeSingle();
+    if (error) throw error;
+    if (!data?.note) { await uploadSnapshot(); return false; }  // 云端为空：把本地首次推上去
+    const payload = JSON.parse(data.note);
+    const map = { memory: 'sleepy_space_memory', memoryV2: 'sleepy_space_memory_v2', astro: 'astro_hist_v1', pair: 'pair_hist_v1', syn: 'syn_hist_v1', yj: 'yijing_hist_v1' };
+    Object.entries(map).forEach(([k, lsKey]) => {
+      if (payload[k]) localStorage.setItem(lsKey, payload[k]);
+      else localStorage.removeItem(lsKey);
+    });
+    return true;
+  } catch (e) {
+    console.warn('云端下载失败:', e);
+    return false;
+  }
+}
+
+/** 防抖自动上传：每次 saveMemory 后 2 秒静默上传 */
+let _syncTimer = null;
+function scheduleUpload() {
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => { uploadSnapshot(); }, 2000);
+}
+
+window.uploadSnapshot = uploadSnapshot;
+window.downloadSnapshot = downloadSnapshot;
+
 window.getCurrentUser = getCurrentUser;
 window.signOut = signOut;
 window.sendVerificationCode = sendVerificationCode;

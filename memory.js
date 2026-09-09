@@ -71,6 +71,7 @@ function mirrorToV2(type, data) {
         _exist.data = { title: title, note: note };
         _exist.createdAt = Date.now();
         localStorage.setItem(key, JSON.stringify(v2));
+        if (typeof window.scheduleUpload === 'function') window.scheduleUpload();
         return;
       }
     }
@@ -84,6 +85,7 @@ function mirrorToV2(type, data) {
       sig: sigVal || 'auto'
     });
     localStorage.setItem(key, JSON.stringify(v2));
+    if (typeof window.scheduleUpload === 'function') window.scheduleUpload();
   } catch (e) {
     console.warn('mirrorToV2 失败:', e);
   }
@@ -119,6 +121,8 @@ function getMemory() {
 function saveMemory(memory) {
   try {
     localStorage.setItem(MEMORY_KEY, JSON.stringify(memory));
+    // 登录状态下自动同步云端（防抖，静默）
+    if (typeof window.scheduleUpload === 'function') window.scheduleUpload();
     return true;
   } catch (e) {
     console.error('保存记忆失败:', e);
