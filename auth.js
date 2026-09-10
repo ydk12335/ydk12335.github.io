@@ -1,44 +1,32 @@
 /**
- * 有点困 - 登录系统 v2
- * 双模式：密码登录 / 验证码登录 + 注册后设置密码
+ * 有点困 - 登录系统 v3
+ * 结构参考 GitHub 登录：主入口是「密码登录」，
+ * 注册 / 验证码 / 忘记密码 都是底部的次级入口，一屏只做一件事。
  */
 
 const AUTH_HTML = `
 <div class="auth-mask" id="authMask">
-  <div class="auth-modal">
-    <h3 class="auth-title">登 录</h3>
-    <div class="auth-subtitle">登录后，你的记忆将随云端同步</div>
+  <div class="auth-modal" id="authModal">
+    <h3 class="auth-title" id="authTitle">登 录</h3>
+    <div class="auth-subtitle" id="authSubtitle">登录后，你的记忆将随云端同步</div>
 
-    <!-- 登录模式切换 -->
-    <div class="auth-tabs" id="authTabs">
-      <div class="auth-tab-slider" id="tabSlider"></div>
-      <button class="auth-tab active" data-mode="password">密码登录</button>
-      <button class="auth-tab" data-mode="code">验证码登录</button>
-      <button class="auth-tab" data-mode="register">注 册</button>
-    </div>
-
-    <!-- 步骤A: 账号输入（密码/验证码共用） -->
-    <div id="step1">
-      <div class="form-group">
-        <label class="form-label" id="usernameLabel">用户名</label>
-        <input class="form-input" id="authUsername" type="text" placeholder="给自己取个名字" maxlength="20">
-      </div>
+    <!-- ① 密码登录 -->
+    <div class="auth-view" id="viewLogin">
       <div class="form-group">
         <label class="form-label">邮箱</label>
-        <input class="form-input" id="authEmail" type="email" placeholder="you@example.com">
+        <input class="form-input" id="loginEmail" type="email" placeholder="you@example.com" autocomplete="username">
       </div>
-      <div class="form-group" id="pwdGroup">
+      <div class="form-group">
         <label class="form-label">密码</label>
-        <input class="form-input" id="authPwd" type="password" placeholder="至少6位">
+        <input class="form-input" id="loginPwd" type="password" placeholder="你的密码" autocomplete="current-password">
       </div>
       <button class="auth-btn-primary" id="btnLogin">登 录</button>
-      <button class="auth-btn-ghost" id="btnSendCode" style="display:none">发送验证码</button>
-      <div class="auth-tip" id="forgotTip" style="display:none;margin-top:8px">💡 忘记密码？切到上方「验证码登录」，用邮箱验证码进来后就能重新设置密码</div>
+      <button class="auth-btn-ghost" id="btnToCode">用邮箱验证码登录</button>
       <div class="auth-footer"><a href="#" id="btnForgot">忘记密码？</a> · <a href="#" id="authClose1">关闭</a></div>
     </div>
 
-    <!-- 步骤R: 注册 -->
-    <div id="stepR" style="display:none">
+    <!-- ② 注册 -->
+    <div class="auth-view" id="viewRegister" style="display:none">
       <div class="form-group">
         <label class="form-label">用户名</label>
         <input class="form-input" id="regUsername" type="text" placeholder="给自己取个名字" maxlength="20">
@@ -56,32 +44,36 @@ const AUTH_HTML = `
         <input class="form-input" id="regPwd2" type="password" placeholder="再输一遍">
       </div>
       <button class="auth-btn-primary" id="btnRegister">注册账号</button>
-      <div class="auth-tip" id="regTip" style="display:none"></div>
       <div class="form-group" id="regCodeGroup" style="display:none">
         <label class="form-label">邮箱验证码</label>
         <input class="form-input" id="regCode" type="text" placeholder="6位数字" maxlength="6" inputmode="numeric">
       </div>
-      <button class="auth-btn-primary" id="btnRegVerify" style="display:none">确认注册</button>
-      <div class="auth-footer"><a href="#" id="authCloseR">关闭</a></div>
+      <button class="auth-btn-primary" id="btnRegVerify" style="display:none">确认并登录</button>
+      <div class="auth-tip" id="regTip" style="display:none"></div>
+      <div class="auth-footer"><a href="#" id="btnBackLogin2">已有账号？去登录</a> · <a href="#" id="authCloseR">关闭</a></div>
     </div>
 
-    <!-- 步骤B: 验证码 -->
-    <div id="step2" style="display:none">
-      <div class="form-group">
-        <label class="form-label">验证码</label>
-        <input class="form-input" id="authCode" type="text" placeholder="6位数字" maxlength="6" inputmode="numeric">
+    <!-- ③ 验证码登录 / 找回密码 -->
+    <div class="auth-view" id="viewCode" style="display:none">
+      <div class="form-group" id="codeEmailGroup">
+        <label class="form-label">邮箱</label>
+        <input class="form-input" id="codeEmail" type="email" placeholder="you@example.com">
       </div>
+      <button class="auth-btn-primary" id="btnSendCode">发送验证码</button>
+      <div class="form-group" id="codeInputGroup" style="display:none;margin-top:14px">
+        <label class="form-label">验证码</label>
+        <input class="form-input" id="codeInput" type="text" placeholder="6位数字" maxlength="6" inputmode="numeric">
+      </div>
+      <button class="auth-btn-primary" id="btnVerifyCode" style="display:none">验证登录</button>
       <div class="auth-tip" id="codeTip"></div>
-      <button class="auth-btn-primary" id="btnVerify">验证登录</button>
-      <button class="auth-btn-ghost" id="btnBack">返回修改</button>
-      <div class="auth-footer"><a href="#" id="authClose2">关闭</a></div>
+      <div class="auth-footer"><a href="#" id="btnBackLogin3">返回密码登录</a> · <a href="#" id="authClose2">关闭</a></div>
     </div>
 
-    <!-- 步骤C: 设置密码（新用户验证码登录成功后） -->
-    <div id="step3" style="display:none">
-      <div class="auth-tip">首次登录，设一个密码吧<br>以后就可以直接密码进入 ✨</div>
+    <!-- ④ 设置密码（验证码登录成功后） -->
+    <div class="auth-view" id="viewSetPwd" style="display:none">
+      <div class="auth-tip">登录成功！设个密码，以后直接用密码进来 ✨</div>
       <div class="form-group">
-        <label class="form-label">设置密码</label>
+        <label class="form-label">新密码</label>
         <input class="form-input" id="newPwd" type="password" placeholder="至少6位">
       </div>
       <div class="form-group">
@@ -93,8 +85,8 @@ const AUTH_HTML = `
       <div class="auth-footer"><a href="#" id="authClose3">关闭</a></div>
     </div>
 
-    <!-- 已登录 -->
-    <div id="authLogout" style="display:none">
+    <!-- ⑤ 已登录资料 -->
+    <div class="auth-view" id="authLogout" style="display:none">
       <div class="user-avatar" id="userAvatar">?<div class="avatar-edit">换</div></div>
       <input type="file" id="avatarInput" accept="image/*"
         style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0.01">
@@ -110,7 +102,6 @@ const AUTH_HTML = `
 
 const AUTH_CSS = `
 /* ===== 登录弹窗（公告同款居中玻璃卡片） ===== */
-/* 全局：禁止蓝色选区/长按高亮（按钮和交互元素） */
 button,a,.w-chip,.p-card,.hbtn,.mbtn,.guaBox,.auth-modal,.uw-fab,.mu-fab{
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;outline:none}
@@ -123,25 +114,12 @@ button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
 .auth-modal{width:min(380px,94%);max-height:min(88vh,720px);overflow-y:auto;
   border-radius:26px;padding:26px 24px;text-align:center;
   background:rgba(255,255,255,.11);
-  border:none;
   backdrop-filter:blur(28px) saturate(190%);-webkit-backdrop-filter:blur(28px) saturate(190%);
   box-shadow:0 28px 72px rgba(4,2,18,.45), inset 0 1px 0 rgba(255,255,255,.3);
   animation:authPop .38s cubic-bezier(.16,1,.3,1)}
 @keyframes authPop{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:none}}
 .auth-title{font-size:1.08rem;color:#f0cf82;letter-spacing:.2em;margin-bottom:6px;font-weight:600}
 .auth-subtitle{font-size:.72rem;color:rgba(240,207,130,.5);margin-bottom:20px;line-height:1.6}
-.auth-tabs{display:flex;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
-  border-radius:999px;padding:4px;margin-bottom:18px;position:relative}
-.auth-tab{flex:1;padding:9px 0;border:none;border-radius:999px;background:transparent;
-  color:rgba(240,207,130,.5);font-family:inherit;font-size:.78rem;letter-spacing:.1em;cursor:pointer;
-  transition:color .3s cubic-bezier(.4,0,.2,1);position:relative;z-index:1;user-select:none;-webkit-tap-highlight-color:transparent}
-.auth-tab.active{color:#fffbef;font-weight:600}
-.auth-tab-slider{position:absolute;top:4px;bottom:4px;border-radius:999px;z-index:0;
-  background:linear-gradient(165deg,rgba(255,238,196,.28),rgba(240,207,130,.1));
-  border:1px solid rgba(255,240,205,.3);
-  box-shadow:0 2px 12px rgba(240,207,130,.18), inset 0 1px 0 rgba(255,255,255,.15);
-  transition:left .38s cubic-bezier(.34,1.3,.5,1), width .38s cubic-bezier(.34,1.3,.5,1);
-  pointer-events:none}
 .form-group{margin-bottom:14px;text-align:left}
 .form-label{display:block;font-size:.64rem;color:rgba(240,207,130,.5);margin-bottom:6px;letter-spacing:.1em}
 .form-input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);
@@ -151,7 +129,6 @@ button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
 .auth-btn-primary{width:100%;padding:13px;border-radius:999px;border:none;font-family:inherit;font-size:.9rem;
   letter-spacing:.15em;cursor:pointer;margin-top:4px;color:#fffbef;font-weight:600;
   background:linear-gradient(165deg,rgba(255,238,196,.38),rgba(240,207,130,.14) 44%,rgba(198,150,74,.22));
-  border:none;
   box-shadow:inset 0 1.5px 0 rgba(255,253,240,.45), 0 8px 24px rgba(240,207,130,.15);
   transition:transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .25s, filter .25s;
   -webkit-tap-highlight-color:transparent}
@@ -208,123 +185,77 @@ function initAuth() {
   document.head.appendChild(style);
   document.body.insertAdjacentHTML('beforeend', AUTH_HTML);
 
-  const mask = document.getElementById('authMask');
-  const step1 = document.getElementById('step1');
-  const step2 = document.getElementById('step2');
-  const step3 = document.getElementById('step3');
-  const stepR = document.getElementById('stepR');
-  const logoutView = document.getElementById('authLogout');
-  const tabs = document.getElementById('authTabs');
-  const pwdGroup = document.getElementById('pwdGroup');
-  const btnLogin = document.getElementById('btnLogin');
-  const btnSendCode = document.getElementById('btnSendCode');
-  let mode = 'password';   // password | code
-  let sentEmail = '', sentUsername = '', countdown = null, locked = false, isNewUser = false;
+  const $ = id => document.getElementById(id);
+  const mask = $('authMask');
+  const titleEl = $('authTitle');
+  const subEl = $('authSubtitle');
 
-  const showStep = n => {
-    step1.style.display = n === 1 ? 'block' : 'none';
-    stepR.style.display = n === 5 ? 'block' : 'none';
-    step2.style.display = n === 2 ? 'block' : 'none';
-    step3.style.display = n === 3 ? 'block' : 'none';
-    logoutView.style.display = n === 4 ? 'block' : 'none';
+  const VIEWS = { login: 'viewLogin', register: 'viewRegister', code: 'viewCode', setpwd: 'viewSetPwd', profile: 'authLogout' };
+  const TEXT = {
+    login:    ['登 录',      '登录后，你的记忆将随云端同步'],
+    register: ['注 册',      '创建账号，随时同步你的记忆'],
+    code:     ['验证码登录', '用邮箱收到的验证码登录'],
+    setpwd:   ['设置密码',   '以后用密码就能快速登录'],
+    profile:  ['我 的',      '']
   };
+  let locked = false, countdown = null, sentEmail = '', name0 = '?';
 
-  // 模式切换（带滑块动画）
-  const tabSlider = document.getElementById('tabSlider');
-  const moveSlider = (tab, animate = true) => {
-    if (!tab || !tabSlider) return;
-    tabSlider.style.transition = animate ? '' : 'none';
-    tabSlider.style.left = tab.offsetLeft + 'px';
-    tabSlider.style.width = tab.offsetWidth + 'px';
-    if (!animate) requestAnimationFrame(() => tabSlider.style.transition = '');
-  };
-  tabs.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => {
-    mode = t.dataset.mode;
-    tabs.querySelectorAll('.auth-tab').forEach(x => x.classList.toggle('active', x === t));
-    moveSlider(t);
-    pwdGroup.style.display = mode === 'password' ? 'block' : 'none';
-    btnLogin.style.display = mode === 'password' ? 'block' : 'none';
-    btnSendCode.style.display = mode === 'code' ? 'block' : 'none';
-    if (mode === 'register') showStep(5); else showStep(1);
-    clearInterval(countdown);
-    if (mode === 'code') { btnSendCode.disabled = false; btnSendCode.textContent = '发送验证码'; }
-  }));
-  // 初始定位（不播动画）
-  moveSlider(tabs.querySelector('.auth-tab.active'), false);
-
-  // 忘记密码：切到验证码登录并提示
-  const forgotTip = document.getElementById('forgotTip');
-  const btnForgot = document.getElementById('btnForgot');
-  btnForgot._show = false;
-  btnForgot.addEventListener('click', e => {
-    e.preventDefault();
-    btnForgot._show = true;
-    const codeTab = tabs.querySelector('.auth-tab[data-mode="code"]');
-    if (codeTab) codeTab.click();
-    forgotTip.style.display = 'block';
-    toast('用邮箱验证码登录后，即可重新设置密码');
-  });
-  // 切到密码登录时隐藏提示
-  tabs.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => {
-    if (forgotTip) forgotTip.style.display = (t.dataset.mode === 'code' && btnForgot._show) ? 'block' : 'none';
-  }));
+  function showView(name) {
+    Object.keys(VIEWS).forEach(k => { $(VIEWS[k]).style.display = k === name ? 'block' : 'none'; });
+    titleEl.textContent = TEXT[name][0];
+    subEl.textContent = TEXT[name][1];
+    subEl.style.display = TEXT[name][1] ? 'block' : 'none';
+    const m = $('authModal'); if (m) m.scrollTop = 0;
+  }
 
   const close = () => { if (!locked) mask.style.display = 'none'; };
+  const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
   ['authClose1', 'authCloseR', 'authClose2', 'authClose3', 'authClose4'].forEach(id =>
-    document.getElementById(id).addEventListener('click', e => { e.preventDefault(); close(); }));
+    $(id).addEventListener('click', e => { e.preventDefault(); close(); }));
   mask.addEventListener('click', e => { if (e.target === mask) close(); });
 
-  const readAccount = () => {
-    sentUsername = document.getElementById('authUsername').value.trim();
-    sentEmail = document.getElementById('authEmail').value.trim();
-    if (!sentUsername) { toast('先给自己取个名字吧'); return false; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sentEmail)) { toast('邮箱好像不对哦'); return false; }
-    return true;
-  };
-
-  // 密码登录
-  btnLogin.addEventListener('click', async () => {
-    if (!readAccount()) return;
-    const pwd = document.getElementById('authPwd').value;
-    if (!pwd || pwd.length < 6) return toast('密码至少6位');
-    btnLogin.disabled = true; btnLogin.textContent = '登录中…';
+  // ===== ① 密码登录 =====
+  $('btnLogin').addEventListener('click', async () => {
+    const email = $('loginEmail').value.trim();
+    const pwd = $('loginPwd').value;
+    if (!isEmail(email)) return toast('邮箱好像不对哦');
+    if (!pwd) return toast('请输入密码');
+    const btn = $('btnLogin');
+    btn.disabled = true; btn.textContent = '登录中…';
     try {
-      const data = await loginWithPassword(sentEmail, pwd);
-      const meta = data.user?.user_metadata?.display_name;
-      document.cookie = 'auth_name=' + encodeURIComponent(sentUsername) + ';path=/;max-age=31536000';
-      toast('欢迎回来，' + (meta || sentUsername));
+      const data = await loginWithPassword(email, pwd);
+      const name = data.user?.user_metadata?.display_name || email.split('@')[0];
+      document.cookie = 'auth_name=' + encodeURIComponent(name) + ';path=/;max-age=31536000';
+      toast('欢迎回来，' + name);
       close(); location.reload();
     } catch (e) {
-      toast(e.message?.includes('Invalid login') ? '邮箱或密码不对哦' : '登录失败：' + (e.message || '再试试'));
-      btnLogin.disabled = false; btnLogin.textContent = '登 录';
+      toast('邮箱或密码不正确');
+      btn.disabled = false; btn.textContent = '登 录';
     }
   });
 
-  // ===== 注册流程 =====
-  document.getElementById('btnRegister').addEventListener('click', async () => {
-    const username = document.getElementById('regUsername').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const p1 = document.getElementById('regPwd').value;
-    const p2 = document.getElementById('regPwd2').value;
+  // ===== ② 注册 =====
+  $('btnRegister').addEventListener('click', async () => {
+    const username = $('regUsername').value.trim();
+    const email = $('regEmail').value.trim();
+    const p1 = $('regPwd').value, p2 = $('regPwd2').value;
     if (!username) return toast('先给自己取个名字吧');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('邮箱好像不对哦');
+    if (!isEmail(email)) return toast('邮箱好像不对哦');
     if (!p1 || p1.length < 6) return toast('密码至少6位');
     if (p1 !== p2) return toast('两次密码不一致');
-
-    const btn = document.getElementById('btnRegister');
+    const btn = $('btnRegister');
     btn.disabled = true; btn.textContent = '注册中…';
     try {
       const data = await registerWithEmail(email, p1, username);
       if (!data.session) {
-        // 需要邮箱确认：显示验证码输入
-        document.getElementById('regTip').style.display = 'block';
-        document.getElementById('regTip').textContent = '验证码已寄往 ' + email + '，确认后即完成注册';
-        document.getElementById('regCodeGroup').style.display = 'block';
-        document.getElementById('btnRegVerify').style.display = 'block';
+        $('regTip').style.display = 'block';
+        $('regTip').textContent = '验证码已寄往 ' + email;
+        $('regCodeGroup').style.display = 'block';
+        $('btnRegVerify').style.display = 'block';
         btn.style.display = 'none';
         toast('验证码已发送，查收邮箱');
       } else {
-        // 直接注册成功（项目关闭了邮箱确认时）
         toast('注册成功，欢迎加入，' + username);
         close(); location.reload();
       }
@@ -334,14 +265,14 @@ function initAuth() {
     }
   });
 
-  // 注册验证码确认
-  document.getElementById('btnRegVerify').addEventListener('click', async () => {
-    const code = document.getElementById('regCode').value.trim();
+  $('btnRegVerify').addEventListener('click', async () => {
+    const code = $('regCode').value.trim();
     if (code.length !== 6) return toast('输入6位验证码');
-    const email = document.getElementById('regEmail').value.trim();
-    const username = document.getElementById('regUsername').value.trim();
+    const email = $('regEmail').value.trim();
+    const username = $('regUsername').value.trim();
     try {
       await verifyAndLogin(email, code, username);
+      document.cookie = 'auth_name=' + encodeURIComponent(username) + ';path=/;max-age=31536000';
       toast('注册完成，欢迎加入，' + username);
       close(); location.reload();
     } catch (e) {
@@ -349,57 +280,83 @@ function initAuth() {
     }
   });
 
-  // 发送验证码
-  btnSendCode.addEventListener('click', async () => {
-    if (!readAccount()) return;
-    btnSendCode.disabled = true; btnSendCode.textContent = '发送中…';
+  // ===== ③ 验证码登录 / 找回密码 =====
+  const resetCodeView = () => {
+    $('codeEmailGroup').style.display = 'block';
+    $('codeInputGroup').style.display = 'none';
+    $('btnVerifyCode').style.display = 'none';
+    const b = $('btnSendCode');
+    b.style.display = 'block'; b.disabled = false; b.textContent = '发送验证码';
+    $('codeInput').value = '';
+    $('codeTip').textContent = '';
+    clearInterval(countdown);
+  };
+
+  const goCode = (tip) => {
+    sentEmail = '';
+    $('codeEmail').value = $('loginEmail').value.trim();
+    resetCodeView();
+    if (tip) $('codeTip').textContent = tip;
+    showView('code');
+  };
+
+  $('btnToCode').addEventListener('click', () => goCode(''));
+  $('btnForgot').addEventListener('click', e => {
+    e.preventDefault();
+    goCode('输入注册邮箱，验证后即可重新设置密码');
+    toast('验证后就能重设密码');
+  });
+
+  $('btnSendCode').addEventListener('click', async () => {
+    const email = ($('codeInputGroup').style.display === 'none')
+      ? $('codeEmail').value.trim()
+      : sentEmail;
+    if (!isEmail(email)) return toast('邮箱好像不对哦');
+    sentEmail = email;
+    const btn = $('btnSendCode');
+    btn.disabled = true; btn.textContent = '发送中…';
     try {
-      await sendVerificationCode(sentEmail);
-      showStep(2);
-      document.getElementById('codeTip').textContent = '验证码已寄往 ' + sentEmail;
+      await sendVerificationCode(email);
+      $('codeEmailGroup').style.display = 'none';
+      $('codeInputGroup').style.display = 'block';
+      $('btnVerifyCode').style.display = 'block';
+      $('codeTip').textContent = '验证码已寄往 ' + email;
       toast('验证码已发送，查收邮箱');
       let sec = 60;
       clearInterval(countdown);
       const tick = () => {
-        btnSendCode.textContent = sec > 0 ? `${sec}s 后重发` : '发送验证码';
-        if (sec-- <= 0) { clearInterval(countdown); btnSendCode.disabled = false; return; }
+        btn.textContent = sec > 0 ? sec + 's 后可重发' : '重新发送';
+        if (sec-- <= 0) { clearInterval(countdown); btn.disabled = false; return; }
       };
       countdown = setInterval(tick, 1000); tick();
     } catch (e) {
       toast('发送失败：' + (e.message || '稍后再试'));
-      btnSendCode.disabled = false; btnSendCode.textContent = '发送验证码';
+      btn.disabled = false; btn.textContent = '发送验证码';
     }
   });
 
-  // 验证码登录
-  document.getElementById('btnVerify').addEventListener('click', async () => {
-    const code = document.getElementById('authCode').value.trim();
+  $('btnVerifyCode').addEventListener('click', async () => {
+    const code = $('codeInput').value.trim();
     if (code.length !== 6) return toast('输入6位验证码');
+    const btn = $('btnVerifyCode');
+    btn.disabled = true; btn.textContent = '验证中…';
     try {
-      await verifyAndLogin(sentEmail, code, sentUsername);
-      document.cookie = 'auth_name=' + encodeURIComponent(sentUsername) + ';path=/;max-age=31536000';
-      // 检查是否已设过密码：从 session 拿不到该信息，统一引导设置（已设过可直接跳过）
-      isNewUser = true;
-      showStep(3);
+      await verifyAndLogin(sentEmail, code, null);
+      document.cookie = 'auth_name=' + encodeURIComponent(sentEmail.split('@')[0]) + ';path=/;max-age=31536000';
       toast('登录成功！');
+      showView('setpwd');
     } catch (e) {
-      toast('验证失败：' + (e.message || '再试试'));
+      toast('验证码不对或已过期');
     }
+    btn.disabled = false; btn.textContent = '验证登录';
   });
 
-  document.getElementById('btnBack').addEventListener('click', () => {
-    showStep(1);
-    // 恢复倒计时状态
-    if (mode === 'code') { btnSendCode.style.display = 'block'; btnLogin.style.display = 'none'; }
-  });
-
-  // 设置密码
-  document.getElementById('btnSetPwd').addEventListener('click', async () => {
-    const p1 = document.getElementById('newPwd').value;
-    const p2 = document.getElementById('newPwd2').value;
+  // ===== ④ 设置密码 =====
+  $('btnSetPwd').addEventListener('click', async () => {
+    const p1 = $('newPwd').value, p2 = $('newPwd2').value;
     if (!p1 || p1.length < 6) return toast('密码至少6位');
     if (p1 !== p2) return toast('两次输入不一致');
-    const btn = document.getElementById('btnSetPwd');
+    const btn = $('btnSetPwd');
     btn.disabled = true; btn.textContent = '保存中…';
     try {
       await setPassword(p1);
@@ -411,14 +368,15 @@ function initAuth() {
     }
   });
 
-  // 跳过设置密码
-  document.getElementById('btnSkipPwd').addEventListener('click', () => {
-    close(); location.reload();
-  });
+  $('btnSkipPwd').addEventListener('click', () => { close(); location.reload(); });
+
+  // ===== 返回 =====
+  $('btnBackLogin2').addEventListener('click', e => { e.preventDefault(); showView('login'); });
+  $('btnBackLogin3').addEventListener('click', e => { e.preventDefault(); resetCodeView(); showView('login'); });
 
   // ===== 头像上传 =====
-  const avatarEl = document.getElementById('userAvatar');
-  const avatarInput = document.getElementById('avatarInput');
+  const avatarEl = $('userAvatar');
+  const avatarInput = $('avatarInput');
   const editBadge = '<div class="avatar-edit">换</div>';
   const showAvatar = (url) => {
     if (url) {
@@ -430,7 +388,6 @@ function initAuth() {
     }
     avatarEl.insertAdjacentHTML('beforeend', editBadge);
   };
-  let name0 = '?';
   avatarEl.addEventListener('click', () => avatarInput.click());
   avatarInput.addEventListener('change', async () => {
     const file = avatarInput.files[0];
@@ -447,9 +404,8 @@ function initAuth() {
     avatarInput.value = '';
   });
 
-  // 退出
-  document.getElementById('btnSignOut').addEventListener('click', async () => {
-    // 退出前把最新本地数据推上云端，防丢失
+  // ===== 退出 =====
+  $('btnSignOut').addEventListener('click', async () => {
     try { await uploadSnapshot(); } catch (e) {}
     sessionStorage.removeItem('cloud_restored');
     await signOut();
@@ -461,31 +417,30 @@ function initAuth() {
     if (m) m.style.display = 'flex';
   };
 
-  // 全局登录保护
+  // ===== 启动：登录保护 + 云端同步 =====
   (async () => {
     const user = await getCurrentUser();
     if (user) {
-      // 云端同步：云端有快照→下载替换本地；云端为空→首次把本地上传
       let synced = false;
       try { synced = await downloadSnapshot(); } catch (e) { console.warn('同步失败', e); }
       if (synced && !sessionStorage.getItem('cloud_restored')) {
         sessionStorage.setItem('cloud_restored', '1');
         toast('记忆已从云端恢复 ☁');
-        location.reload();   // 替换后刷新，让所有模块读到新数据
+        location.reload();
         return;
       }
       const name = user.user_metadata?.display_name || user.email?.split('@')[0] || '旅人';
       name0 = name[0].toUpperCase();
-      document.getElementById('userName').textContent = name;
-      document.getElementById('userEmail').textContent = user.email;
+      $('userName').textContent = name;
+      $('userEmail').textContent = user.email;
       showAvatar(user.user_metadata?.avatar || null);
-      showStep(4);
-      /* 点过悬浮球才打开资料弹窗 */
+      showView('profile');
       if (sessionStorage.getItem('open_auth')) { mask.style.display = 'flex'; sessionStorage.removeItem('open_auth'); }
       else mask.style.display = 'none';
     } else {
       locked = true;
-      mask.style.display = 'flex';   // 未登录：强制弹登录，必须登录才能用
+      showView('login');
+      mask.style.display = 'flex';
     }
   })();
 }
