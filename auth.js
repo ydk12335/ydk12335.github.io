@@ -407,7 +407,7 @@ function initAuth() {
 
   // ===== 退出 =====
   $('btnSignOut').addEventListener('click', async () => {
-    try { await uploadSnapshot(); } catch (e) {}
+    try { await (window.flushUpload || uploadSnapshot)(); } catch (e) {}
     sessionStorage.removeItem('cloud_restored');
     await signOut();
     close(); location.reload();
@@ -418,18 +418,10 @@ function initAuth() {
     if (m) m.style.display = 'flex';
   };
 
-  // ===== 启动：登录保护 + 云端同步 =====
+  // ===== 启动：登录保护（云端同步由 supabase-config.js 的 bootCloudSync 统一处理） =====
   (async () => {
     const user = await getCurrentUser();
     if (user) {
-      let synced = false;
-      try { synced = await downloadSnapshot(); } catch (e) { console.warn('同步失败', e); }
-      if (synced && !sessionStorage.getItem('cloud_restored')) {
-        sessionStorage.setItem('cloud_restored', '1');
-        toast('记忆已从云端恢复 ☁');
-        location.reload();
-        return;
-      }
       const name = user.user_metadata?.display_name || user.email?.split('@')[0] || '旅人';
       name0 = name[0].toUpperCase();
       $('userName').textContent = name;

@@ -398,7 +398,7 @@
 
     /* 退出登录 */
     $('pfBtnOut').addEventListener('click', async () => {
-      try { await uploadSnapshot(); } catch (e) {}
+      try { await (window.flushUpload || uploadSnapshot)(); } catch (e) {}
       sessionStorage.removeItem('cloud_restored');
       try { await signOut(); } catch (e) {}
       location.reload();

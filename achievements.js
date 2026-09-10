@@ -202,7 +202,10 @@
   const SEEN_KEY = 'ach_seen_v1';
   function getSeen() { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); } catch (e) { return []; } }
   function markSeen(id) {
-    const s = getSeen(); if (s.indexOf(id) < 0) { s.push(id); try { localStorage.setItem(SEEN_KEY, JSON.stringify(s)); } catch (e) {} }
+    const s = getSeen(); if (s.indexOf(id) < 0) {
+      s.push(id);
+      try { localStorage.setItem(SEEN_KEY, JSON.stringify(s)); } catch (e) {}
+    }
   }
 
   /* =========================================================

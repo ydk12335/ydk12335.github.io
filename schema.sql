@@ -57,6 +57,7 @@ CREATE POLICY "改自己资料" ON profiles FOR UPDATE USING (auth.uid() = id);
 
 CREATE POLICY "读自己记忆" ON memories FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "插自己记忆" ON memories FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "改自己记忆" ON memories FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "删自己记忆" ON memories FOR DELETE USING (auth.uid() = user_id);
 
 -- ========================================
