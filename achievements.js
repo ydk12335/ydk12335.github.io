@@ -243,17 +243,26 @@
 .ag-stage{position:relative;display:flex;align-items:center;justify-content:center;
   transform-style:preserve-3d}
 
-/* ============ 卡片本体 ============ */
+/* ============ 卡片本体（3D 双面） ============ */
 .ag-card{position:relative;width:min(300px,76vw);aspect-ratio:2.5/3.5;border-radius:20px;
   transform-style:preserve-3d;will-change:transform;
-  box-shadow:0 30px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.28);
-  overflow:hidden;isolation:isolate;cursor:pointer;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+  cursor:grab;-webkit-tap-highlight-color:transparent;
+  box-shadow:0 30px 70px rgba(0,0,0,.6);
   background:linear-gradient(160deg,#22203a,#141126)}
+.ag-card.grabbing{cursor:grabbing}
 .ag-card.enter{animation:agPop .72s cubic-bezier(.18,1.5,.4,1) both}
 @keyframes agPop{
-  0%{opacity:0;transform:perspective(800px) scale(.55) rotateX(18deg) rotateZ(-6deg)}
-  62%{opacity:1;transform:perspective(800px) scale(1.06) rotateX(-3deg) rotateZ(1.5deg)}
-  100%{opacity:1;transform:perspective(800px) scale(1) rotateX(0) rotateZ(0)}}
+  0%{opacity:0;transform:perspective(900px) scale(.55) rotateY(-24deg) rotateZ(-6deg)}
+  62%{opacity:1;transform:perspective(900px) scale(1.06) rotateY(8deg) rotateZ(1.5deg)}
+  100%{opacity:1;transform:perspective(900px) scale(1) rotateY(0) rotateZ(0)}}
+
+/* 双面 */
+.ag-face{position:absolute;inset:0;border-radius:20px;overflow:hidden;
+  transform-style:preserve-3d;
+  -webkit-backface-visibility:hidden;backface-visibility:hidden}
+.ag-front{transform:rotateY(0deg)}
+.ag-back{transform:rotateY(180deg)}
 
 /* 液金 / 虹彩层 */
 .ag-holo{position:absolute;inset:-20%;pointer-events:none;z-index:1;
@@ -287,9 +296,23 @@
 .ag-card.settled .ag-quote{animation:agQuote 1.5s ease .55s forwards}
 @keyframes agQuote{to{opacity:1;transform:none}}
 
+/* ============ 卡背内容 ============ */
+.ag-inner-back{justify-content:center;gap:10px;transform:translateZ(14px)}
+.ag-bk-rar{font-size:.6rem;letter-spacing:.42em;text-indent:.42em;padding:3px 12px;border-radius:999px;
+  border:1px solid currentColor;opacity:.8}
+.ag-bk-name{font-size:1.1rem;letter-spacing:.18em;font-weight:600;color:#fff}
+.ag-bk-div{width:44px;height:1px;background:currentColor;opacity:.35;margin:2px0}
+.ag-bk-desc{font-size:.72rem;line-height:1.65;opacity:.8;max-width:210px}
+.ag-bk-quote{font-family:'STKaiti','KaiTi','Songti SC',serif;font-size:.74rem;line-height:1.75;
+  max-width:210px;opacity:.9}
+.ag-bk-no{position:absolute;left:0;right:0;bottom:16px;text-align:center;
+  font-size:.55rem;letter-spacing:.34em;text-indent:.34em;opacity:.42}
+.ag-bk-mark{position:absolute;right:14px;top:12px;font-size:.9rem;opacity:.5}
+
 /* ============ 白色 · 安静克制 ============ */
-.ag-card[data-rarity="white"]{
+.ag-card[data-rarity="white"] .ag-face{
   background:linear-gradient(158deg,#2b2c40 0%,#1a1a2b 55%,#12121e 100%)}
+.ag-card[data-rarity="white"] .ag-inner-back{color:#e9e6ff}
 .ag-card[data-rarity="white"] .ag-holo{opacity:.13;
   background-image:linear-gradient(112deg,transparent 34%,rgba(255,255,255,.75) 48%,transparent 62%)}
 .ag-card[data-rarity="white"] .ag-sheen{opacity:.32}
@@ -299,8 +322,9 @@
 .ag-card[data-rarity="white"] .ag-quote{color:rgba(226,222,255,.8)}
 
 /* ============ 紫色 · 彩虹渐变 ============ */
-.ag-card[data-rarity="purple"]{
+.ag-card[data-rarity="purple"] .ag-face{
   background:linear-gradient(158deg,#3a2b5c 0%,#241a3d 52%,#160f26 100%)}
+.ag-card[data-rarity="purple"] .ag-inner-back{color:#d9c6ff}
 .ag-card[data-rarity="purple"] .ag-holo{opacity:.34;
   background-image:linear-gradient(112deg,#ff5fa8,#8b5cff,#39d0ff,#ff8ae2,#ff5fa8);
   animation:agFlow 7s ease-in-out infinite}
@@ -313,8 +337,16 @@
 @keyframes agFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
 /* ============ 金色 · 传说（分层克制） ============ */
-.ag-card[data-rarity="gold"]{
+.ag-card[data-rarity="gold"] .ag-face{
   background:linear-gradient(158deg,#4a3a1c 0%,#2e2410 46%,#1a1408 100%)}
+.ag-card[data-rarity="gold"] .ag-inner-back{color:#ffe9a6}
+.ag-card[data-rarity="gold"] .ag-bk-rar{border-color:rgba(242,208,113,.6);color:#f2d071;
+  box-shadow:0 0 14px rgba(242,208,113,.25)}
+.ag-card[data-rarity="gold"] .ag-bk-name{
+  background:linear-gradient(100deg,#fff4c4,#f2d071,#fffbe8,#d4af37,#fff4c4);
+  background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:agFlow 5s linear infinite}
+.ag-card[data-rarity="gold"] .ag-bk-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.35)}
 /* ① 液态金缓慢流动 */
 .ag-card[data-rarity="gold"] .ag-holo{opacity:.58;
   background-image:linear-gradient(115deg,#7d6326,#f7e7a8,#d4af37,#fff8cf,#c9a227,#8a6d2f,#f0d989);
@@ -510,21 +542,39 @@
     <div class="ag-ring" id="agRing"></div>
     <div class="ag-particles" id="agParticles"></div>
     <div class="ag-card" id="agCard" data-rarity="white">
-      <div class="ag-holo"></div>
-      <div class="ag-foil"></div>
-      <div class="ag-sheen"></div>
-      <div class="ag-edge"></div>
-      <div class="ag-inner">
-        <div class="ag-icon" id="agIcon">🌙</div>
-        <div class="ag-rar" id="agRar">普通</div>
-        <div class="ag-name" id="agName">成就</div>
-        <div class="ag-desc" id="agDesc"></div>
-        <div class="ag-quote" id="agQuote"></div>
+      <!-- 正面 -->
+      <div class="ag-face ag-front">
+        <div class="ag-holo"></div>
+        <div class="ag-foil"></div>
+        <div class="ag-sheen"></div>
+        <div class="ag-edge"></div>
+        <div class="ag-inner">
+          <div class="ag-icon" id="agIcon">🌙</div>
+          <div class="ag-rar" id="agRar">普通</div>
+          <div class="ag-name" id="agName">成就</div>
+          <div class="ag-desc" id="agDesc"></div>
+          <div class="ag-quote" id="agQuote"></div>
+        </div>
+      </div>
+      <!-- 背面 -->
+      <div class="ag-face ag-back">
+        <div class="ag-holo"></div>
+        <div class="ag-foil"></div>
+        <div class="ag-sheen"></div>
+        <div class="ag-edge"></div>
+        <div class="ag-inner ag-inner-back">
+          <div class="ag-bk-mark" id="agBkMark">✦</div>
+          <div class="ag-bk-rar" id="agBkRar">普通</div>
+          <div class="ag-bk-name" id="agBkName">成就</div>
+          <div class="ag-bk-desc" id="agBkDesc"></div>
+          <div class="ag-bk-quote" id="agBkQuote"></div>
+        </div>
+        <div class="ag-bk-no" id="agBkNo"></div>
       </div>
       <div class="ag-burst" id="agBurst"></div>
     </div>
   </div>
-  <div class="ag-hint" id="agHint">移动鼠标 · 倾斜手机</div>
+  <div class="ag-hint" id="agHint">拖动翻转 · 双击翻面</div>
   <button class="ag-close" id="agClose">收 起</button>
 </div>
 <div class="ag-flash" id="agFlash"></div>`;
@@ -599,22 +649,55 @@
   /* =========================================================
    * 8. 姿态输入（鼠标 + 陀螺仪）
    * =======================================================*/
-  const pose = { tx: 0, ty: 0, px: 0.5, py: 0.5, dx: 0, dy: 0 };  // target / pointer
-  const cur = { rx: 0, ry: 0, x: 0.5, y: 0.5, px: 0, py: 0 };
+  const pose = { tx: 0, ty: 0, px: 0.5, py: 0.5, dx: 0, dy: 0 };  // 目标姿态
+  const cur = { x: 0.5, y: 0.5, px: 0, py: 0, tiltX: 0, tiltY: 0 };
   let rafId = null, tiltMax = 6;
 
+  /* ---------- 3D 翻转状态 ---------- */
+  let rotY = 0;        // 主旋转（度）：180 的奇偶决定正/反面
+  let snapY = 0;       // 吸附目标
+  let rotX = 0;        // 俯仰（度）
+  let dragging = false;
+  let drag0 = null;
+  let spinV = 0;
+
+  /** 归一到 180 的整数倍（0 / ±180 / ±360 …） */
+  function normalizeFlip(v) { return Math.round(v / 180) * 180; }
+  /** 当前是否正被翻到背面 */
+  function isShowingBack() {
+    const n = Math.round(rotY / 180);
+    return (((n % 2) + 2) % 2) === 1;
+  }
+  /** 翻面（双击 / 双触） */
+  function flipCard() {
+    const base = normalizeFlip(rotY);
+    snapY = isShowingBack() ? base - 180 : base + 180;
+  }
+
   function loop() {
-    cur.rx += (pose.tx - cur.rx) * 0.12;
-    cur.ry += (pose.ty - cur.ry) * 0.12;
+    /* 高光层平滑（鼠标 / 陀螺仪） */
     cur.x += (pose.px - cur.x) * 0.12;
     cur.y += (pose.py - cur.y) * 0.12;
     cur.px += (pose.dx - cur.px) * 0.10;
     cur.py += (pose.dy - cur.py) * 0.10;
 
+    if (!dragging) {
+      /* 松手后：惯性投影 → 吸附到正/反面 */
+      rotY += (snapY - rotY) * 0.18;
+      if (Math.abs(snapY - rotY) < 0.3) rotY = snapY;
+      /* 俯仰回中（由陀螺仪/鼠标接管） */
+      cur.tiltX += (pose.tx * 0.45 - cur.tiltX) * 0.09;
+      cur.tiltY += (pose.ty * 0.45 - cur.tiltY) * 0.09;
+    } else {
+      cur.tiltX = rotX; cur.tiltY = 0;
+    }
+
     const card = $('agCard');
     if (card && $('agMask') && $('agMask').classList.contains('open')) {
+      const ry = dragging ? rotY : (rotY + cur.tiltY);
+      const rx = dragging ? rotX : cur.tiltX;
       card.style.transform =
-        'perspective(800px) rotateX(' + (-cur.rx).toFixed(2) + 'deg) rotateY(' + cur.ry.toFixed(2) + 'deg)';
+        'perspective(900px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)';
       card.style.setProperty('--x', (cur.x * 100).toFixed(2) + '%');
       card.style.setProperty('--y', (cur.y * 100).toFixed(2) + '%');
       card.style.setProperty('--px', cur.px.toFixed(2) + 'px');
