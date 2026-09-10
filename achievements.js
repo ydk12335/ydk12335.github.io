@@ -267,21 +267,21 @@
 .ag-front{transform:rotateY(0deg)}
 .ag-back{transform:rotateY(180deg)}
 
-/* 光栅层：跟随指针的棱彩反光 */
-.ag-holo{position:absolute;inset:-6%;pointer-events:none;z-index:1;
-  background-repeat:no-repeat;background-size:200% 200%;
+/* 光栅层：跟随指针的棱彩反光（背景位移大 → 跟手） */
+.ag-holo{position:absolute;inset:0;pointer-events:none;z-index:1;
+  background-repeat:no-repeat;background-size:220% 220%;
   background-position:var(--bx,50%) var(--by,50%);
-  mix-blend-mode:color-dodge;opacity:0;
-  transition:opacity .5s ease;
+  mix-blend-mode:screen;opacity:0;
+  transition:opacity .35s ease;
   transform:translate3d(var(--sx,0px),var(--sy,0px),0)}
 .ag-foil{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:0;
   background:repeating-linear-gradient(105deg, rgba(255,255,255,.05) 0 1px, transparent 1px 4px);
   mix-blend-mode:overlay}
-/* 高光眩光：跟随指针 */
-.ag-sheen{position:absolute;inset:0;pointer-events:none;z-index:3;opacity:.45;
-  background:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
-    rgba(255,255,255,.8) 6%, rgba(255,255,255,.12) 34%, rgba(0,0,0,.4) 96%);
-  mix-blend-mode:overlay;transition:opacity .3s}
+/* 高光眩光：跟随指针的清晰反光点 */
+.ag-sheen{position:absolute;inset:0;pointer-events:none;z-index:3;opacity:.5;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),
+    rgba(255,255,255,.72) 0%, rgba(255,255,255,.16) 22%, rgba(255,255,255,0) 48%);
+  mix-blend-mode:screen;transition:opacity .3s}
 .ag-edge{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:4;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 0 22px rgba(0,0,0,.45)}
 
@@ -342,13 +342,11 @@
 .ag-card[data-rarity="purple"] .ag-face{
   background:linear-gradient(158deg,#3a2b5c 0%,#241a3d 52%,#160f26 100%)}
 .ag-card[data-rarity="purple"] .ag-inner-back{color:#d9c6ff}
-.ag-card[data-rarity="purple"] .ag-holo{opacity:.72;
-  background-image:repeating-linear-gradient(112deg,
-    #7a4bff 0%, #c07bff 9%, #5ec8ff 18%, #ff8ad6 27%, #8b5cff 36%,
-    #7a4bff 45%, #c07bff 54%, #5ec8ff 63%, #ff8ad6 72%, #8b5cff 81%, #7a4bff 90%);
-  background-size:320% 320%;
-  filter:brightness(1.2) contrast(1.08) saturate(1.15) hue-rotate(var(--hh,0deg));
-  animation:agHue 26s linear infinite}
+.ag-card[data-rarity="purple"] .ag-holo{opacity:.6;
+  background-image:linear-gradient(115deg,
+    #6a3df0 0%, #b06bff 18%, #ff8ad6 38%, #7fd4ff 58%, #6affc0 76%, #b06bff 100%);
+  background-size:240% 240%;
+  filter:brightness(1.12) saturate(1.25)}
 .ag-card[data-rarity="purple"] .ag-foil{opacity:.2}
 .ag-card[data-rarity="purple"] .ag-sheen{opacity:.42}
 .ag-card[data-rarity="purple"] .ag-icon{color:#d9c6ff;filter:drop-shadow(0 0 16px rgba(160,110,255,.6))}
@@ -370,14 +368,12 @@
   background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:agFlow 5s linear infinite}
 .ag-card[data-rarity="gold"] .ag-bk-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.35)}
-/* 彩色棱镜光栅：跟随指针 + 缓慢色相漂移（动态） */
-.ag-card[data-rarity="gold"] .ag-holo{opacity:.85;
-  background-image:repeating-linear-gradient(115deg,
-    #ff3d81 0%, #ff9a3d 8%, #ffe23d 17%, #5bff9e 26%, #3dd1ff 35%,
-    #8a5cff 44%, #ff3d81 53%, #ff9a3d 62%, #ffe23d 71%, #5bff9e 80%, #3dd1ff 89%, #8a5cff 100%);
-  background-size:480% 480%;
-  filter:brightness(1.35) contrast(1.12) saturate(1.35) hue-rotate(var(--hh,0deg));
-  animation:agHue 16s linear infinite}
+/* 彩色棱镜光栅：跟随指针流动（无延迟动画） */
+.ag-card[data-rarity="gold"] .ag-holo{opacity:.78;
+  background-image:linear-gradient(115deg,
+    #ff5fb0 0%, #ffd36e 15%, #6effb0 32%, #6ec7ff 50%, #b06eff 68%, #ffd36e 84%, #ff5fb0 100%);
+  background-size:280% 280%;
+  filter:brightness(1.18) saturate(1.35)}
 .ag-card[data-rarity="gold"] .ag-foil{opacity:.42}
 .ag-card[data-rarity="gold"] .ag-sheen{opacity:.5;
   background:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
@@ -395,8 +391,6 @@
 .ag-card[data-rarity="gold"] .ag-edge{
   box-shadow:inset 0 0 0 1px rgba(255,235,170,.6), inset 0 0 36px rgba(120,90,20,.5)}
 @keyframes agFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-@property --hh{syntax:'<angle>';initial-value:0deg;inherits:false}
-@keyframes agHue{to{--hh:360deg}}
 
 /* ============ 粒子层（金色） ============ */
 .ag-particles{position:absolute;inset:-46px;pointer-events:none;z-index:0;overflow:visible}
@@ -442,12 +436,6 @@
   color:rgba(240,207,130,.85);font-family:inherit;font-size:.76rem;letter-spacing:.16em;
   padding:10px 26px;border-radius:999px;cursor:pointer;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 .ag-close:active{transform:translateX(-50%) scale(.96)}
-.ag-flip{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
-  z-index:530;background:rgba(255,255,255,.08);border:1px solid rgba(240,207,130,.28);
-  color:rgba(240,207,130,.9);font-family:inherit;font-size:.74rem;letter-spacing:.16em;
-  padding:10px 24px;border-radius:999px;cursor:pointer;
-  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-.ag-flip:active{transform:translateX(-50%) scale(.96)}
 .ag-hint{position:fixed;left:50%;top:calc(22px + env(safe-area-inset-top,0px));transform:translateX(-50%);
   z-index:530;font-size:.68rem;color:rgba(240,207,130,.5);letter-spacing:.14em;pointer-events:none;
   animation:agFade 1s ease .5s both}
@@ -605,8 +593,7 @@
       <div class="ag-burst" id="agBurst"></div>
     </div>
   </div>
-  <div class="ag-hint" id="agHint">拖动翻转 · 轻点翻面</div>
-  <button class="ag-flip" id="agFlip">↻ 翻 面</button>
+  <div class="ag-hint" id="agHint">拖动翻面 · 倾斜手机看体感</div>
   <button class="ag-close" id="agClose">收 起</button>
 </div>
 <div class="ag-flash" id="agFlash"></div>`;
@@ -706,11 +693,11 @@
   }
 
   function loop() {
-    /* 高光层平滑（鼠标 / 陀螺仪） */
-    cur.x += (pose.px - cur.x) * 0.12;
-    cur.y += (pose.py - cur.y) * 0.12;
-    cur.px += (pose.dx - cur.px) * 0.10;
-    cur.py += (pose.dy - cur.py) * 0.10;
+    /* 高光层平滑：系数调大 → 跟手、不拖影 */
+    cur.x += (pose.px - cur.x) * 0.40;
+    cur.y += (pose.py - cur.y) * 0.40;
+    cur.px += (pose.dx - cur.px) * 0.28;
+    cur.py += (pose.dy - cur.py) * 0.28;
 
     if (!dragging) {
       /* 松手后：惯性投影 → 吸附到正/反面 */
@@ -731,10 +718,10 @@
       let swX = 0, swY = 0, swBx = 0, swBy = 0;
       if (idle) {
         const t = now * 0.001;
-        swX = Math.sin(t * 0.6) * 3.2;
-        swY = Math.cos(t * 0.45) * 4.2;
-        swBx = Math.sin(t * 0.5) * 12;
-        swBy = Math.cos(t * 0.33) * 12;
+        swX = Math.sin(t * 0.6) * 2.2;
+        swY = Math.cos(t * 0.45) * 2.8;
+        swBx = Math.sin(t * 0.5) * 6;
+        swBy = Math.cos(t * 0.33) * 6;
       }
       const rx = (dragging ? rotX : cur.tiltX + swX);
       const ry = rotY + (dragging ? 0 : cur.tiltY + swY);
@@ -903,7 +890,7 @@
 
     mask.classList.add('open');
     $('agHint').textContent = /Mobi|Android|iPhone/i.test(navigator.userAgent)
-      ? '拖动 / 轻点翻面 · 倾斜手机看体感' : '拖动 / 轻点翻面 · 移动鼠标看光栅';
+      ? '拖动翻面 · 倾斜手机看体感' : '拖动翻面 · 移动鼠标看光影';
     startLoop();
 
     /* 仪式：闪光 + 爆发 + 音效 + 震动 */
@@ -949,6 +936,14 @@
       moved = Math.max(moved, Math.hypot(dx, dy));
       rotY = ry0 + dx * 0.7;
       rotX = Math.max(-26, Math.min(26, -dy * 0.35));
+      /* 指针位置也驱动光栅 → 触摸/拖动时同样跟手 */
+      const rc = card.getBoundingClientRect();
+      pose.px = Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width));
+      pose.py = Math.min(1, Math.max(0, (e.clientY - rc.top) / rc.height));
+      pose.ty = (pose.px - .5) * 2 * tiltMax;
+      pose.tx = (pose.py - .5) * 2 * tiltMax;
+      pose.dx = (pose.px - .5) * -18;
+      pose.dy = (pose.py - .5) * -18;
       const now = performance.now();
       const dt = now - lt;
       if (dt > 0) { v = (e.clientX - lx) / dt; lx = e.clientX; lt = now; }
@@ -967,7 +962,7 @@
         if (Math.abs(v) > 0.35) snapY = normalizeFlip(rotY) + (v > 0 ? 180 : -180);  // 快速甩 = 翻到下一面
         else snapY = normalizeFlip(rotY);  // 慢拖 = 吸附最近一面
       }
-      rotX = 0; lastInput = now;
+      rotX = 0; pose.tx = 0; pose.ty = 0; pose.dx = 0; pose.dy = 0; lastInput = now;
     };
     card.addEventListener('pointerdown', down);
     card.addEventListener('pointermove', move);
@@ -977,9 +972,8 @@
 
   function bindCard() {
     $('agClose').addEventListener('click', closeCard);
-    if ($('agFlip')) $('agFlip').addEventListener('click', flipCard);
     $('agMask').addEventListener('click', e => { if (e.target === $('agMask') || e.target === $('agStage')) closeCard(); });
-    window.addEventListener('mousemove', e => { if ($('agMask').classList.contains('open')) pointerMove(e); });
+    window.addEventListener('pointermove', e => { if ($('agMask').classList.contains('open')) pointerMove(e); });
     $('agMask').addEventListener('touchstart', () => { requestGyro(); }, { once: true, passive: true });
     document.addEventListener('keydown', e => {
       if (!$('agMask').classList.contains('open')) return;
