@@ -444,7 +444,7 @@
 @keyframes agFade{from{opacity:0}to{opacity:1}}
 
 .ag-stage{position:relative;display:flex;align-items:center;justify-content:center;
-  transform-style:preserve-3d}
+  transform-style:preserve-3d;transform:translateZ(0)}
 
 /* ============ 卡片本体（3D 双面） ============ */
 .ag-card{position:relative;width:min(400px,88vw);aspect-ratio:2.5/3.5;border-radius:22px;
@@ -452,7 +452,8 @@
   touch-action:none;user-select:none;-webkit-user-select:none;
   cursor:grab;-webkit-tap-highlight-color:transparent;
   box-shadow:none;
-  background:linear-gradient(160deg,#22203a,#141126)}
+  background:linear-gradient(160deg,#22203a,#141126);
+  isolation:isolate}
 .ag-card.grabbing{cursor:grabbing}
 .ag-card.enter{animation:agPop .72s cubic-bezier(.18,1.5,.4,1) both}
 @keyframes agPop{
@@ -470,20 +471,18 @@
 /* ============ 全息彩虹层（poke-holo 配方 · 性能版） ============
    固定 background-image，用 transform 位移扫动（GPU 合成，
    不再每帧重绘渐变 / 重算 filter） */
-.ag-shine{position:absolute;inset:-25%;pointer-events:none;z-index:1;
-  background-repeat:no-repeat;background-size:220% 220%;background-position:center;
-  transform:translate3d(calc(var(--sxp,0) * 1%),calc(var(--syp,0) * 1%),0);
-  will-change:transform;
-  mix-blend-mode:screen;transition:opacity .35s ease}
-.ag-shine::after{display:none}
+.ag-shine{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:1;
+  background-repeat:no-repeat;background-size:220% 220%;
+  background-position:calc(50% + var(--sxp,0) * 1%) calc(50% + var(--syp,0) * 1%);
+  mix-blend-mode:screen}
 /* ============ 高光眩光：固定径向渐变，靠 transform 跟随指针 ============ */
 /* 眩光：圆心放在指针位置、半径拉到最远角（poke-holo 做法）→ 光从指针向整卡铺开，而非一块会跑的贴图 */
-.ag-glare{position:absolute;inset:0;pointer-events:none;z-index:2;
+.ag-glare{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:2;
   background-image:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
     rgba(255,255,255,.5) 6%, rgba(255,255,255,.16) 28%, transparent 76%);
   mix-blend-mode:screen;
   opacity:calc(var(--pfc,0) * .5 + .12)}
-.ag-edge{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:4;
+.ag-edge{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:4;
   box-shadow:none}
 
 /* 内容 */
@@ -562,56 +561,56 @@
 /* ============ 金色 · 传说（彩色 + 动态） ============ */
 .ag-card[data-rarity="gold"]{
   box-shadow:none}
-/* 底层：缓慢流动的金色液态渐变 */
+/* 底层：缓慢流动的浪漫多色渐变（传说） */
 .ag-card[data-rarity="gold"] .ag-face{
   background:
-    radial-gradient(120% 90% at 20% 15%, rgba(255,222,140,.5), transparent 60%),
-    radial-gradient(120% 90% at 82% 88%, rgba(255,190,70,.4), transparent 62%),
-    linear-gradient(120deg,#3a2c0e 0%,#6b4d18 38%,#241a0d 62%,#7a5a1e 100%);
-  background-size:200% 200%, 200% 200%, 200% 200%;
-  animation:agGoldFlow 9s ease-in-out infinite}
+    radial-gradient(120% 90% at 16% 12%, rgba(255,111,216,.55), transparent 58%),
+    radial-gradient(120% 90% at 84% 20%, rgba(167,139,250,.5), transparent 60%),
+    radial-gradient(130% 100% at 24% 88%, rgba(90,209,255,.46), transparent 62%),
+    radial-gradient(120% 95% at 82% 86%, rgba(127,240,224,.42), transparent 62%),
+    linear-gradient(150deg,#2a1740 0%,#160e28 55%,#0e0a1e 100%);
+  background-size:200% 200%, 200% 200%, 200% 200%, 200% 200%, 100% 100%;
+  animation:agGoldFlow 11s ease-in-out infinite}
 @keyframes agGoldFlow{
-  0%{background-position:0% 50%, 100% 50%, 0% 50%}
-  50%{background-position:100% 50%, 0% 50%, 100% 50%}
-  100%{background-position:0% 50%, 100% 50%, 0% 50%}}
-.ag-card[data-rarity="gold"] .ag-inner-back{color:#ffe9a6}
-.ag-card[data-rarity="gold"] .ag-bk-rar{border-color:rgba(242,208,113,.6);color:#f2d071;
-  box-shadow:0 0 14px rgba(242,208,113,.25)}
+  0%{background-position:0% 50%, 100% 50%, 0% 50%, 100% 50%, 0% 0%}
+  50%{background-position:100% 50%, 0% 50%, 100% 50%, 0% 50%, 0% 0%}
+  100%{background-position:0% 50%, 100% 50%, 0% 50%, 100% 50%, 0% 0%}}
+.ag-card[data-rarity="gold"] .ag-inner-back{color:#ecd9ff}
+.ag-card[data-rarity="gold"] .ag-bk-rar{border-color:rgba(190,150,255,.55);color:#d9b8ff;
+  box-shadow:0 0 14px rgba(190,150,255,.22)}
 .ag-card[data-rarity="gold"] .ag-bk-name{
-  background:linear-gradient(100deg,#fff4c4,#f2d071,#fffbe8,#d4af37,#fff4c4);
+  background:linear-gradient(100deg,#ffd7f2,#d9b8ff,#e6dcff,#b79bff,#ffd7f2);
   background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:agFlow 5s linear infinite}
-.ag-card[data-rarity="gold"] .ag-bk-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.35)}
-/* 金属扫光：conic 角度随倾斜转动 + 背景视差（overlay 叠加） */
-.ag-card[data-rarity="gold"] .ag-shine{opacity:.72;
+.ag-card[data-rarity="gold"] .ag-bk-quote{color:#f0c9ff;text-shadow:0 0 16px rgba(190,150,255,.35)}
+/* 浪漫流光：多色线性渐变 + 指针视差（screen 叠加，不用 conic） */
+.ag-card[data-rarity="gold"] .ag-shine{opacity:.6;
   background-image:
-    conic-gradient(from calc(120deg + var(--tilt-y,0deg)),
-      #6b4d18 0%, #ffd76e 12%, #fff6d6 20%, #ffb43d 32%, #7a5a1e 46%,
-      #ffe9a8 60%, #ff9a3d 72%, #6b4d18 86%, #ffd76e 100%),
-    linear-gradient(115deg, transparent 34%, rgba(255,255,255,.5) 48%, transparent 64%);
-  background-size:210% 210%, 250% 250%;
+    linear-gradient(115deg,#ff6fd8,#a78bfa,#5ad1ff,#7ff0e0,#ffd166,#ff6fd8),
+    linear-gradient(115deg, transparent 34%, rgba(255,255,255,.45) 48%, transparent 64%);
+  background-size:260% 260%, 240% 240%;
   background-position:
-    calc(50% + var(--sxp,0) * .9%) calc(50% + var(--syp,0) * .9%),
-    calc(50% + var(--sxp,0) * 1.5%) calc(50% + var(--syp,0) * 1.5%);
-  mix-blend-mode:overlay;
-  filter:brightness(1.16) saturate(1.35)}
-/* 跟随指针的金色高光（hard-light，金属“活”起来） */
+    calc(50% + var(--sxp,0) * 1.1%) calc(50% + var(--syp,0) * 1.1%),
+    calc(50% + var(--sxp,0) * 1.6%) calc(50% + var(--syp,0) * 1.6%);
+  mix-blend-mode:screen;
+  filter:brightness(1.12) saturate(1.25)}
+/* 跟随指针的柔光（screen，浪漫冷调） */
 .ag-card[data-rarity="gold"] .ag-glare{
   background-image:radial-gradient(farthest-corner circle at var(--pointer-x,50%) var(--pointer-y,50%),
-    rgba(255,248,220,.8) 5%, rgba(255,214,120,.4) 22%, rgba(255,180,60,.16) 44%, transparent 72%);
-  mix-blend-mode:hard-light;
-  opacity:calc(var(--pfc,0) * .7 + .22)}
+    rgba(255,255,255,.6) 5%, rgba(255,190,240,.3) 24%, rgba(150,180,255,.16) 46%, transparent 74%);
+  mix-blend-mode:screen;
+  opacity:calc(var(--pfc,0) * .6 + .18)}
 .ag-card[data-rarity="gold"] .ag-shine::after{display:none}
-.ag-card[data-rarity="gold"] .ag-icon{color:#ffe9a6;
-  filter:drop-shadow(0 0 22px rgba(240,200,100,.85))}
+.ag-card[data-rarity="gold"] .ag-icon{color:#ecd9ff;
+  filter:drop-shadow(0 0 22px rgba(200,160,255,.8))}
 .ag-card[data-rarity="gold"] .ag-name{
-  background:linear-gradient(100deg,#ffe1a8,#ff9a3d,#ffe23d,#5bff9e,#7fd4ff,#c39bff,#ffe1a8);
+  background:linear-gradient(100deg,#ff9ad8,#c39bff,#9be7ff,#8ef0e0,#7fd4ff,#c39bff,#ff9ad8);
   background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:agFlow 5s linear infinite;font-weight:700;letter-spacing:.2em}
-.ag-card[data-rarity="gold"] .ag-rar{color:#f2d071;border-color:rgba(242,208,113,.6);
-  box-shadow:0 0 14px rgba(242,208,113,.25)}
-.ag-card[data-rarity="gold"] .ag-desc{color:rgba(255,240,200,.82)}
-.ag-card[data-rarity="gold"] .ag-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.4);font-size:.78rem}
+.ag-card[data-rarity="gold"] .ag-rar{color:#d9b8ff;border-color:rgba(190,150,255,.55);
+  box-shadow:0 0 14px rgba(190,150,255,.22)}
+.ag-card[data-rarity="gold"] .ag-desc{color:rgba(238,230,255,.85)}
+.ag-card[data-rarity="gold"] .ag-quote{color:#f0c9ff;text-shadow:0 0 16px rgba(190,150,255,.4);font-size:.78rem}
 .ag-card[data-rarity="gold"] .ag-edge{
   padding:2px;border-radius:22px;
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -620,23 +619,26 @@
   mask-composite:exclude;
   overflow:hidden}
 .ag-card[data-rarity="gold"] .ag-edge::before{
-  content:'';position:absolute;inset:-70%;
-  background:conic-gradient(from 0deg,
-    transparent 0 68%, rgba(255,214,120,.85) 76%, rgba(255,255,230,1) 80%,
-    rgba(255,190,80,.85) 84%, transparent 92% 100%);
-  animation:agGoldTrack 7s linear infinite}
-@keyframes agGoldTrack{to{transform:rotate(360deg)}}
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(115deg,
+    transparent 40%, rgba(255,111,216,.9) 47%, rgba(167,139,250,1) 50%,
+    rgba(90,209,255,.9) 53%, transparent 60%);
+  background-size:300% 300%;
+  animation:agGoldTrack 6s linear infinite}
+@keyframes agGoldTrack{
+  0%{background-position:0% 0%}
+  100%{background-position:200% 200%}}
 @keyframes agFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
 /* ============ 星座 · 专属卡（流动背景 + 缓转星座符号） ============ */
 /* 卡外背景：该星座专属星图（由 JS 注入 SVG） */
-.ag-sky{position:absolute;inset:-110px;z-index:-3;pointer-events:none;opacity:0;
+.ag-sky{position:absolute;inset:0;z-index:-3;pointer-events:none;opacity:0;
   transition:opacity .8s ease;display:flex;align-items:center;justify-content:center}
 .ag-sky.on{opacity:1}
 .ag-sky svg{width:100%;height:100%;overflow:visible}
 
 /* 流沙：几道柔和的沙色带缓慢流淌（纯 transform 位移，GPU 合成，零重绘） */
-.ag-zsand{position:absolute;inset:-12%;z-index:0;pointer-events:none;display:none;
+.ag-zsand{position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;display:none;
   overflow:hidden}
 /* 星尘点阵：多层不同颜色/大小的细小光点，缓缓漂移（静态背景，只做 transform） */
 .ag-zsand::before{content:'';position:absolute;inset:-30%;
@@ -658,7 +660,7 @@
     radial-gradient(circle, #ffffff 0.8px, transparent 1.3px);
   background-size:29px 29px, 21px 21px, 33px 33px, 14px 14px;
   background-position:9px 4px, 15px 23px, 2px 17px, 4px 11px;
-  mix-blend-mode:screen;opacity:.75;
+  opacity:.9;
   animation:agSandB 29s ease-in-out infinite alternate}
 @keyframes agSandA{
   0%{transform:translate3d(-7%,-5%,0) rotate(-4deg) scale(1.05)}
@@ -691,7 +693,20 @@
   box-shadow:0 0 14px var(--z2)}
 .ag-card[data-rarity="zodiac"] .ag-desc{color:rgba(230,242,255,.86)}
 .ag-card[data-rarity="zodiac"] .ag-quote{color:rgba(222,240,255,.94);text-shadow:0 0 16px var(--z2)}
-.ag-card[data-rarity="zodiac"] .ag-edge{box-shadow:none}
+.ag-card[data-rarity="zodiac"] .ag-edge{
+  padding:2px;border-radius:22px;
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite:exclude;
+  overflow:hidden}
+.ag-card[data-rarity="zodiac"] .ag-edge::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(115deg,
+    transparent 40%, var(--z3) 47%, var(--z2) 50%,
+    var(--z1) 53%, transparent 60%);
+  background-size:300% 300%;
+  animation:agGoldTrack 6s linear infinite}
 .ag-card[data-rarity="zodiac"] .ag-shine{opacity:.46;
   background-image:linear-gradient(115deg,
     var(--z1) 0%, var(--z2) 22%, var(--z3) 44%, var(--z4) 66%, var(--z1) 88%, var(--z1) 100%);
@@ -717,9 +732,9 @@
 
 /* ============ 关闭 & 提示 ============ */
 .ag-close{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
-  z-index:530;background:rgba(255,255,255,.08);border:1px solid rgba(240,207,130,.28);
+  z-index:530;background:rgba(16,13,26,.92);border:1px solid rgba(240,207,130,.28);
   color:rgba(240,207,130,.85);font-family:inherit;font-size:.76rem;letter-spacing:.16em;
-  padding:10px 26px;border-radius:999px;cursor:pointer;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  padding:10px 26px;border-radius:999px;cursor:pointer}
 .ag-close:active{transform:translateX(-50%) scale(.96)}
 .ag-hint{position:fixed;left:50%;top:calc(22px + env(safe-area-inset-top,0px));transform:translateX(-50%);
   z-index:530;font-size:.68rem;color:rgba(240,207,130,.5);letter-spacing:.14em;pointer-events:none;
@@ -743,7 +758,7 @@
 .ab-redeem input::placeholder{color:rgba(240,207,130,.4)}
 .ab-redeem input:focus{border-color:rgba(240,207,130,.6);background:rgba(255,255,255,.1)}
 .ab-redeem button{font-family:inherit;font-size:.72rem;letter-spacing:.18em;color:#1a1408;
-  background:linear-gradient(135deg,#f2d071,#fff3c9);border:none;border-radius:999px;
+  background:linear-gradient(135deg,#d9b8ff,#fff3c9);border:none;border-radius:999px;
   padding:9px 18px;cursor:pointer;flex:none}
 .ab-redeem button:active{transform:scale(.96)}
 .ab-filters{display:flex;gap:7px;justify-content:center;margin:16px 0 20px;flex-wrap:wrap}
@@ -767,7 +782,7 @@
 .ab-card .ab-nm{position:relative;z-index:4;font-size:.72rem;margin-top:5px;letter-spacing:.08em;color:#e8e4ff}
 .ab-card .ab-rr{position:relative;z-index:4;font-size:.56rem;margin-top:3px;letter-spacing:.2em}
 .ab-card .ab-lock{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;
-  font-size:1.3rem;background:rgba(8,6,16,.62);backdrop-filter:blur(2px)}
+  font-size:1.3rem;background:rgba(8,6,16,.85)}
 .ab-card.locked{filter:grayscale(1);opacity:.5;cursor:default}
 .ab-card.locked .ab-ic{opacity:.4}
 .ab-card.r-white{background:linear-gradient(160deg,#2c2d42,#181828)}
@@ -780,19 +795,18 @@
 .ab-card.r-gold{background:linear-gradient(160deg,#4b3b1d,#1d1608);
   box-shadow:0 10px 26px rgba(0,0,0,.42), 0 0 0 1px rgba(242,208,113,.42), 0 0 22px rgba(242,208,113,.14),
     inset 0 1px 0 rgba(255,255,255,.22)}
-.ab-card.r-gold .ab-rr{color:#f2d071}
+.ab-card.r-gold .ab-rr{color:#d9b8ff}
 .ab-card.r-gold .ab-nm{color:#ffeeb8}
 .ab-card.r-gold .ab-holo{opacity:.42;
-  background-image:linear-gradient(115deg,#7d6326,#f7e7a8,#d4af37,#fff8cf,#c9a227,#8a6d2f);
+  background-image:linear-gradient(115deg,#7d6326,#f7e7a8,#b79bff,#fff8cf,#c9a227,#8a6d2f);
   animation:agLiquid 10s linear infinite}
-.ab-card.r-gold .ab-ic{filter:drop-shadow(0 0 12px rgba(240,200,100,.85))}
+.ab-card.r-gold .ab-ic{filter:drop-shadow(0 0 12px rgba(200,160,255,.8))}
 .ab-card.new::after{content:'NEW';position:absolute;top:7px;right:7px;z-index:7;
   font-size:.5rem;letter-spacing:.12em;padding:2px 6px;border-radius:99px;
   background:linear-gradient(135deg,#ff6b9d,#8b5cff);color:#fff;font-weight:700}
 .ab-close{position:fixed;right:16px;top:calc(16px + env(safe-area-inset-top,0px));z-index:490;
   width:38px;height:38px;border-radius:50%;border:1px solid rgba(240,207,130,.28);cursor:pointer;
-  background:rgba(20,14,36,.7);color:rgba(240,207,130,.8);font-size:1rem;font-family:inherit;
-  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+  background:rgba(20,14,36,.9);color:rgba(240,207,130,.8);font-size:1rem;font-family:inherit}
 
 /* ============ 低端机降级 ============ */
 .ag-lite .ag-mask,.ag-lite .ab-mask,.ag-lite .ag-close,.ag-lite .ab-close{
@@ -816,7 +830,7 @@
 .pf-badge.r-gold.on{border-color:rgba(180,160,255,.42);
   background:linear-gradient(140deg,rgba(120,110,255,.22),rgba(90,70,200,.10) 55%,rgba(255,200,120,.14));
   box-shadow:0 4px 18px rgba(140,120,255,.28)}
-.pf-badge.r-gold.on .tx{color:#f2d071}
+.pf-badge.r-gold.on .tx{color:#d9b8ff}
 .pf-badge.r-zodiac.on{border-color:rgba(150,200,255,.45);
   background:linear-gradient(150deg,rgba(90,150,255,.2),rgba(20,30,60,.1));
   box-shadow:0 4px 16px rgba(90,150,255,.24)}
@@ -981,6 +995,8 @@
   function flipCard() {}
 
   function loop() {
+    /* 只在这里消费最新指针坐标（rAF 节流，避免 mousemove 频率直接写样式） */
+    if (pendMove) { applyPointer(pendMove); pendMove = null; }
     /* 高光层平滑：系数调大 → 跟手、不拖影 */
     cur.x += (pose.px - cur.x) * 0.40;
     cur.y += (pose.py - cur.y) * 0.40;
@@ -1030,8 +1046,6 @@
       const sxp = (pxv - 50) * 0.5, syp = (pyv - 50) * 0.5;
       card.style.setProperty('--sxp', sxp.toFixed(2));
       card.style.setProperty('--syp', syp.toFixed(2));
-      card.style.setProperty('--txp', sxp.toFixed(2));
-      card.style.setProperty('--typ', syp.toFixed(2));
       card.style.setProperty('--gxp', ((mx - 50) * 0.52).toFixed(2));
       card.style.setProperty('--gyp', ((my - 50) * 0.52).toFixed(2));
       card.style.setProperty('--pfc', pfc.toFixed(3));
@@ -1055,13 +1069,16 @@
   function startLoop() { if (!rafId) rafId = requestAnimationFrame(loop); }
   function stopLoop() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
 
-  function pointerMove(e) {
+  /* mousemove 只记录最新坐标；真正的计算放到 rAF(loop) 里，避免高频重排/写样式 */
+  let pendMove = null;
+  function pointerMove(e) { pendMove = { x: e.clientX, y: e.clientY }; }
+  function applyPointer(p) {
     const card = $('agCard');
     if (!card) return;
     lastInput = performance.now();
-    const r = card.getBoundingClientRect();
-    let px = (e.clientX - r.left) / r.width;
-    let py = (e.clientY - r.top) / r.height;
+    const r = card._rect || (card._rect = card.getBoundingClientRect());
+    const px = (p.x - r.left) / r.width;
+    const py = (p.y - r.top) / r.height;
     pose.px = Math.min(1, Math.max(0, px));
     pose.py = Math.min(1, Math.max(0, py));
     pose.ty = (pose.px - .5) * 2 * tiltMax;
@@ -1162,6 +1179,7 @@
 
     /* 入场动画 */
     card.classList.remove('enter', 'settled');
+    card._rect = null;              // 重新测量卡片位置（缓存失效）
     void card.offsetWidth;
     card.classList.add('enter');
     setTimeout(() => card.classList.add('settled'), 300);
