@@ -18,7 +18,7 @@ async function initSupabase() {
     await new Promise((res, rej) => { s.onload = res; s.onerror = rej; });
   }
   sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
+    auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
   });
   return sbClient;
 }
