@@ -267,13 +267,12 @@
 .ag-front{transform:rotateY(0deg)}
 .ag-back{transform:rotateY(180deg)}
 
-/* 光栅层：跟随指针的棱彩反光（背景位移大 → 跟手） */
+/* 光栅层：只靠背景位移流动（不做整体位移，避免被卡片边框裁出界限） */
 .ag-holo{position:absolute;inset:0;pointer-events:none;z-index:1;
   background-repeat:no-repeat;background-size:220% 220%;
   background-position:var(--bx,50%) var(--by,50%);
   mix-blend-mode:screen;opacity:0;
-  transition:opacity .35s ease;
-  transform:translate3d(var(--sx,0px),var(--sy,0px),0)}
+  transition:opacity .35s ease}
 .ag-foil{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:0;
   background:repeating-linear-gradient(105deg, rgba(255,255,255,.05) 0 1px, transparent 1px 4px);
   mix-blend-mode:overlay}
@@ -558,7 +557,6 @@
 <div class="ag-mask" id="agMask">
   <div class="ag-stage" id="agStage">
     <div class="ag-halo" id="agHalo"></div>
-    <div class="ag-ring" id="agRing"></div>
     <div class="ag-particles" id="agParticles"></div>
     <div class="ag-card" id="agCard" data-rarity="white">
       <!-- 正面 -->
@@ -590,6 +588,7 @@
         </div>
         <div class="ag-bk-no" id="agBkNo"></div>
       </div>
+      <div class="ag-ring" id="agRing"></div>
       <div class="ag-burst" id="agBurst"></div>
     </div>
   </div>
