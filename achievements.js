@@ -222,7 +222,7 @@
         '<path d="M48.5 13.5l1.45 3.75 3.75 1.45-3.75 1.45-1.45 3.75-1.45-3.75-3.75-1.45 3.75-1.45z" fill="#fff3c9"/>' +
         '<path d="M53.5 32l.95 2.45 2.45.95-2.45.95-.95 2.45-.95-2.45-2.45-.95 2.45-.95z" fill="#fff3c9" fill-opacity=".78"/>' +
         '</svg>',
-      desc: '输入兑换码解锁的隐藏成就',
+      desc: '',
       quote: '星河溺进深海的幻念',
       check: s => s.redeem }
   ];
@@ -489,17 +489,9 @@
 .ag-dyn{position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;
   display:none;overflow:hidden;mix-blend-mode:screen}
 
-/* 下雨：多层斜向雨丝持续下落 */
-.ag-card[data-motion="rain"] .ag-dyn{display:block;
-  background-image:
-    repeating-linear-gradient(103deg, transparent 0 5px, rgba(186,220,255,.55) 5px 6px),
-    repeating-linear-gradient(99deg, transparent 0 10px, rgba(150,196,255,.34) 10px 11px),
-    repeating-linear-gradient(107deg, transparent 0 16px, rgba(214,238,255,.22) 16px 17px);
-  background-size:90px 220px, 140px 300px, 210px 400px;
-  animation:agRain .8s linear infinite}
-@keyframes agRain{
-  from{background-position:0 -220px, 0 -300px, 0 -400px}
-  to{background-position:0 0, 0 0, 0 0}}
+/* 下雨：Canvas 逐滴渲染（与主页同一套雨滴逻辑），疏密自然、不是条纹 */
+.ag-rain{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:1;display:none}
+.ag-card[data-motion="rain"] .ag-rain{display:block}
 
 /* 极光：两道柔光带缓缓漂移 */
 .ag-card[data-motion="aurora"] .ag-dyn{display:block;
@@ -922,6 +914,7 @@
         <div class="ag-zsand"></div>
         <div class="ag-zmark" id="agZmark"></div>
         <div class="ag-dyn"></div>
+        <canvas class="ag-rain" id="agRain"></canvas>
         <div class="ag-shine"></div>
         <div class="ag-glare"></div>
         <div class="ag-edge"></div>
@@ -1112,6 +1105,8 @@
       card.style.setProperty('--tilt-x', rx.toFixed(2) + 'deg');
       card.style.setProperty('--tilt-y', ry.toFixed(2) + 'deg');
     }
+    /* 卡面雨：仅在雨中渲染 */
+    if (rainActive) drawRain();
     /* 收藏册里的卡也随陀螺仪流动 */
     const ab = $('abMask');
     if (ab && ab.classList.contains('open')) {
@@ -1125,6 +1120,57 @@
   }
   function startLoop() { if (!rafId) rafId = requestAnimationFrame(loop); }
   function stopLoop() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
+
+  /* ===== 卡面雨（复用主页雨滴思路：逐滴下落 + 圆头 + 随机疏密，非条纹） ===== */
+  let rainCtx = null, rainDrops = [], rainW = 0, rainH = 0, rainActive = false;
+  function newDrop(spread) {
+    return { x: Math.random() * rainW,
+      y: spread ? Math.random() * rainH : -12,
+      l: 7 + Math.random() * 9,
+      v: 5 + Math.random() * 4,
+      a: .22 + Math.random() * .38,
+      w: Math.random() < .3 ? 1.3 : 1,
+      d: (Math.random() - .5) * .4 };
+  }
+  function setupRain(on) {
+    const cv = $('agRain'), card = $('agCard');
+    if (!cv || !card) { rainActive = false; return; }
+    if (!on) {
+      rainActive = false;
+      if (rainCtx) { rainCtx.clearRect(0, 0, rainW, rainH); }
+      return;
+    }
+    const r = card.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    rainW = r.width || 260; rainH = r.height || 364;
+    cv.width = Math.max(1, Math.round(rainW * dpr));
+    cv.height = Math.max(1, Math.round(rainH * dpr));
+    cv.style.width = rainW + 'px'; cv.style.height = rainH + 'px';
+    rainCtx = cv.getContext('2d');
+    rainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    rainDrops = [];
+    const n = Math.max(16, Math.round(rainW * 0.14));
+    for (let i = 0; i < n; i++) rainDrops.push(newDrop(true));
+    rainActive = true;
+  }
+  function drawRain() {
+    if (!rainCtx) return;
+    rainCtx.clearRect(0, 0, rainW, rainH);
+    rainCtx.strokeStyle = 'rgba(214,232,255,1)';
+    rainCtx.lineCap = 'round';
+    for (const d of rainDrops) {
+      d.y += d.v; d.x += d.d;
+      if (d.y - d.l > rainH) { const nd = newDrop(false); d.y = nd.y; d.x = nd.x; }
+      else if (d.x < -4 || d.x > rainW + 4) { d.x = Math.random() * rainW; }
+      rainCtx.globalAlpha = d.a;
+      rainCtx.lineWidth = d.w;
+      rainCtx.beginPath();
+      rainCtx.moveTo(d.x, d.y);
+      rainCtx.lineTo(d.x - d.d * 2, d.y - d.l);
+      rainCtx.stroke();
+    }
+    rainCtx.globalAlpha = 1;
+  }
 
   /* mousemove 只记录最新坐标；真正的计算放到 rAF(loop) 里，避免高频重排/写样式 */
   let pendMove = null;
@@ -1211,11 +1257,18 @@
     $('agIcon').innerHTML = iconHtml(ach);
     $('agRar').textContent = r.label;
     $('agName').textContent = ach.name;
-    $('agDesc').textContent = ach.desc;
+    const dEl = $('agDesc');
+    dEl.textContent = ach.desc || '';
+    dEl.style.display = ach.desc ? '' : 'none';
     $('agQuote').textContent = ach.quote || '';
     card.setAttribute('data-rarity', ach.rarity);
-    /* 专属动态：有 motion 用专属，传说卡默认极光，其余无 */
-    card.setAttribute('data-motion', ach.motion || (ach.rarity === 'gold' ? 'aurora' : ''));
+    /* 专属动态：有点困固定下雨；其余传说随机一个动效；其他卡若定义了 motion 则用它 */
+    const MOTION_POOL = ['aurora', 'pulse', 'spark', 'flame', 'rain'];
+    let motion = ach.motion || '';
+    if (ach.rarity === 'gold' && ach.id !== 'youdiankun') {
+      motion = MOTION_POOL[Math.floor(Math.random() * MOTION_POOL.length)];
+    }
+    card.setAttribute('data-motion', motion);
 
     /* 星座主题：配色变量 + 缓转图腾 SVG + 卡外专属星图 */
     const zdef = applyTheme(card, ach);
@@ -1244,6 +1297,9 @@
     setTimeout(() => card.classList.add('settled'), 300);
 
     mask.classList.add('open');
+    /* 卡面雨：需要卡片已展开，等一帧量好尺寸再建画布 */
+    if (motion === 'rain') requestAnimationFrame(() => setupRain(true));
+    else setupRain(false);
     $('agHint').textContent = /Mobi|Android|iPhone/i.test(navigator.userAgent)
       ? '倾斜手机 · 光影流动' : '移动鼠标 · 光影流动';
     startLoop();
@@ -1265,6 +1321,7 @@
 
   function closeCard() {
     const m = $('agMask'); if (m) m.classList.remove('open');
+    setupRain(false);
     stopLoop();
     if (window.Achievements && window.Achievements.onClose) window.Achievements.onClose();
   }
