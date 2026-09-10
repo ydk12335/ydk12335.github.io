@@ -124,10 +124,11 @@
       if(url){av.style.backgroundImage='url('+url+')';av.textContent='';}
       else av.textContent=name[0].toUpperCase();
 makeDraggable(btn,function(){
-        /* 点击逻辑：按下前是否已展开（_wasOpen），已展开则直接打开资料 */
+        /* 点击逻辑：按下前是否已展开（_wasOpen），已展开则直接打开「我的」 */
         if(el0WasOpen(btn)){
-          if(typeof window.openAuthMask==='function')window.openAuthMask();
-          else{var co=function(){if(typeof window.openAuthMask==='function')window.openAuthMask();else setTimeout(co,100);};co();}
+          if(typeof window.openProfile==='function')window.openProfile();
+          else if(typeof window.openAuthMask==='function')window.openAuthMask();
+          else{var co=function(){if(typeof window.openProfile==='function')window.openProfile();else if(typeof window.openAuthMask==='function')window.openAuthMask();else setTimeout(co,100);};co();}
           return;
         }
         /* 未展开：第一下展开显示名字，2.6秒后收回 */
