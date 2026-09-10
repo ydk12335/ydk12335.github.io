@@ -691,7 +691,7 @@
 
 /* ============ 星座 · 专属卡（流动背景 + 缓转星座符号） ============ */
 /* 卡外背景：该星座专属星图（由 JS 注入 SVG） */
-.ag-sky{position:absolute;inset:0;z-index:-3;pointer-events:none;opacity:0;
+.ag-sky{position:absolute;inset:-110px;z-index:-3;pointer-events:none;opacity:0;
   transition:opacity .8s ease;display:flex;align-items:center;justify-content:center}
 .ag-sky.on{opacity:1}
 .ag-sky svg{width:100%;height:100%;overflow:visible}
