@@ -32,57 +32,57 @@
    * =======================================================*/
   const ZODIACS = [
     { key: 'aries', name: '白羊座', glyph: '♈', range: '3.21-4.19', elem: '火象 · 守护火星',
-      palette: ['#ff3b30', '#ff7a18', '#ff2d6f', '#ffb03a'], quote: '我把所有的莽撞，都用来奔向你。',
+      palette: ['#ff3b30', '#ff8a3d', '#ff4d8d', '#ffd166'], quote: '我把所有的莽撞，都用来奔向你。',
       art: '<path d="M50 30C40 20 24 24 24 38c0 27 15 30 24 48"/><path d="M50 30c10-10 26-6 26 8 0 27-15 30-24 48"/><path d="M50 30v10"/>',
       stars: [[20, 55], [38, 48], [56, 44], [74, 52], [86, 40]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4]] },
     { key: 'taurus', name: '金牛座', glyph: '♉', range: '4.20-5.20', elem: '土象 · 守护金星',
-      palette: ['#3aa76d', '#7bc96f', '#1f7a5a', '#c9e07a'], quote: '想把最好的季节，都留给你。',
+      palette: ['#3aa76d', '#8fe3c0', '#4fd1ff', '#ffd166'], quote: '想把最好的季节，都留给你。',
       art: '<circle cx="50" cy="58" r="17"/><path d="M50 41V27"/><path d="M33 41C21 37 17 25 25 15c5 10 15 15 25 15"/><path d="M67 41c12-4 16-16 8-26-5 10-15 15-25 15"/><circle cx="44" cy="56" r="1.9" fill="currentColor" stroke="none"/><circle cx="56" cy="56" r="1.9" fill="currentColor" stroke="none"/>',
       stars: [[15, 30], [30, 50], [45, 65], [58, 52], [72, 30], [50, 74]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [2, 5]] },
     { key: 'gemini', name: '双子座', glyph: '♊', range: '5.21-6.21', elem: '风象 · 守护水星',
-      palette: ['#35c4ff', '#6ee7f9', '#2b8cff', '#a78bfa'], quote: '我的心有两个人，都在念你的名字。',
+      palette: ['#35c4ff', '#5a7bff', '#a78bfa', '#7ff0e0'], quote: '我的心有两个人，都在念你的名字。',
       art: '<circle cx="36" cy="24" r="6"/><circle cx="64" cy="24" r="6"/><path d="M3630v44M6430v44M3038h12M5838h12M3076h12M5876h12"/><path d="M3050h12M5838h12" opacity=".35"/>',
       stars: [[30, 20], [28, 45], [34, 70], [62, 22], [66, 48], [70, 72]],
       lines: [[0, 1], [1, 2], [3, 4], [4, 5], [0, 3]] },
     { key: 'cancer', name: '巨蟹座', glyph: '♋', range: '6.22-7.22', elem: '水象 · 守护月亮',
-      palette: ['#b8c6e8', '#dbe6ff', '#6f86c9', '#c8b6ff'], quote: '月亮落进海里，我在潮汐里想你。',
+      palette: ['#9ab8ff', '#b9a7ff', '#ffa8d8', '#8fe0ff'], quote: '月亮落进海里，我在潮汐里想你。',
       art: '<ellipse cx="50" cy="58" rx="16" ry="11"/><path d="M34 54C25 51 21 43 26 35c7 2 12 6 14 12"/><path d="M66 54c9-3 13-11 8-19-7 2-12 6-14 12"/><path d="M40 68l-7 8M47 70l-4 9M53 70l4 9M60 68l7 8"/>',
       stars: [[50, 25], [50, 50], [30, 72], [70, 70], [38, 32], [62, 30]],
       lines: [[0, 1], [1, 2], [1, 3], [0, 4], [0, 5]] },
     { key: 'leo', name: '狮子座', glyph: '♌', range: '7.23-8.22', elem: '火象 · 守护太阳',
-      palette: ['#ffb300', '#ffdd55', '#ff8a00', '#ffd9a0'], quote: '我所有的光，只想照亮你一个人。',
+      palette: ['#ffb300', '#ff8a00', '#ff5f8d', '#ffe07a'], quote: '我所有的光，只想照亮你一个人。',
       art: '<circle cx="50" cy="52" r="14"/><circle cx="50" cy="52" r="23" stroke-dasharray="6 7"/><circle cx="45" cy="50" r="1.9" fill="currentColor" stroke="none"/><circle cx="55" cy="50" r="1.9" fill="currentColor" stroke="none"/>',
       stars: [[28, 40], [34, 22], [46, 16], [58, 26], [52, 46], [70, 58], [84, 44]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [5, 6]] },
     { key: 'virgo', name: '处女座', glyph: '♍', range: '8.23-9.22', elem: '土象 · 守护水星',
-      palette: ['#c9a227', '#e6d27a', '#8f7a1e', '#d9e08a'], quote: '把每一处细节，都过成想你的样子。',
+      palette: ['#c9a227', '#7fd6c0', '#b9a7d6', '#e6d27a'], quote: '把每一处细节，都过成想你的样子。',
       art: '<path d="M50 80V30"/><path d="M50 30c6-9-7-12-9-6-1 4 3 8 9 10"/><path d="M50 46c9-1 12-6 12-12-6-1-11 3-12 12"/><path d="M50 46c-9-1-12-6-12-12 6-1 11 3 12 12"/><path d="M50 60c9-1 12-6 12-12-6-1-11 3-12 12"/><path d="M50 60c-9-1-12-6-12-12 6-1 11 3 12 12"/>',
       stars: [[50, 18], [46, 42], [70, 58], [30, 40], [24, 68], [66, 78]],
       lines: [[0, 1], [1, 2], [1, 3], [3, 4], [2, 5]] },
     { key: 'libra', name: '天秤座', glyph: '♎', range: '9.23-10.23', elem: '风象 · 守护金星',
-      palette: ['#7fe3d0', '#9ad0ff', '#4fb8c9', '#c3b2ff'], quote: '天平的两端，都是你。',
+      palette: ['#5aa9ff', '#7fe3d0', '#ffb3e0', '#c3b2ff'], quote: '天平的两端，都是你。',
       art: '<path d="M50 24v52"/><circle cx="50" cy="21" r="4"/><path d="M22 34h56"/><path d="M22 34l-9 16h18z"/><path d="M78 34l-9 16h18z"/><path d="M36 80h28"/>',
       stars: [[32, 40], [50, 32], [62, 46], [44, 58]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 0]] },
     { key: 'scorpio', name: '天蝎座', glyph: '♏', range: '10.24-11.22', elem: '水象 · 守护冥王星',
-      palette: ['#8b3bff', '#c04bff', '#5a1e9e', '#ff5bb0'], quote: '我把最深的夜，留给最亮的你。',
+      palette: ['#8b3bff', '#ff4d9e', '#3a5bff', '#c04bff'], quote: '我把最深的夜，留给最亮的你。',
       art: '<path d="M34 78V38h26v28c0 13 9 17 16 9"/><path d="M76 75l6-9-11-2"/><path d="M34 52h18"/>',
       stars: [[30, 20], [40, 32], [52, 38], [62, 52], [70, 68], [64, 82], [50, 86]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]] },
     { key: 'sagittarius', name: '射手座', glyph: '♐', range: '11.23-12.21', elem: '火象 · 守护木星',
-      palette: ['#ff6a00', '#ffa73b', '#ff3d00', '#ffd166'], quote: '我射出的每一支箭，终点都是你。',
+      palette: ['#ff6a00', '#ffd166', '#9b6bff', '#4fd1ff'], quote: '我射出的每一支箭，终点都是你。',
       art: '<path d="M26 74L74 26"/><path d="M55 26h19v19"/><path d="M36 64a20 20 0 0 0 26-26"/><path d="M26 74l-4-1M26 74l1 4" opacity=".6"/>',
       stars: [[30, 58], [26, 44], [40, 36], [58, 38], [70, 50], [64, 64], [46, 68]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0], [2, 6]] },
     { key: 'capricorn', name: '摩羯座', glyph: '♑', range: '12.22-1.19', elem: '土象 · 守护土星',
-      palette: ['#a9744f', '#d1a06a', '#6f4a2e', '#c9b48a'], quote: '我慢慢走，是想和你走很久。',
+      palette: ['#a9744f', '#6bb8a8', '#8a7bd6', '#d1a06a'], quote: '我慢慢走，是想和你走很久。',
       art: '<path d="M26 34h40l-9 28H35z"/><path d="M28 34C18 28 20 16 30 14c4 6 4 14 0 20"/><path d="M70 68c8 6 14 2 14-6" opacity=".7"/>',
       stars: [[24, 30], [46, 24], [66, 34], [54, 56], [30, 52]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0]] },
     { key: 'aquarius', name: '水瓶座', glyph: '♒', range: '1.20-2.18', elem: '风象 · 守护天王星',
-      palette: ['#2f6bff', '#56e1ff', '#1e3fd6', '#8ab6ff'], quote: '我把整片银河，倒进你的梦里。',
+      palette: ['#2f6bff', '#56e1ff', '#a78bfa', '#7ff0e0'], quote: '我把整片银河，倒进你的梦里。',
       art: '<path d="M20 42q10-12 20 0t20 0 20 0"/><path d="M20 62q10-12 20 0t20 0 20 0"/><circle cx="30" cy="24" r="1.8" fill="currentColor" stroke="none"/><circle cx="50" cy="20" r="1.8" fill="currentColor" stroke="none"/><circle cx="70" cy="24" r="1.8" fill="currentColor" stroke="none"/>',
       stars: [[20, 36], [34, 50], [46, 34], [60, 48], [72, 32], [84, 46]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]] },
@@ -944,11 +944,8 @@
     const n = Math.round(rotY / 180);
     return (((n % 2) + 2) % 2) === 1;
   }
-  /** 翻面（双击 / 双触） */
-  function flipCard() {
-    const base = normalizeFlip(rotY);
-    snapY = isShowingBack() ? base - 180 : base + 180;
-  }
+  /** 翻面已按需求关闭：卡片恒显示正面（保留函数空实现，避免残留调用报错） */
+  function flipCard() {}
 
   function loop() {
     /* 高光层平滑：系数调大 → 跟手、不拖影 */
@@ -1133,7 +1130,7 @@
 
     mask.classList.add('open');
     $('agHint').textContent = /Mobi|Android|iPhone/i.test(navigator.userAgent)
-      ? '拖动翻面 · 倾斜手机看体感' : '拖动翻面 · 移动鼠标看光影';
+      ? '倾斜手机 · 光影流动' : '移动鼠标 · 光影流动';
     startLoop();
 
     /* 体感：Android 直接绑定；iOS 仍需用户手势（下面 touchstart 已兜底） */
@@ -1177,8 +1174,7 @@
       if (!dragging || e.pointerId !== pid) return;
       const dx = e.clientX - x0, dy = e.clientY - y0;
       moved = Math.max(moved, Math.hypot(dx, dy));
-      rotY = ry0 + dx * 0.7;
-      rotX = Math.max(-26, Math.min(26, -dy * 0.35));
+      /* 翻面已关闭：拖动不再旋转卡片，仅驱动光影 */
       /* 指针位置也驱动光栅 → 触摸/拖动时同样跟手 */
       const rc = card.getBoundingClientRect();
       pose.px = Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width));
@@ -1199,13 +1195,9 @@
       card.classList.remove('grabbing');
       try { card.releasePointerCapture(e.pointerId); } catch (err) {}
       const now = performance.now();
-      if ((now - t0) < 260 && moved < 8) {
-        flipCard();                        // 轻点 = 翻面
-      } else {
-        if (Math.abs(v) > 0.35) snapY = normalizeFlip(rotY) + (v > 0 ? 180 : -180);  // 快速甩 = 翻到下一面
-        else snapY = normalizeFlip(rotY);  // 慢拖 = 吸附最近一面
-      }
-      rotX = 0; pose.tx = 0; pose.ty = 0; pose.dx = 0; pose.dy = 0; lastInput = now;
+      /* 翻面已关闭：松手后恒正面 */
+      rotY = 0; snapY = 0; rotX = 0;
+      pose.tx = 0; pose.ty = 0; pose.dx = 0; pose.dy = 0; lastInput = now;
     };
     card.addEventListener('pointerdown', down);
     card.addEventListener('pointermove', move);
@@ -1221,7 +1213,6 @@
     document.addEventListener('keydown', e => {
       if (!$('agMask').classList.contains('open')) return;
       if (e.key === 'Escape') closeCard();
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') flipCard();
     });
     bindDrag();
   }
