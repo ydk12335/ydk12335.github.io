@@ -447,7 +447,7 @@
   transform-style:preserve-3d;transform:translateZ(0)}
 
 /* ============ 卡片本体（3D 双面） ============ */
-.ag-card{position:relative;width:min(400px,88vw);aspect-ratio:2.5/3.5;border-radius:22px;
+.ag-card{position:relative;width:min(320px,64vw);aspect-ratio:2.5/3.5;border-radius:22px;
   transform-style:preserve-3d;will-change:transform;
   touch-action:none;user-select:none;-webkit-user-select:none;
   cursor:grab;-webkit-tap-highlight-color:transparent;
@@ -902,7 +902,7 @@
 
 /* ============ 小屏 ============ */
 @media (max-width:360px){
-  .ag-card{width:min(260px,74vw)}
+  .ag-card{width:min(240px,62vw)}
   .ab-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
 }
 @media (prefers-reduced-motion: reduce){
