@@ -447,7 +447,7 @@
   transform-style:preserve-3d}
 
 /* ============ 卡片本体（3D 双面） ============ */
-.ag-card{position:relative;width:min(300px,76vw);aspect-ratio:2.5/3.5;border-radius:20px;
+.ag-card{position:relative;width:min(400px,88vw);aspect-ratio:2.5/3.5;border-radius:22px;
   transform-style:preserve-3d;will-change:transform;
   touch-action:none;user-select:none;-webkit-user-select:none;
   cursor:grab;-webkit-tap-highlight-color:transparent;
@@ -461,7 +461,7 @@
   100%{opacity:1;transform:perspective(900px) scale(1) rotateY(0) rotateZ(0)}}
 
 /* 双面 */
-.ag-face{position:absolute;inset:0;border-radius:20px;overflow:hidden;
+.ag-face{position:absolute;inset:0;border-radius:22px;overflow:hidden;
   transform-style:preserve-3d;
   -webkit-backface-visibility:hidden;backface-visibility:hidden}
 .ag-front{transform:rotateY(0deg)}
@@ -485,7 +485,7 @@
   mix-blend-mode:screen;
   opacity:calc(var(--pfc,0) * .5 + .12)}
 .ag-edge{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:4;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 0 18px rgba(0,0,0,.16)}
+  box-shadow:none}
 
 /* 内容 */
 .ag-inner{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
@@ -558,11 +558,11 @@
 .ag-card[data-rarity="purple"] .ag-name{color:#efe4ff}
 .ag-card[data-rarity="purple"] .ag-rar{color:#c9a7ff}
 .ag-card[data-rarity="purple"] .ag-quote{color:rgba(214,190,255,.85)}
-.ag-card[data-rarity="purple"] .ag-edge{box-shadow:inset 0 0 0 1px rgba(190,150,255,.4), inset 0 0 26px rgba(80,40,140,.5)}
+.ag-card[data-rarity="purple"] .ag-edge{box-shadow:none}
 
 /* ============ 金色 · 传说（彩色 + 动态） ============ */
 .ag-card[data-rarity="gold"]{
-  box-shadow:0 30px 70px rgba(0,0,0,.6), 0 0 42px rgba(255,180,80,.22), 0 0 90px rgba(120,160,255,.14)}
+  box-shadow:0 30px 60px rgba(0,0,0,.55)}
 .ag-card[data-rarity="gold"] .ag-face{
   background:linear-gradient(158deg,#3a2e14 0%,#2a2110 46%,#17120a 100%)}
 .ag-card[data-rarity="gold"] .ag-inner-back{color:#ffe9a6}
@@ -589,8 +589,7 @@
   box-shadow:0 0 14px rgba(242,208,113,.25)}
 .ag-card[data-rarity="gold"] .ag-desc{color:rgba(255,240,200,.82)}
 .ag-card[data-rarity="gold"] .ag-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.4);font-size:.78rem}
-.ag-card[data-rarity="gold"] .ag-edge{
-  box-shadow:inset 0 0 0 1px rgba(255,235,170,.6), inset 0 0 36px rgba(120,90,20,.5)}
+.ag-card[data-rarity="gold"] .ag-edge{box-shadow:none}
 @keyframes agFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
 /* ============ 星座 · 专属卡（流动背景 + 缓转星座符号） ============ */
@@ -614,17 +613,16 @@
   background-size:23px 23px, 31px 31px, 37px 37px, 41px 41px, 17px 17px;
   background-position:0 0, 11px 15px, 19px 9px, 22px 7px, 6px 24px;
   animation:agSandA 19s ease-in-out infinite alternate}
-/* 彩色柔云斑：该星座四色大范围柔和叠加（无硬边），缓缓流动 */
+/* 第二层星尘点（不同颜色/疏密，叠出丰富感；避免任何色斑边界） */
 .ag-zsand::after{content:'';position:absolute;inset:-30%;
   background-image:
-    radial-gradient(60% 60% at 18% 16%, var(--z1), transparent 72%),
-    radial-gradient(58% 58% at 84% 26%, var(--z3), transparent 74%),
-    radial-gradient(62% 62% at 24% 84%, var(--z2), transparent 74%),
-    radial-gradient(56% 56% at 80% 82%, var(--z4), transparent 74%),
-    radial-gradient(50% 50% at 52% 48%, var(--z1), transparent 70%);
-  background-size:170% 170%, 165% 165%, 175% 175%, 165% 165%, 150% 150%;
-  background-position:0 0, 0 0, 0 0, 0 0, 0 0;
-  mix-blend-mode:screen;opacity:.72;
+    radial-gradient(circle, var(--z4) 1.4px, transparent 1.9px),
+    radial-gradient(circle, var(--z2) 1.1px, transparent 1.6px),
+    radial-gradient(circle, var(--z3) 1.3px, transparent 1.8px),
+    radial-gradient(circle, #ffffff 0.8px, transparent 1.3px);
+  background-size:29px 29px, 21px 21px, 33px 33px, 14px 14px;
+  background-position:9px 4px, 15px 23px, 2px 17px, 4px 11px;
+  mix-blend-mode:screen;opacity:.75;
   animation:agSandB 29s ease-in-out infinite alternate}
 @keyframes agSandA{
   0%{transform:translate3d(-7%,-5%,0) rotate(-4deg) scale(1.05)}
@@ -644,7 +642,7 @@
   from{transform:translate(-50%,-50%) rotate(0deg)}
   to{transform:translate(-50%,-50%) rotate(360deg)}}
 
-.ag-card[data-rarity="zodiac"]{box-shadow:0 30px 70px rgba(0,0,0,.6), 0 0 50px var(--z2)}
+.ag-card[data-rarity="zodiac"]{box-shadow:0 30px 60px rgba(0,0,0,.55)}
 .ag-card[data-rarity="zodiac"] .ag-zsand{display:block}
 .ag-card[data-rarity="zodiac"] .ag-face{
   background:
@@ -657,8 +655,7 @@
   box-shadow:0 0 14px var(--z2)}
 .ag-card[data-rarity="zodiac"] .ag-desc{color:rgba(230,242,255,.86)}
 .ag-card[data-rarity="zodiac"] .ag-quote{color:rgba(222,240,255,.94);text-shadow:0 0 16px var(--z2)}
-.ag-card[data-rarity="zodiac"] .ag-edge{
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.4), inset 0 0 22px rgba(0,0,0,.15)}
+.ag-card[data-rarity="zodiac"] .ag-edge{box-shadow:none}
 .ag-card[data-rarity="zodiac"] .ag-shine{opacity:.46;
   background-image:linear-gradient(115deg,
     var(--z1) 0%, var(--z2) 22%, var(--z3) 44%, var(--z4) 66%, var(--z1) 88%, var(--z1) 100%);
