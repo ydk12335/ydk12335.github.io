@@ -124,7 +124,19 @@ makeDraggable(btn,function(){
         if(btn.classList.contains('pinned')){
           /* 定格展开状态：点击直接打开资料 */
           btn.classList.remove('pinned','expanded');
-          try{window.openAuthMask();}catch(e){}
+          if(typeof window.openAuthMask==='function'){
+            window.openAuthMask();
+          }else{
+            /* auth.js 未加载时，等它加载完再打开 */
+            var checkOpen=function(){
+              if(typeof window.openAuthMask==='function'){
+                window.openAuthMask();
+              }else{
+                setTimeout(checkOpen,100);
+              }
+            };
+            checkOpen();
+          }
           return;
         }
         /* 普通状态：第一下展开显示名字，再点一下才打开资料 */
@@ -135,8 +147,19 @@ makeDraggable(btn,function(){
           return;
         }
         clearTimeout(btn._ct);
-        btn.classList.remove('expanded');
-        try{window.openAuthMask();}catch(e){}
+         btn.classList.remove('expanded');
+         if(typeof window.openAuthMask==='function'){
+           window.openAuthMask();
+         }else{
+           var checkOpen2=function(){
+             if(typeof window.openAuthMask==='function'){
+               window.openAuthMask();
+             }else{
+               setTimeout(checkOpen2,100);
+             }
+           };
+           checkOpen2();
+         }
       });
     }else{
       btn.style.display='none';
