@@ -1,12 +1,14 @@
 /**
  * 有点困 · 成就光栅卡系统（Holographic Achievement Cards）
  * -----------------------------------------------------------
- * 稀有度：white 普通 / purple 稀有 / gold 传说
+ * 稀有度：white 普通 / purple 稀有 / gold 传说 / zodiac 星座
  * 交互：3D 双面 · 手动拖动翻转（rotateY 吸附）+ 双击翻面
- * 光效：跟随指针的棱彩光栅（poke-holo 思路）
- *   · white  平淡银反光 + 呼吸光晕（最低级专属）
- *   · purple 顺滑彩虹光栅（随指针流动 + 缓慢色相漂移）
- *   · gold   彩色棱镜光栅 + 旋转彩环 + 粒子 + 开卡爆发（必须彩色 + 动态）
+ * 光效：poke-holo 配方（固定渐变 + transform 扫动 + color-dodge / overlay）
+ *   · white  银色全息（screen 低透明）+ 呼吸光晕
+ *   · purple 冷彩虹全息
+ *   · gold   全彩虹日柱（sunpillar）全息
+ *   · zodiac 各星座专属配色流动底 + 缓转星座符号 + 卡外专属星图
+ * 星座解锁：个人资料填入生日（或 zodiac），或观星页查看过该星座
  * 降级：低端机自动进入 lite 模式（关 backdrop-filter / conic-gradient）
  * -----------------------------------------------------------
  * 纯前端，无后端依赖；数据来源与 profile.js 一致（localStorage）。
@@ -20,8 +22,67 @@
   const RARITY = {
     white:  { label: '普通', tilt: 7,  particles: 0,  vbr: [12] },
     purple: { label: '稀有', tilt: 12, particles: 12, vbr: [16, 40, 16] },
-    gold:   { label: '传说', tilt: 18, particles: 26, vbr: [22, 55, 22, 55, 45] }
+    gold:   { label: '传说', tilt: 18, particles: 26, vbr: [22, 55, 22, 55, 45] },
+    zodiac: { label: '星座', tilt: 15, particles: 0,  vbr: [20, 46, 20] }
   };
+
+  /* =========================================================
+   * 1.5 十二星座：专属配色 + 专属手绘星图（卡外背景用）
+   *   星点坐标归一化到 0..100 的方框；lines 为星点连线索引对。
+   * =======================================================*/
+  const ZODIACS = [
+    { key: 'aries', name: '白羊座', glyph: '♈', range: '3.21-4.19', elem: '火象 · 守护火星',
+      palette: ['#ff3b30', '#ff7a18', '#ff2d6f'], quote: '先出发的人，才配得上草原。',
+      stars: [[20, 55], [38, 48], [56, 44], [74, 52], [86, 40]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 4]] },
+    { key: 'taurus', name: '金牛座', glyph: '♉', range: '4.20-5.20', elem: '土象 · 守护金星',
+      palette: ['#3aa76d', '#7bc96f', '#1f7a5a'], quote: '把日子过厚，也是一种浪漫。',
+      stars: [[15, 30], [30, 50], [45, 65], [58, 52], [72, 30], [50, 74]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 4], [2, 5]] },
+    { key: 'gemini', name: '双子座', glyph: '♊', range: '5.21-6.21', elem: '风象 · 守护水星',
+      palette: ['#35c4ff', '#6ee7f9', '#2b8cff'], quote: '我有很多个我，都想去看看。',
+      stars: [[30, 20], [28, 45], [34, 70], [62, 22], [66, 48], [70, 72]],
+      lines: [[0, 1], [1, 2], [3, 4], [4, 5], [0, 3]] },
+    { key: 'cancer', name: '巨蟹座', glyph: '♋', range: '6.22-7.22', elem: '水象 · 守护月亮',
+      palette: ['#b8c6e8', '#dbe6ff', '#6f86c9'], quote: '壳很硬，里面住着整片海。',
+      stars: [[50, 25], [50, 50], [30, 72], [70, 70], [38, 32], [62, 30]],
+      lines: [[0, 1], [1, 2], [1, 3], [0, 4], [0, 5]] },
+    { key: 'leo', name: '狮子座', glyph: '♌', range: '7.23-8.22', elem: '火象 · 守护太阳',
+      palette: ['#ffb300', '#ffdd55', '#ff8a00'], quote: '光是自己的，不必借。',
+      stars: [[28, 40], [34, 22], [46, 16], [58, 26], [52, 46], [70, 58], [84, 44]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [5, 6]] },
+    { key: 'virgo', name: '处女座', glyph: '♍', range: '8.23-9.22', elem: '土象 · 守护水星',
+      palette: ['#c9a227', '#e6d27a', '#8f7a1e'], quote: '把细节照顾好的，是有心人。',
+      stars: [[50, 18], [46, 42], [70, 58], [30, 40], [24, 68], [66, 78]],
+      lines: [[0, 1], [1, 2], [1, 3], [3, 4], [2, 5]] },
+    { key: 'libra', name: '天秤座', glyph: '♎', range: '9.23-10.23', elem: '风象 · 守护金星',
+      palette: ['#7fe3d0', '#9ad0ff', '#4fb8c9'], quote: '在两端之间，我选择体面。',
+      stars: [[32, 40], [50, 32], [62, 46], [44, 58]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 0]] },
+    { key: 'scorpio', name: '天蝎座', glyph: '♏', range: '10.24-11.22', elem: '水象 · 守护冥王星',
+      palette: ['#8b3bff', '#c04bff', '#5a1e9e'], quote: '安静，但什么都记得。',
+      stars: [[30, 20], [40, 32], [52, 38], [62, 52], [70, 68], [64, 82], [50, 86]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]] },
+    { key: 'sagittarius', name: '射手座', glyph: '♐', range: '11.23-12.21', elem: '火象 · 守护木星',
+      palette: ['#ff6a00', '#ffa73b', '#ff3d00'], quote: '箭一旦离弦，就只认远方。',
+      stars: [[30, 58], [26, 44], [40, 36], [58, 38], [70, 50], [64, 64], [46, 68]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0], [2, 6]] },
+    { key: 'capricorn', name: '摩羯座', glyph: '♑', range: '12.22-1.19', elem: '土象 · 守护土星',
+      palette: ['#a9744f', '#d1a06a', '#6f4a2e'], quote: '慢，但从不停下。',
+      stars: [[24, 30], [46, 24], [66, 34], [54, 56], [30, 52]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0]] },
+    { key: 'aquarius', name: '水瓶座', glyph: '♒', range: '1.20-2.18', elem: '风象 · 守护天王星',
+      palette: ['#2f6bff', '#56e1ff', '#1e3fd6'], quote: '不合群，是另一种先行。',
+      stars: [[20, 36], [34, 50], [46, 34], [60, 48], [72, 32], [84, 46]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]] },
+    { key: 'pisces', name: '双鱼座', glyph: '♓', range: '2.19-3.20', elem: '水象 · 守护海王星',
+      palette: ['#2b8cff', '#4fd1ff', '#5a3bff'], quote: '两条鱼，游向同一个梦。',
+      stars: [[22, 30], [30, 48], [46, 54], [62, 46], [74, 30], [80, 52], [66, 66], [46, 60]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 2]] }
+  ];
+  const ZMAP = {};
+  ZODIACS.forEach(z => { ZMAP[z.name] = z; });
+
 
   /* =========================================================
    * 2. 成就数据（含稀有度字段 + 判定函数）
@@ -139,7 +200,21 @@
       check: s => s.redeem }
   ];
 
-  const RARE_ORDER = { white: 0, purple: 1, gold: 2 };
+  const RARE_ORDER = { white: 0, purple: 1, gold: 2, zodiac: 3 };
+
+  /* ---------- 十二星座成就（填过生日 / 观星过该星座即解锁） ---------- */
+  ZODIACS.forEach(z => {
+    ACHIEVEMENTS.push({
+      id: 'zodiac_' + z.key,
+      name: z.name,
+      icon: z.glyph,
+      rarity: 'zodiac',
+      zodiac: z.key,
+      desc: '在个人资料填入生日，或在观星页查看过' + z.name,
+      quote: z.quote,
+      check: s => (s.signs || []).indexOf(z.name) >= 0
+    });
+  });
 
   /* =========================================================
    * 3. 工具 & 数据层
@@ -148,6 +223,36 @@
   const esc = (t) => { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; };
   /** 成就图标：有手绘 SVG 用 SVG，否则用 emoji */
   const iconHtml = (a) => (a && a.art) ? a.art : esc(a ? a.icon : '');
+  /** 取成就对应的星座定义（非星座成就返回 null） */
+  const zodiacOfAch = (a) => (a && a.zodiac) ? (ZMAP[a.name] || null) : null;
+  /** 把星座配色写入卡片的 CSS 变量（--z1/--z2/--z3） */
+  function applyTheme(card, ach) {
+    const z = zodiacOfAch(ach);
+    if (z) {
+      card.style.setProperty('--z1', z.palette[0]);
+      card.style.setProperty('--z2', z.palette[1]);
+      card.style.setProperty('--z3', z.palette[2]);
+    } else {
+      card.style.removeProperty('--z1');
+      card.style.removeProperty('--z2');
+      card.style.removeProperty('--z3');
+    }
+    return z;
+  }
+  /** 生成该星座的专属星图 SVG（卡外背景用） */
+  function skySvg(z) {
+    let g = '';
+    z.lines.forEach(l => {
+      const a = z.stars[l[0]], b = z.stars[l[1]];
+      g += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] +
+        '" stroke="' + z.palette[1] + '" stroke-width="0.5" stroke-opacity=".55"/>';
+    });
+    z.stars.forEach(s => {
+      g += '<circle cx="' + s[0] + '" cy="' + s[1] + '" r="3.4" fill="' + z.palette[1] + '" fill-opacity=".26"/>';
+      g += '<circle cx="' + s[0] + '" cy="' + s[1] + '" r="1.35" fill="#fff"/>';
+    });
+    return '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">' + g + '</svg>';
+  }
   const arr = (k) => { try { return JSON.parse(localStorage.getItem(k) || '[]') || []; } catch (e) { return []; } };
 
   const MAJ22 = ['愚者', '魔术师', '女祭司', '女皇', '皇帝', '教皇', '恋人', '战车', '力量', '隐士',
@@ -161,6 +266,40 @@
   }
   function cardsOf(rec) {
     return (String(rec.cards || '').match(/「([^」]+)」/g) || []).map(x => x.replace(/[「」]/g, ''));
+  }
+
+  /** 生日 → 星座（与 profile.js 保持一致） */
+  function zodiacOf(birthday) {
+    if (!birthday) return '';
+    const p = String(birthday).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+    if (!p) return '';
+    const m = +p[2], d = +p[3];
+    const S = [[1, 19, '摩羯座'], [2, 18, '水瓶座'], [3, 20, '双鱼座'], [4, 19, '白羊座'], [5, 20, '金牛座'],
+      [6, 21, '双子座'], [7, 22, '巨蟹座'], [8, 22, '狮子座'], [9, 23, '处女座'], [10, 23, '天秤座'],
+      [11, 22, '天蝎座'], [12, 21, '射手座'], [12, 31, '摩羯座']];
+    for (const s of S) if (m < s[0] || (m === s[0] && d <= s[1])) return s[2];
+    return '';
+  }
+
+  /** 收集用户已“点亮”的星座：资料里的生日 / zodiac，或观星历史里的 sign */
+  function collectSigns() {
+    const set = new Set();
+    const grab = (raw) => {
+      try {
+        const m = JSON.parse(raw || '{}') || {};
+        const u = m.user || {};
+        if (u.zodiac) set.add(u.zodiac);
+        const z = zodiacOf(u.birthday); if (z) set.add(z);
+      } catch (e) {}
+    };
+    try { grab(localStorage.getItem('sleepy_space_memory')); } catch (e) {}
+    try { grab(localStorage.getItem('sleepy_space_memory_v2')); } catch (e) {}
+    arr('astro_hist_v1').forEach(r => { if (r && r.sign) set.add(String(r.sign).trim()); });
+    try {
+      const m = JSON.parse(localStorage.getItem('sleepy_space_memory') || '{}') || {};
+      (m.horoscope || []).forEach(r => { if (r && r.sign) set.add(String(r.sign).trim()); });
+    } catch (e) {}
+    return [...set];
   }
 
   /** 汇总全部统计量（供成就判定使用） */
@@ -204,6 +343,7 @@
       cardCnt,
       majCount: MAJ22.filter(n => cardCnt[n]).length,
       fav, night, streak, days: days.size,
+      signs: collectSigns(),
       redeem: redeemUnlocked()
     };
   }
@@ -298,17 +438,29 @@
 .ag-front{transform:rotateY(0deg)}
 .ag-back{transform:rotateY(180deg)}
 
-/* 光栅层：整体 transform 位移（GPU 合成，不重绘、不卡，也不会被边框裁出界限） */
-.ag-holo{position:absolute;inset:-34%;pointer-events:none;z-index:1;
-  background-repeat:no-repeat;background-size:100% 100%;background-position:center;
-  mix-blend-mode:screen;opacity:0;transition:opacity .35s ease;will-change:transform;
-  transform:translate3d(var(--hx,0px),var(--hy,0px),0)}
-/* 高光眩光：transform 位移跟随指针的反光点 */
-.ag-sheen{position:absolute;inset:-46%;pointer-events:none;z-index:3;opacity:.5;
-  background:radial-gradient(circle at 50% 50%,
-    rgba(255,255,255,.75) 0%, rgba(255,255,255,.12) 26%, rgba(255,255,255,0) 52%);
-  mix-blend-mode:screen;transition:opacity .3s;will-change:transform;
-  transform:translate3d(var(--gx,0px),var(--gy,0px),0)}
+/* ============ 全息彩虹层（poke-holo 配方 · 性能版） ============
+   固定 background-image，用 transform 位移扫动（GPU 合成，
+   不再每帧重绘渐变 / 重算 filter） */
+.ag-shine{position:absolute;inset:-50%;pointer-events:none;z-index:1;
+  background-repeat:no-repeat;background-size:200% 200%;background-position:center;
+  transform:translate3d(calc(var(--sxp,0) * 1%),calc(var(--syp,0) * 1%),0);
+  will-change:transform;
+  filter:brightness(.86) contrast(2.2) saturate(.75);
+  mix-blend-mode:color-dodge}
+.ag-shine::after{content:'';position:absolute;inset:0;
+  background-repeat:no-repeat;background-size:200% 200%;background-position:center;
+  transform:translate3d(calc(var(--txp,0) * .55%),calc(var(--typ,0) * .55%),0);
+  will-change:transform;
+  filter:brightness(.7) contrast(2) saturate(1);
+  mix-blend-mode:color-dodge}
+/* ============ 高光眩光：固定径向渐变，靠 transform 跟随指针 ============ */
+.ag-glare{position:absolute;inset:-45%;pointer-events:none;z-index:2;
+  background-image:radial-gradient(circle at 50% 50%,
+    rgba(255,255,255,.85) 0%, rgba(255,255,255,.3) 20%, rgba(0,0,0,.5) 60%);
+  transform:translate3d(calc(var(--gxp,0) * 1%),calc(var(--gyp,0) * 1%),0);
+  will-change:transform;
+  mix-blend-mode:overlay;filter:brightness(.92) contrast(1.6);
+  opacity:calc(var(--pfc,0) * .7 + .22)}
 .ag-edge{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:4;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 0 22px rgba(0,0,0,.45)}
 
@@ -358,11 +510,12 @@
 .ag-card[data-rarity="white"] .ag-face{
   background:linear-gradient(158deg,#2b2c40 0%,#1a1a2b 55%,#12121e 100%)}
 .ag-card[data-rarity="white"] .ag-inner-back{color:#e9e6ff}
-.ag-card[data-rarity="white"] .ag-holo{opacity:.5;
-  background-image:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.7) 47%,
-    rgba(190,210,255,.42) 54%,transparent 70%);
-  mix-blend-mode:screen}
-.ag-card[data-rarity="white"] .ag-sheen{opacity:.28}
+.ag-card[data-rarity="white"] .ag-shine{
+  background-image:linear-gradient(-30deg,
+    hsl(210,25%,72%),hsl(0,0%,88%),hsl(220,25%,76%),hsl(200,20%,64%),hsl(210,25%,82%),hsl(0,0%,70%),hsl(210,25%,72%));
+  mix-blend-mode:screen;opacity:.34;filter:brightness(.95) contrast(1.5) saturate(.35)}
+.ag-card[data-rarity="white"] .ag-shine::after{display:none}
+.ag-card[data-rarity="white"] .ag-glare{opacity:calc(var(--pfc,0) * .5 + .12)}
 .ag-card[data-rarity="white"] .ag-icon{color:#e9e6ff}
 .ag-card[data-rarity="white"] .ag-name{color:#f2f0ff}
 .ag-card[data-rarity="white"] .ag-rar{color:#cfcbe8}
@@ -372,11 +525,16 @@
 .ag-card[data-rarity="purple"] .ag-face{
   background:linear-gradient(158deg,#3a2b5c 0%,#241a3d 52%,#160f26 100%)}
 .ag-card[data-rarity="purple"] .ag-inner-back{color:#d9c6ff}
-.ag-card[data-rarity="purple"] .ag-holo{opacity:.6;
-  background-image:linear-gradient(115deg,
-    #6a3df0 0%, #b06bff 18%, #ff8ad6 38%, #7fd4ff 58%, #6affc0 76%, #b06bff 100%);
-  filter:brightness(1.12) saturate(1.25)}
-.ag-card[data-rarity="purple"] .ag-sheen{opacity:.42}
+.ag-card[data-rarity="purple"] .ag-shine{opacity:.72;
+  background-image:linear-gradient(-30deg,
+    hsl(215,95%,72%),hsl(250,95%,74%),hsl(285,92%,74%),hsl(320,90%,74%),hsl(195,95%,72%),
+    hsl(265,95%,76%),hsl(215,95%,72%),hsl(250,95%,74%),hsl(285,92%,74%),hsl(320,90%,74%),
+    hsl(195,95%,72%),hsl(265,95%,76%),hsl(215,95%,72%))}
+.ag-card[data-rarity="purple"] .ag-shine::after{
+  background-image:linear-gradient(-60deg,
+    hsl(285,92%,74%),hsl(320,90%,74%),hsl(195,95%,72%),hsl(265,95%,76%),hsl(215,95%,72%),
+    hsl(250,95%,74%),hsl(285,92%,74%),hsl(320,90%,74%),hsl(195,95%,72%),hsl(265,95%,76%),
+    hsl(215,95%,72%),hsl(250,95%,74%),hsl(285,92%,74%))}
 .ag-card[data-rarity="purple"] .ag-icon{color:#d9c6ff;filter:drop-shadow(0 0 16px rgba(160,110,255,.6))}
 .ag-card[data-rarity="purple"] .ag-name{color:#efe4ff}
 .ag-card[data-rarity="purple"] .ag-rar{color:#c9a7ff}
@@ -396,14 +554,16 @@
   background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:agFlow 5s linear infinite}
 .ag-card[data-rarity="gold"] .ag-bk-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.35)}
-/* 彩色棱镜光栅：跟随指针流动（无延迟动画） */
-.ag-card[data-rarity="gold"] .ag-holo{opacity:.78;
-  background-image:linear-gradient(115deg,
-    #ff5fb0 0%, #ffd36e 15%, #6effb0 32%, #6ec7ff 50%, #b06eff 68%, #ffd36e 84%, #ff5fb0 100%);
-  filter:brightness(1.18) saturate(1.35)}
-.ag-card[data-rarity="gold"] .ag-sheen{opacity:.5;
-  background:radial-gradient(circle at 50% 50%,
-    rgba(255,255,240,.9) 0%, rgba(255,240,180,.15) 26%, rgba(255,240,180,0) 52%)}
+.ag-card[data-rarity="gold"] .ag-shine{opacity:.92;
+  background-image:linear-gradient(-30deg,
+    hsl(2,100%,73%),hsl(53,100%,69%),hsl(93,100%,69%),hsl(176,100%,76%),hsl(228,100%,74%),hsl(283,100%,73%),
+    hsl(2,100%,73%),hsl(53,100%,69%),hsl(93,100%,69%),hsl(176,100%,76%),hsl(228,100%,74%),hsl(283,100%,73%),
+    hsl(2,100%,73%))}
+.ag-card[data-rarity="gold"] .ag-shine::after{
+  background-image:linear-gradient(-60deg,
+    hsl(93,100%,69%),hsl(176,100%,76%),hsl(228,100%,74%),hsl(283,100%,73%),hsl(2,100%,73%),hsl(53,100%,69%),
+    hsl(93,100%,69%),hsl(176,100%,76%),hsl(228,100%,74%),hsl(283,100%,73%),hsl(2,100%,73%),hsl(53,100%,69%),
+    hsl(93,100%,69%))}
 .ag-card[data-rarity="gold"] .ag-icon{color:#ffe9a6;
   filter:drop-shadow(0 0 22px rgba(240,200,100,.85))}
 .ag-card[data-rarity="gold"] .ag-name{
@@ -418,36 +578,66 @@
   box-shadow:inset 0 0 0 1px rgba(255,235,170,.6), inset 0 0 36px rgba(120,90,20,.5)}
 @keyframes agFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
-/* ============ 粒子层（金色） ============ */
-.ag-particles{position:absolute;inset:-46px;pointer-events:none;z-index:0;overflow:visible}
-.ag-particles i{position:absolute;bottom:-10px;width:3px;height:3px;border-radius:50%;
-  background:radial-gradient(circle,#fff6cf,rgba(242,208,113,0));
-  box-shadow:0 0 8px rgba(242,208,113,.9);
-  animation:agRise linear infinite;opacity:0}
-@keyframes agRise{
-  0%{opacity:0;transform:translateY(0) translateX(0) scale(.4)}
-  12%{opacity:1}
-  80%{opacity:.7}
-  100%{opacity:0;transform:translateY(-210px) translateX(var(--drift,10px)) scale(1.15)}}
+/* ============ 星座 · 专属卡（流动背景 + 缓转星座符号） ============ */
+/* 卡外背景：该星座专属星图（由 JS 注入 SVG） */
+.ag-sky{position:absolute;inset:-110px;z-index:-3;pointer-events:none;opacity:0;
+  transition:opacity .8s ease;display:flex;align-items:center;justify-content:center}
+.ag-sky.on{opacity:1}
+.ag-sky svg{width:100%;height:100%;overflow:visible}
 
-/* ============ Canvas 粒子层（星环粒子 + 无双爆发） ============ */
-.ag-fx{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  pointer-events:none;z-index:5;opacity:0;transition:opacity .6s ease;display:block}
-.ag-fx.on{opacity:1}
+/* 流动色情：大画布渐变 + transform 位移（GPU 合成，不重绘） */
+.ag-zflow{position:absolute;inset:-70%;z-index:0;pointer-events:none;opacity:.95;
+  background:linear-gradient(118deg,var(--z1),var(--z2),var(--z3),var(--z1),var(--z2));
+  background-size:200% 200%;
+  animation:agZflow 9s ease-in-out infinite alternate;
+  filter:saturate(1.18) brightness(.9)}
+@keyframes agZflow{
+  0%{transform:translate3d(-9%,-7%,0) scale(1.15)}
+  100%{transform:translate3d(9%,8%,0) scale(1.32)}}
+
+/* 缓慢旋转的星座符号（取代小图标，成为卡面主体） */
+.ag-zmark{position:absolute;left:50%;top:50%;z-index:2;pointer-events:none;
+  font-size:16rem;line-height:1;color:rgba(255,255,255,.15);
+  text-shadow:0 0 70px var(--z2);
+  animation:agZspin 48s linear infinite}
+@keyframes agZspin{
+  from{transform:translate(-50%,-50%) rotate(0deg)}
+  to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+.ag-card[data-rarity="zodiac"]{box-shadow:0 30px 70px rgba(0,0,0,.6), 0 0 50px var(--z2)}
+.ag-card[data-rarity="zodiac"] .ag-face{background:linear-gradient(160deg,#0b1424,#04070e)}
+.ag-card[data-rarity="zodiac"] .ag-inner{color:#eaf4ff}
+.ag-card[data-rarity="zodiac"] .ag-icon{display:none}
+.ag-card[data-rarity="zodiac"] .ag-name{color:#fff;text-shadow:0 2px 20px var(--z2)}
+.ag-card[data-rarity="zodiac"] .ag-rar{color:#fff;border-color:rgba(255,255,255,.5);
+  box-shadow:0 0 14px var(--z2)}
+.ag-card[data-rarity="zodiac"] .ag-desc{color:rgba(230,242,255,.86)}
+.ag-card[data-rarity="zodiac"] .ag-quote{color:rgba(222,240,255,.94);text-shadow:0 0 16px var(--z2)}
+.ag-card[data-rarity="zodiac"] .ag-edge{
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.38), inset 0 0 30px rgba(0,0,0,.5)}
+.ag-card[data-rarity="zodiac"] .ag-shine{opacity:.5}
+.ag-card[data-rarity="zodiac"] .ag-inner-back{color:#eaf4ff}
+.ag-card[data-rarity="zodiac"] .ag-bk-rar{color:#fff;border-color:rgba(255,255,255,.5)}
+.ag-card[data-rarity="zodiac"] .ag-bk-name{color:#fff;text-shadow:0 2px 18px var(--z2)}
+.ag-card[data-rarity="zodiac"] .ag-bk-quote{color:rgba(222,240,255,.92);text-shadow:0 0 14px var(--z2)}
+
+/* 收藏册里的星座卡 */
+.ab-card.r-zodiac{background:linear-gradient(160deg,#13213a,#070d18);
+  border:1px solid rgba(255,255,255,.2);box-shadow:0 4px 16px var(--z2)}
+.ab-card.r-zodiac .ab-rr{color:#c3dcff}
+.ab-card.r-zodiac .ab-nm{color:#eef6ff}
+.ab-card.r-zodiac .ab-ic{color:#fff;filter:drop-shadow(0 0 12px var(--z2))}
+.ab-card.r-zodiac .ab-holo{opacity:.32;
+  background:linear-gradient(120deg,var(--z1),var(--z2),var(--z3));
+  animation:agZflow 9s ease-in-out infinite alternate}
+.ag-lite .ag-zflow{animation:none}
+.ag-lite .ag-zmark{animation:none}
 
 /* ============ ⑤ 开卡爆发 ============ */
 .ag-flash{position:fixed;inset:0;pointer-events:none;z-index:520;opacity:0;
   background:radial-gradient(circle at 50% 45%,rgba(255,246,210,.95),rgba(242,208,113,.35) 34%,rgba(0,0,0,0) 68%)}
 .ag-flash.fire{animation:agFlash .8s ease-out}
 @keyframes agFlash{0%{opacity:0}14%{opacity:.9}100%{opacity:0}}
-.ag-burst{position:absolute;inset:0;pointer-events:none;z-index:7;overflow:visible}
-.ag-burst i{position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;
-  background:radial-gradient(circle,#fffbe6,rgba(242,208,113,0));
-  box-shadow:0 0 10px rgba(255,230,150,.95);
-  animation:agBurst .95s cubic-bezier(.15,.7,.3,1) forwards}
-@keyframes agBurst{
-  0%{opacity:1;transform:translate(-50%,-50%) scale(.3)}
-  100%{opacity:0;transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(1.1)}}
 
 /* ============ 关闭 & 提示 ============ */
 .ag-close{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
@@ -533,13 +723,10 @@
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .ag-lite .ag-halo{animation:none;opacity:.5;transform:none;
   background:radial-gradient(circle,rgba(180,200,255,.35),rgba(180,200,255,0) 70%)}
-.ag-lite .ag-fx{display:none}
-.ag-lite .ag-particles{display:none}
-.ag-lite .ag-card[data-rarity="gold"] .ag-holo,
-.ag-lite .ag-card[data-rarity="purple"] .ag-holo{animation:none}
+.ag-lite .ag-card[data-rarity="gold"] .ag-shine::after,
+.ag-lite .ag-card[data-rarity="purple"] .ag-shine::after{display:none}
 .ag-lite .ag-card[data-rarity="gold"] .ag-name{animation:none;background-position:50% 50%}
 .ag-lite .ab-card.r-purple .ab-holo,.ag-lite .ab-card.r-gold .ab-holo{animation:none;background-position:50% 50%}
-.ag-lite .ag-burst{display:none}
 
 /* ============ 徽章入口（profile 用） ============ */
 .pf-badge{position:relative;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;
@@ -554,6 +741,10 @@
   background:linear-gradient(140deg,rgba(120,110,255,.22),rgba(90,70,200,.10) 55%,rgba(255,200,120,.14));
   box-shadow:0 4px 18px rgba(140,120,255,.28)}
 .pf-badge.r-gold.on .tx{color:#f2d071}
+.pf-badge.r-zodiac.on{border-color:rgba(150,200,255,.45);
+  background:linear-gradient(150deg,rgba(90,150,255,.2),rgba(20,30,60,.1));
+  box-shadow:0 4px 16px rgba(90,150,255,.24)}
+.pf-badge.r-zodiac.on .tx{color:#bcd8ff}
 .pf-badge.justnew::after{content:'';position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;
   background:#ff5fa8;box-shadow:0 0 8px #ff5fa8;animation:agPulse 1.4s ease-in-out infinite}
 @keyframes agPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.55}}
@@ -567,8 +758,7 @@
 }
 @media (prefers-reduced-motion: reduce){
   .ag-card.enter{animation-duration:.01ms}
-  .ag-holo,.ag-halo,.ag-icon,.ab-holo{animation:none!important}
-  .ag-fx{display:none}
+  .ag-shine,.ag-halo,.ag-icon,.ab-holo{animation:none!important}
 }
 `;
 
@@ -578,13 +768,15 @@
   const CARD_HTML = `
 <div class="ag-mask" id="agMask">
   <div class="ag-stage" id="agStage">
+    <div class="ag-sky" id="agSky"></div>
     <div class="ag-halo" id="agHalo"></div>
-    <div class="ag-particles" id="agParticles"></div>
     <div class="ag-card" id="agCard" data-rarity="white">
       <!-- 正面 -->
       <div class="ag-face ag-front">
-        <div class="ag-holo"></div>
-        <div class="ag-sheen"></div>
+        <div class="ag-zflow"></div>
+        <div class="ag-zmark" id="agZmark"></div>
+        <div class="ag-shine"></div>
+        <div class="ag-glare"></div>
         <div class="ag-edge"></div>
         <div class="ag-inner">
           <div class="ag-icon" id="agIcon">🌙</div>
@@ -596,8 +788,10 @@
       </div>
       <!-- 背面 -->
       <div class="ag-face ag-back">
-        <div class="ag-holo"></div>
-        <div class="ag-sheen"></div>
+        <div class="ag-zflow"></div>
+        <div class="ag-zmark"></div>
+        <div class="ag-shine"></div>
+        <div class="ag-glare"></div>
         <div class="ag-edge"></div>
         <div class="ag-inner ag-inner-back">
           <div class="ag-bk-mark" id="agBkMark">✦</div>
@@ -608,8 +802,6 @@
         </div>
         <div class="ag-bk-no" id="agBkNo"></div>
       </div>
-      <canvas class="ag-fx" id="agFx"></canvas>
-      <div class="ag-burst" id="agBurst"></div>
     </div>
   </div>
   <div class="ag-hint" id="agHint">拖动翻面 · 倾斜手机看体感</div>
@@ -631,6 +823,7 @@
   </div>
   <div class="ab-filters" id="abFilters">
     <button class="ab-chip on" data-f="all">全部</button>
+    <button class="ab-chip" data-f="zodiac">星座</button>
     <button class="ab-chip" data-f="white">普通</button>
     <button class="ab-chip" data-f="purple">稀有</button>
     <button class="ab-chip" data-f="gold">传说</button>
@@ -756,17 +949,19 @@
       const mx = cur.x * 100, my = cur.y * 100;
       card.style.setProperty('--mx', mx.toFixed(2) + '%');
       card.style.setProperty('--my', my.toFixed(2) + '%');
-      /* 光栅流动：指针位移 + 恒定缓慢漂移 → 卡面始终有流光 */
-      const idleK = idle ? 1 : 0.3;
-      const hx = (cur.x - .5) * -54 + swBx * 1.7 * idleK + Math.sin(now * 0.00042) * 11;
-      const hy = (cur.y - .5) * -54 + swBy * 1.7 * idleK + Math.cos(now * 0.00033) * 13;
-      card.style.setProperty('--hx', hx.toFixed(2) + 'px');
-      card.style.setProperty('--hy', hy.toFixed(2) + 'px');
-      /* 高光点：跟手位移 */
-      const gx = (cur.x - .5) * -78 + Math.sin(now * 0.0005) * 7;
-      const gy = (cur.y - .5) * -78 + Math.cos(now * 0.0004) * 8;
-      card.style.setProperty('--gx', gx.toFixed(2) + 'px');
-      card.style.setProperty('--gy', gy.toFixed(2) + 'px');
+      /* 全息扫动：只写百分比，CSS 用 transform 位移（GPU 合成，零重绘） */
+      const drift = idle ? 1 : 0.35;
+      const dxk = Math.sin(now * 0.00027) * 22;
+      const dyk = Math.cos(now * 0.00021) * 26;
+      const pxv = Math.min(100, Math.max(0, mx + swBx * 2.4 * drift + dxk));
+      const pyv = Math.min(100, Math.max(0, my + swBy * 2.4 * drift + dyk));
+      const sxp = (pxv - 50) * 0.5, syp = (pyv - 50) * 0.5;
+      card.style.setProperty('--sxp', sxp.toFixed(2));
+      card.style.setProperty('--syp', syp.toFixed(2));
+      card.style.setProperty('--txp', sxp.toFixed(2));
+      card.style.setProperty('--typ', syp.toFixed(2));
+      card.style.setProperty('--gxp', ((mx - 50) * 0.52).toFixed(2));
+      card.style.setProperty('--gyp', ((my - 50) * 0.52).toFixed(2));
       card.style.setProperty('--pfc', pfc.toFixed(3));
     }
     /* 收藏册里的卡也随陀螺仪流动 */
@@ -836,221 +1031,6 @@
   }
 
   /* =========================================================
-   * 9. 粒子系统
-   * =======================================================*/
-  function spawnFloaters(box, n) {
-    if (LITE || !box) { if (box) box.innerHTML = ''; return; }
-    let html = '';
-    for (let i = 0; i < n; i++) {
-      const left = (Math.random() * 104 - 2).toFixed(1);
-      const dur = (5 + Math.random() * 6).toFixed(2);
-      const delay = (Math.random() * 6).toFixed(2);
-      const drift = (Math.random() * 40 - 20).toFixed(0);
-      const size = (2 + Math.random() * 2.2).toFixed(1);
-      html += '<i style="left:' + left + '%;--drift:' + drift + 'px;width:' + size + 'px;height:' + size +
-        'px;animation-duration:' + dur + 's;animation-delay:-' + delay + 's"></i>';
-    }
-    box.innerHTML = html;
-  }
-  function spawnBurst(box, n) {
-    if (LITE || !box) return;
-    let html = '';
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + Math.random() * .3;
-      const dist = 90 + Math.random() * 130;
-      const tx = Math.cos(a) * dist, ty = Math.sin(a) * dist;
-      html += '<i style="--tx:' + tx.toFixed(0) + 'px;--ty:' + ty.toFixed(0) + 'px;animation-delay:' +
-        (Math.random() * .08).toFixed(2) + 's"></i>';
-    }
-    box.innerHTML = html;
-    setTimeout(() => { box.innerHTML = ''; }, 1300);
-  }
-
-  /* ---------------------------------------------------------
-   * Canvas 粒子：传说「星环」+ 可触碰「无双」爆发
-   * -------------------------------------------------------*/
-  const FX = { canvas: null, ctx: null, raf: 0, w: 0, h: 0, dpr: 1,
-    running: false, on: false, rings: [], burst: [], sprites: {}, last: 0,
-    px: null, py: null, pLast: 0 };
-
-  /** 预渲染柔光粒子贴图（金/白两种），避免每帧 createRadialGradient 的开销 */
-  function fxSprite(kind) {
-    if (FX.sprites[kind]) return FX.sprites[kind];
-    const s = 48, c = document.createElement('canvas');
-    c.width = c.height = s;
-    const g = c.getContext('2d');
-    const rg = g.createRadialGradient(s * .5, s * .5, 0, s * .5, s * .5, s * .5);
-    if (kind === 'w') {
-      rg.addColorStop(0, 'rgba(255,255,255,1)');
-      rg.addColorStop(.25, 'rgba(232,240,255,.85)');
-      rg.addColorStop(.6, 'rgba(180,205,255,.3)');
-      rg.addColorStop(1, 'rgba(180,205,255,0)');
-    } else {
-      rg.addColorStop(0, 'rgba(255,252,235,1)');
-      rg.addColorStop(.22, 'rgba(255,235,170,.95)');
-      rg.addColorStop(.55, 'rgba(242,208,113,.4)');
-      rg.addColorStop(1, 'rgba(242,208,113,0)');
-    }
-    g.fillStyle = rg; g.fillRect(0, 0, s, s);
-    FX.sprites[kind] = c;
-    return c;
-  }
-
-  /** 初始化画布尺寸 + 构建多层「斜置星环」粒子 */
-  function fxInit() {
-    const card = $('agCard'), cv = $('agFx');
-    if (!card || !cv) return false;
-    const cw = card.offsetWidth || 260, ch = card.offsetHeight || 364;
-    const w = Math.round(cw * 1.95), h = Math.round(ch * 1.7);
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    FX.w = w; FX.h = h; FX.dpr = dpr;
-    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-    cv.style.width = w + 'px'; cv.style.height = h + 'px';
-    FX.canvas = cv; FX.ctx = cv.getContext('2d');
-    FX.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    /* 三层不同倾角的星环 → 叠出「斜着转」的立体感 */
-    const cfg = [
-      { rx: w * .40, ry: w * .112, tilt: -0.42, spd: 0.16, n: 52, size: 1.00, kind: 'g' },
-      { rx: w * .325, ry: w * .092, tilt: 0.55, spd: -0.10, n: 40, size: 0.82, kind: 'g' },
-      { rx: w * .47, ry: w * .140, tilt: 0.16, spd: 0.06, n: 30, size: 0.62, kind: 'w' }
-    ];
-    FX.rings = [];
-    if (!LITE) cfg.forEach(c => {
-      for (let i = 0; i < c.n; i++) {
-        FX.rings.push({
-          c, a: (i / c.n) * Math.PI * 2 + Math.random() * .05,
-          r: (1.3 + Math.random() * 2.6) * c.size,
-          spd: c.spd * (0.85 + Math.random() * 0.3),
-          ph: Math.random() * Math.PI * 2,          // 闪烁相位
-          tw: .45 + Math.random() * 1.0,
-          ox: 0, oy: 0, vx: 0, vy: 0                // 搅动偏移 / 速度（会被指针拨动）
-        });
-      }
-    });
-    return true;
-  }
-
-  /** 在指针位置炸出一簇无双粒子 */
-  function fxBurstAt(clientX, clientY, n) {
-    if (!FX.on || !FX.canvas) return;
-    const r = FX.canvas.getBoundingClientRect();
-    if (!r.width || !r.height) return;
-    const x = Math.max(0, Math.min(FX.w, (clientX - r.left) * (FX.w / r.width)));
-    const y = Math.max(0, Math.min(FX.h, (clientY - r.top) * (FX.h / r.height)));
-    /* 记录指针：星环粒子会被它拨动（可搅动） */
-    FX.px = x; FX.py = y; FX.pLast = performance.now();
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const sp = 70 + Math.random() * 340;
-      FX.burst.push({
-        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 50,
-        life: 0, max: .4 + Math.random() * .7,
-        size: 5 + Math.random() * 20,
-        kind: Math.random() < .28 ? 'w' : 'g'
-      });
-    }
-    if (FX.burst.length > 300) FX.burst.splice(0, FX.burst.length - 300);
-  }
-
-  function fxFrame(now) {
-    if (!FX.running || !FX.ctx) return;
-    const ctx = FX.ctx, w = FX.w, h = FX.h, cx = w * .5, cy = h * .5;
-    const dt = Math.min(.05, (now - FX.last) / 1000 || .016);
-    FX.last = now;
-    const t = now * .001;
-    ctx.clearRect(0, 0, w, h);
-    ctx.globalCompositeOperation = 'lighter';
-    const spr = fxSprite('g');
-
-    /* 多层斜置星环：椭圆轨道 + 固定倾角；指针划过会把粒子「拨散」再弹回 */
-    const stirring = FX.px != null && (now - FX.pLast) < 260;
-    for (let i = 0; i < FX.rings.length; i++) {
-      const p = FX.rings[i], c = p.c;
-      const a = p.a + t * p.spd;
-      const ex = Math.cos(a) * c.rx, ey = Math.sin(a) * c.ry;
-      const ct = Math.cos(c.tilt), st = Math.sin(c.tilt);
-      let x = cx + ex * ct - ey * st;
-      let y = cy + ex * st + ey * ct;
-      if (stirring) {
-        const dx = x - FX.px, dy = y - FX.py, d2 = dx * dx + dy * dy, RR = 74;
-        if (d2 < RR * RR && d2 > .01) {
-          const d = Math.sqrt(d2), f = 1 - d / RR;
-          p.vx += (dx / d) * f * 3.2 + (Math.random() - .5) * f * 1.4;
-          p.vy += (dy / d) * f * 3.2 + (Math.random() - .5) * f * 1.4;
-        }
-      }
-      /* 弹回原位（弹簧 + 阻尼） */
-      p.vx += -p.ox * .075; p.vy += -p.oy * .075;
-      p.vx *= .90; p.vy *= .90;
-      p.ox += p.vx; p.oy += p.vy;
-      x += p.ox; y += p.oy;
-      const depth = (Math.sin(a) + 1) * .5;
-      const tw = .5 + .5 * Math.sin(t * 2.4 * p.tw + p.ph);
-      const s = p.r * (0.6 + depth * 1.5) * 3.6;
-      ctx.globalAlpha = (0.16 + depth * 0.84) * tw;
-      ctx.drawImage(fxSprite(c.kind), x - s * .5, y - s * .5, s, s);
-    }
-
-    /* 无双爆发：向外飞溅 + 轻微重力衰减 */
-    for (let i = FX.burst.length - 1; i >= 0; i--) {
-      const p = FX.burst[i];
-      p.life += dt;
-      if (p.life >= p.max) { FX.burst.splice(i, 1); continue; }
-      p.vy += 380 * dt;
-      p.vx *= .985; p.vy *= .985;
-      p.x += p.vx * dt; p.y += p.vy * dt;
-      const k = 1 - p.life / p.max;
-      const s = p.size * (0.45 + k * 0.85);
-      ctx.globalAlpha = k * k;
-      ctx.drawImage(fxSprite(p.kind), p.x - s * .5, p.y - s * .5, s, s);
-    }
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-    FX.raf = requestAnimationFrame(fxFrame);
-  }
-
-  function fxStart() {
-    if (LITE) return;
-    const cv = $('agFx');
-    if (!cv || !fxInit()) return;
-    FX.on = true; FX.running = true; FX.last = performance.now();
-    cv.classList.add('on');
-    if (!FX.raf) FX.raf = requestAnimationFrame(fxFrame);
-  }
-
-  function fxStop() {
-    FX.on = false;
-    const cv = $('agFx');
-    if (cv) cv.classList.remove('on');
-    setTimeout(() => {                    // 等爆发粒子自然散尽再停
-      if (FX.on) return;
-      FX.running = false;
-      if (FX.raf) { cancelAnimationFrame(FX.raf); FX.raf = 0; }
-      if (FX.ctx) FX.ctx.clearRect(0, 0, FX.w, FX.h);
-      FX.burst.length = 0;
-    }, 700);
-  }
-
-  /** 指针在卡面任意位置划过 / 按下 → 炸出无双粒子 */
-  function bindFxInput() {
-    const mask = $('agMask');
-    if (!mask || mask._fxBound) return;
-    mask._fxBound = true;
-    let last = 0;
-    mask.addEventListener('pointerdown', (e) => {
-      if (FX.on) fxBurstAt(e.clientX, e.clientY, 34);
-    });
-    mask.addEventListener('pointermove', (e) => {
-      if (!FX.on) return;
-      const now = performance.now();
-      if (now - last < 34) return;        // 限流，避免每帧都生成一堆粒子
-      last = now;
-      fxBurstAt(e.clientX, e.clientY, 6);
-    });
-  }
-
-  /* =========================================================
    * 10. 开卡
    * =======================================================*/
   let curAch = null;
@@ -1084,16 +1064,24 @@
     $('agQuote').textContent = ach.quote || '';
     card.setAttribute('data-rarity', ach.rarity);
 
+    /* 星座主题：配色变量 + 缓转符号 + 卡外专属星图 */
+    const zdef = applyTheme(card, ach);
+    card.querySelectorAll('.ag-zmark').forEach(el => { el.textContent = zdef ? zdef.glyph : ''; });
+    const sky = $('agSky');
+    if (sky) {
+      sky.innerHTML = zdef ? skySvg(zdef) : '';
+      sky.classList.toggle('on', !!zdef);
+    }
+
     /* 姿态复位 */
     pose.tx = pose.ty = 0; pose.px = pose.py = .5; pose.dx = pose.dy = 0;
     cur.rx = cur.ry = 0; cur.x = cur.y = .5; cur.px = cur.py = 0;
     rotY = 0; snapY = 0; rotX = 0; dragging = false; lastInput = performance.now();
-
-    /* 装饰层：呼吸光晕只留给最低级（普通），Canvas 星环只给传说 */
+    /* 装饰层：呼吸光晕只留给最低级（普通） */
     const halo = $('agHalo');
     halo.className = 'ag-halo' + (ach.rarity === 'white' ? ' on r-white' : '');
     halo.style.background = ''; halo.style.filter = '';
-    spawnFloaters($('agParticles'), LITE ? 0 : r.particles);
+
 
     /* 入场动画 */
     card.classList.remove('enter', 'settled');
@@ -1105,9 +1093,6 @@
     $('agHint').textContent = /Mobi|Android|iPhone/i.test(navigator.userAgent)
       ? '拖动翻面 · 倾斜手机看体感' : '拖动翻面 · 移动鼠标看光影';
     startLoop();
-
-    /* 传说：启动 Canvas 星环 + 可触碰无双粒子 */
-    if (isGold) fxStart(); else fxStop();
 
     /* 体感：Android 直接绑定；iOS 仍需用户手势（下面 touchstart 已兜底） */
     try {
@@ -1123,7 +1108,6 @@
       fl.classList.remove('fire'); void fl.offsetWidth; fl.classList.add('fire');
       setTimeout(() => fl.classList.remove('fire'), 900);
     }
-    if (isGold && !LITE) setTimeout(() => spawnBurst($('agBurst'), 26), 120);
 
     /* 标记已读 */
     markSeen(ach.id);
@@ -1133,7 +1117,6 @@
   function closeCard() {
     const m = $('agMask'); if (m) m.classList.remove('open');
     stopLoop();
-    fxStop();
     if (window.Achievements && window.Achievements.onClose) window.Achievements.onClose();
   }
 
@@ -1142,14 +1125,14 @@
     const card = $('agCard');
     if (!card || card._dragBound) return;
     card._dragBound = true;
-    let pid = null, x0 = 0, ry0 = 0, t0 = 0, lt = 0, lx = 0, v = 0, moved = 0;
+    let pid = null, x0 = 0, y0 = 0, ry0 = 0, t0 = 0, lt = 0, lx = 0, v = 0, moved = 0;
 
     const down = (e) => {
       if (!($('agMask') && $('agMask').classList.contains('open'))) return;
       pid = e.pointerId; dragging = true;
       lastInput = performance.now();
       card.classList.add('grabbing');
-      x0 = e.clientX; ry0 = rotY; t0 = lastInput; lt = t0; lx = e.clientX; v = 0; moved = 0;
+      x0 = e.clientX; y0 = e.clientY; ry0 = rotY; t0 = lastInput; lt = t0; lx = e.clientX; v = 0; moved = 0;
       try { card.setPointerCapture(pid); } catch (err) {}
       if (e.cancelable) e.preventDefault();
     };
@@ -1204,7 +1187,6 @@
       else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') flipCard();
     });
     bindDrag();
-    bindFxInput();
   }
 
   /* =========================================================
@@ -1229,7 +1211,7 @@
       if (a.unlocked) cls.push('on');
       if (a.unlocked && seen.indexOf(a.id) < 0) cls.push('justnew');
       return '<button class="' + cls.join(' ') + '" data-id="' + a.id + '" title="' +
-        esc(a.rarity === 'gold' ? '传说 · ' : a.rarity === 'purple' ? '稀有 · ' : '') + esc(a.name) + '">' +
+        esc(a.rarity === 'gold' ? '传说 · ' : a.rarity === 'zodiac' ? '星座 · ' : a.rarity === 'purple' ? '稀有 · ' : '') + esc(a.name) + '">' +
         '<span class="ic">' + (a.unlocked ? iconHtml(a) : '🔒') + '</span>' +
         '<span class="tx">' + esc(a.name) + '</span></button>';
     }).join('');
@@ -1263,8 +1245,10 @@
 
     grid.innerHTML = shown.map((a, i) => {
       const isNew = a.unlocked && seen.indexOf(a.id) < 0;
+      const zdef = zodiacOfAch(a);
+      const zst = zdef ? ('--z1:' + zdef.palette[0] + ';--z2:' + zdef.palette[1] + ';--z3:' + zdef.palette[2] + ';') : '';
       return '<div class="ab-card r-' + a.rarity + (a.unlocked ? '' : ' locked') + (isNew ? ' new' : '') +
-        '" data-id="' + a.id + '" style="animation-delay:' + (i * 28) + 'ms">' +
+        '" data-id="' + a.id + '" style="' + zst + 'animation-delay:' + (i * 28) + 'ms">' +
         '<div class="ab-holo"></div><div class="ab-sheen"></div>' +
         '<span class="ab-ic">' + (a.unlocked ? iconHtml(a) : '🔒') + '</span>' +
         '<div class="ab-nm">' + esc(a.name) + '</div>' +
