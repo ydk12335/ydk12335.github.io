@@ -22,7 +22,7 @@ const AUTH_HTML = `
       </div>
       <button class="auth-btn-primary" id="btnLogin">登 录</button>
       <button class="auth-btn-ghost" id="btnToCode">用邮箱验证码登录</button>
-      <div class="auth-footer"><a href="#" id="btnForgot">忘记密码？</a> · <a href="#" id="authClose1">关闭</a></div>
+      <div class="auth-footer"><a href="#" id="btnForgot">忘记密码？</a> · <a href="#" id="btnToRegister">创建账号</a> · <a href="#" id="authClose1">关闭</a></div>
     </div>
 
     <!-- ② 注册 -->
@@ -371,6 +371,7 @@ function initAuth() {
   $('btnSkipPwd').addEventListener('click', () => { close(); location.reload(); });
 
   // ===== 返回 =====
+  $('btnToRegister').addEventListener('click', e => { e.preventDefault(); showView('register'); });
   $('btnBackLogin2').addEventListener('click', e => { e.preventDefault(); showView('login'); });
   $('btnBackLogin3').addEventListener('click', e => { e.preventDefault(); resetCodeView(); showView('login'); });
 
