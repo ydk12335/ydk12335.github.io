@@ -703,8 +703,11 @@
 @keyframes agFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
 /* ============ 星座 · 专属卡（流动背景 + 缓转星座符号） ============ */
-/* 卡外背景：该星座专属星图（由 JS 注入 SVG） */
-.ag-sky{position:absolute;inset:-150px;z-index:-3;pointer-events:none;opacity:0;
+/* 卡外背景：该星座专属星图（由 JS 注入 SVG）
+   尺寸按屏幕自适应：尽量大，但始终完整留在屏幕内（不越界） */
+.ag-sky{position:absolute;left:50%;top:50%;z-index:-3;pointer-events:none;opacity:0;
+  transform:translate(-50%,-50%);
+  width:min(calc(100vw - 28px), 640px);aspect-ratio:1/1;
   transition:opacity .6s ease;display:flex;align-items:center;justify-content:center}
 .ag-sky.on{opacity:1}
 .ag-sky svg{width:100%;height:100%;overflow:visible}
