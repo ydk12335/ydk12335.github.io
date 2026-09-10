@@ -696,6 +696,28 @@
 .ag-sky.on{opacity:1}
 .ag-sky svg{width:100%;height:100%;overflow:visible}
 
+/* ---- 星座卡开场序列：先连出星图 → 再浮现卡片 → 最后逐条出现文字 ---- */
+.ag-stage.seq .ag-sky svg line{
+  stroke-dasharray:140;stroke-dashoffset:140;
+  animation:agStarDraw .9s ease-out forwards}
+.ag-stage.seq .ag-sky svg circle{
+  opacity:0;animation:agStarPop .7s ease-out .4s forwards}
+@keyframes agStarDraw{to{stroke-dashoffset:0}}
+@keyframes agStarPop{from{opacity:0}to{opacity:1}}
+/* 卡片：等星图连完再浮现 */
+.ag-stage.seq .ag-card.enter{animation-delay:.62s}
+/* 星象图腾：卡片出现后淡入（保留自转） */
+.ag-stage.seq .ag-zmark{animation:agZspin 52s linear infinite, agFade .9s ease-out 1.15s both}
+@keyframes agFade{from{opacity:0}to{opacity:1}}
+/* 文字：最后逐条浮出 */
+.ag-stage.seq .ag-front .ag-inner > *{opacity:0;animation:agTextIn .55s ease-out forwards}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(1){animation-delay:1.35s}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(2){animation-delay:1.42s}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(3){animation-delay:1.48s}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(4){animation-delay:1.55s}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(5){animation-delay:1.62s}
+@keyframes agTextIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+
 /* 流沙：几道柔和的沙色带缓慢流淌（纯 transform 位移，GPU 合成，零重绘） */
 .ag-zsand{position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;display:none;
   overflow:hidden}
@@ -1380,6 +1402,9 @@
       sky.innerHTML = zdef ? skySvg(zdef) : '';
       sky.classList.toggle('on', !!zdef);
     }
+    /* 星座卡专属开场序列：连星图 → 浮出卡 → 出文字（非星座卡关闭） */
+    const stageEl = $('agStage');
+    if (stageEl) stageEl.classList.toggle('seq', !!zdef);
 
     /* 姿态复位 */
     pose.tx = pose.ty = 0; pose.px = pose.py = .5; pose.dx = pose.dy = 0;
