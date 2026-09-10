@@ -451,7 +451,7 @@
   transform-style:preserve-3d;will-change:transform;
   touch-action:none;user-select:none;-webkit-user-select:none;
   cursor:grab;-webkit-tap-highlight-color:transparent;
-  box-shadow:0 30px 70px rgba(0,0,0,.6);
+  box-shadow:none;
   background:linear-gradient(160deg,#22203a,#141126)}
 .ag-card.grabbing{cursor:grabbing}
 .ag-card.enter{animation:agPop .72s cubic-bezier(.18,1.5,.4,1) both}
@@ -477,13 +477,7 @@
   mix-blend-mode:screen;transition:opacity .35s ease}
 .ag-shine::after{display:none}
 /* ============ 高光眩光：固定径向渐变，靠 transform 跟随指针 ============ */
-.ag-glare{position:absolute;inset:-45%;pointer-events:none;z-index:2;
-  background-image:radial-gradient(circle at 50% 50%,
-    rgba(255,255,255,.6) 0%, rgba(255,255,255,.2) 30%, transparent 66%);
-  transform:translate3d(calc(var(--gxp,0) * 1%),calc(var(--gyp,0) * 1%),0);
-  will-change:transform;
-  mix-blend-mode:screen;
-  opacity:calc(var(--pfc,0) * .5 + .12)}
+.ag-glare{display:none}
 .ag-edge{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:4;
   box-shadow:none}
 
@@ -520,8 +514,7 @@
 .ag-bk-mark{position:absolute;right:14px;top:12px;font-size:.9rem;opacity:.5}
 
 /* ============ 呼吸光晕（现只给最低级 · 普通） ============ */
-.ag-halo{position:absolute;inset:-30px;border-radius:36px;pointer-events:none;z-index:-1;opacity:0;
-  transition:opacity .6s}
+.ag-halo{display:none}
 .ag-halo.on{opacity:1;animation:agBreathe 4.2s ease-in-out infinite}
 .ag-halo.r-white{background:radial-gradient(circle,rgba(180,200,255,.42),rgba(150,170,225,.12) 46%,rgba(0,0,0,0) 72%);
   filter:blur(22px)}
@@ -533,9 +526,10 @@
 .ag-card[data-rarity="white"] .ag-face{
   background:linear-gradient(158deg,#2b2c40 0%,#1a1a2b 55%,#12121e 100%)}
 .ag-card[data-rarity="white"] .ag-inner-back{color:#e9e6ff}
-.ag-card[data-rarity="white"] .ag-shine{opacity:.5;
-  background-image:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.72) 46%,
-    rgba(190,210,255,.42) 54%,transparent 72%);
+.ag-card[data-rarity="white"] .ag-shine{opacity:.42;
+  background-image:linear-gradient(115deg,
+    rgba(255,255,255,.16), rgba(255,255,255,.5), rgba(190,210,255,.28),
+    rgba(215,228,255,.46), rgba(255,255,255,.16));
   background-size:220% 220%}
 .ag-card[data-rarity="white"] .ag-shine::after{display:none}
 .ag-card[data-rarity="white"] .ag-glare{opacity:calc(var(--pfc,0) * .5 + .12)}
@@ -562,7 +556,7 @@
 
 /* ============ 金色 · 传说（彩色 + 动态） ============ */
 .ag-card[data-rarity="gold"]{
-  box-shadow:0 30px 60px rgba(0,0,0,.55)}
+  box-shadow:none}
 .ag-card[data-rarity="gold"] .ag-face{
   background:linear-gradient(158deg,#3a2e14 0%,#2a2110 46%,#17120a 100%)}
 .ag-card[data-rarity="gold"] .ag-inner-back{color:#ffe9a6}
@@ -642,7 +636,7 @@
   from{transform:translate(-50%,-50%) rotate(0deg)}
   to{transform:translate(-50%,-50%) rotate(360deg)}}
 
-.ag-card[data-rarity="zodiac"]{box-shadow:0 30px 60px rgba(0,0,0,.55)}
+.ag-card[data-rarity="zodiac"]{box-shadow:none}
 .ag-card[data-rarity="zodiac"] .ag-zsand{display:block}
 .ag-card[data-rarity="zodiac"] .ag-face{
   background:
