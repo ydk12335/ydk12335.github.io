@@ -32,56 +32,83 @@
    * =======================================================*/
   const ZODIACS = [
     { key: 'aries', name: '白羊座', glyph: '♈', range: '3.21-4.19', elem: '火象 · 守护火星',
-      palette: ['#ff3b30', '#ff7a18', '#ff2d6f'], quote: '先出发的人，才配得上草原。',
+      palette: ['#ff3b30', '#ff7a18', '#ff2d6f', '#ffb03a'], quote: '我把所有的莽撞，都用来奔向你。',
+      art: '<path d="M50 30C40 20 24 24 24 38c0 27 15 30 24 48"/><path d="M50 30c10-10 26-6 26 8 0 27-15 30-24 48"/><path d="M50 30v10"/>',
       stars: [[20, 55], [38, 48], [56, 44], [74, 52], [86, 40]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4]] },
     { key: 'taurus', name: '金牛座', glyph: '♉', range: '4.20-5.20', elem: '土象 · 守护金星',
-      palette: ['#3aa76d', '#7bc96f', '#1f7a5a'], quote: '把日子过厚，也是一种浪漫。',
+      palette: ['#3aa76d', '#7bc96f', '#1f7a5a', '#c9e07a'], quote: '想把最好的季节，都留给你。',
+      art: '<circle cx="50" cy="58" r="17"/><path d="M50 41V27"/><path d="M33 41C21 37 17 25 25 15c5 10 15 15 25 15"/><path d="M67 41c12-4 16-16 8-26-5 10-15 15-25 15"/><circle cx="44" cy="56" r="1.9" fill="currentColor" stroke="none"/><circle cx="56" cy="56" r="1.9" fill="currentColor" stroke="none"/>',
       stars: [[15, 30], [30, 50], [45, 65], [58, 52], [72, 30], [50, 74]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [2, 5]] },
     { key: 'gemini', name: '双子座', glyph: '♊', range: '5.21-6.21', elem: '风象 · 守护水星',
-      palette: ['#35c4ff', '#6ee7f9', '#2b8cff'], quote: '我有很多个我，都想去看看。',
+      palette: ['#35c4ff', '#6ee7f9', '#2b8cff', '#a78bfa'], quote: '我的心有两个人，都在念你的名字。',
+      art: '<circle cx="36" cy="24" r="6"/><circle cx="64" cy="24" r="6"/><path d="M3630v44M6430v44M3038h12M5838h12M3076h12M5876h12"/><path d="M3050h12M5838h12" opacity=".35"/>',
       stars: [[30, 20], [28, 45], [34, 70], [62, 22], [66, 48], [70, 72]],
       lines: [[0, 1], [1, 2], [3, 4], [4, 5], [0, 3]] },
     { key: 'cancer', name: '巨蟹座', glyph: '♋', range: '6.22-7.22', elem: '水象 · 守护月亮',
-      palette: ['#b8c6e8', '#dbe6ff', '#6f86c9'], quote: '壳很硬，里面住着整片海。',
+      palette: ['#b8c6e8', '#dbe6ff', '#6f86c9', '#c8b6ff'], quote: '月亮落进海里，我在潮汐里想你。',
+      art: '<ellipse cx="50" cy="58" rx="16" ry="11"/><path d="M34 54C25 51 21 43 26 35c7 2 12 6 14 12"/><path d="M66 54c9-3 13-11 8-19-7 2-12 6-14 12"/><path d="M40 68l-7 8M47 70l-4 9M53 70l4 9M60 68l7 8"/>',
       stars: [[50, 25], [50, 50], [30, 72], [70, 70], [38, 32], [62, 30]],
       lines: [[0, 1], [1, 2], [1, 3], [0, 4], [0, 5]] },
     { key: 'leo', name: '狮子座', glyph: '♌', range: '7.23-8.22', elem: '火象 · 守护太阳',
-      palette: ['#ffb300', '#ffdd55', '#ff8a00'], quote: '光是自己的，不必借。',
+      palette: ['#ffb300', '#ffdd55', '#ff8a00', '#ffd9a0'], quote: '我所有的光，只想照亮你一个人。',
+      art: '<circle cx="50" cy="52" r="14"/><circle cx="50" cy="52" r="23" stroke-dasharray="6 7"/><circle cx="45" cy="50" r="1.9" fill="currentColor" stroke="none"/><circle cx="55" cy="50" r="1.9" fill="currentColor" stroke="none"/>',
       stars: [[28, 40], [34, 22], [46, 16], [58, 26], [52, 46], [70, 58], [84, 44]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [5, 6]] },
     { key: 'virgo', name: '处女座', glyph: '♍', range: '8.23-9.22', elem: '土象 · 守护水星',
-      palette: ['#c9a227', '#e6d27a', '#8f7a1e'], quote: '把细节照顾好的，是有心人。',
+      palette: ['#c9a227', '#e6d27a', '#8f7a1e', '#d9e08a'], quote: '把每一处细节，都过成想你的样子。',
+      art: '<path d="M50 80V30"/><path d="M50 30c6-9-7-12-9-6-1 4 3 8 9 10"/><path d="M50 46c9-1 12-6 12-12-6-1-11 3-12 12"/><path d="M50 46c-9-1-12-6-12-12 6-1 11 3 12 12"/><path d="M50 60c9-1 12-6 12-12-6-1-11 3-12 12"/><path d="M50 60c-9-1-12-6-12-12 6-1 11 3 12 12"/>',
       stars: [[50, 18], [46, 42], [70, 58], [30, 40], [24, 68], [66, 78]],
       lines: [[0, 1], [1, 2], [1, 3], [3, 4], [2, 5]] },
     { key: 'libra', name: '天秤座', glyph: '♎', range: '9.23-10.23', elem: '风象 · 守护金星',
-      palette: ['#7fe3d0', '#9ad0ff', '#4fb8c9'], quote: '在两端之间，我选择体面。',
+      palette: ['#7fe3d0', '#9ad0ff', '#4fb8c9', '#c3b2ff'], quote: '天平的两端，都是你。',
+      art: '<path d="M50 24v52"/><circle cx="50" cy="21" r="4"/><path d="M22 34h56"/><path d="M22 34l-9 16h18z"/><path d="M78 34l-9 16h18z"/><path d="M36 80h28"/>',
       stars: [[32, 40], [50, 32], [62, 46], [44, 58]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 0]] },
     { key: 'scorpio', name: '天蝎座', glyph: '♏', range: '10.24-11.22', elem: '水象 · 守护冥王星',
-      palette: ['#8b3bff', '#c04bff', '#5a1e9e'], quote: '安静，但什么都记得。',
+      palette: ['#8b3bff', '#c04bff', '#5a1e9e', '#ff5bb0'], quote: '我把最深的夜，留给最亮的你。',
+      art: '<path d="M34 78V38h26v28c0 13 9 17 16 9"/><path d="M76 75l6-9-11-2"/><path d="M34 52h18"/>',
       stars: [[30, 20], [40, 32], [52, 38], [62, 52], [70, 68], [64, 82], [50, 86]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]] },
     { key: 'sagittarius', name: '射手座', glyph: '♐', range: '11.23-12.21', elem: '火象 · 守护木星',
-      palette: ['#ff6a00', '#ffa73b', '#ff3d00'], quote: '箭一旦离弦，就只认远方。',
+      palette: ['#ff6a00', '#ffa73b', '#ff3d00', '#ffd166'], quote: '我射出的每一支箭，终点都是你。',
+      art: '<path d="M26 74L74 26"/><path d="M55 26h19v19"/><path d="M36 64a20 20 0 0 0 26-26"/><path d="M26 74l-4-1M26 74l1 4" opacity=".6"/>',
       stars: [[30, 58], [26, 44], [40, 36], [58, 38], [70, 50], [64, 64], [46, 68]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0], [2, 6]] },
     { key: 'capricorn', name: '摩羯座', glyph: '♑', range: '12.22-1.19', elem: '土象 · 守护土星',
-      palette: ['#a9744f', '#d1a06a', '#6f4a2e'], quote: '慢，但从不停下。',
+      palette: ['#a9744f', '#d1a06a', '#6f4a2e', '#c9b48a'], quote: '我慢慢走，是想和你走很久。',
+      art: '<path d="M26 34h40l-9 28H35z"/><path d="M28 34C18 28 20 16 30 14c4 6 4 14 0 20"/><path d="M70 68c8 6 14 2 14-6" opacity=".7"/>',
       stars: [[24, 30], [46, 24], [66, 34], [54, 56], [30, 52]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0]] },
     { key: 'aquarius', name: '水瓶座', glyph: '♒', range: '1.20-2.18', elem: '风象 · 守护天王星',
-      palette: ['#2f6bff', '#56e1ff', '#1e3fd6'], quote: '不合群，是另一种先行。',
+      palette: ['#2f6bff', '#56e1ff', '#1e3fd6', '#8ab6ff'], quote: '我把整片银河，倒进你的梦里。',
+      art: '<path d="M20 42q10-12 20 0t20 0 20 0"/><path d="M20 62q10-12 20 0t20 0 20 0"/><circle cx="30" cy="24" r="1.8" fill="currentColor" stroke="none"/><circle cx="50" cy="20" r="1.8" fill="currentColor" stroke="none"/><circle cx="70" cy="24" r="1.8" fill="currentColor" stroke="none"/>',
       stars: [[20, 36], [34, 50], [46, 34], [60, 48], [72, 32], [84, 46]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]] },
     { key: 'pisces', name: '双鱼座', glyph: '♓', range: '2.19-3.20', elem: '水象 · 守护海王星',
-      palette: ['#2b8cff', '#4fd1ff', '#5a3bff'], quote: '两条鱼，游向同一个梦。',
+      palette: ['#2b8cff', '#5a3bff', '#ff6fd8', '#4fd1ff'], quote: '两条鱼游过一整片海，只为在你的梦里相遇。',
+      /* 两条手绘的鱼，首尾相望、以水波相连；整卡缓慢旋转 */
+      art: '<path d="M68 34C60 24 42 24 30 34c12 10 30 10 38 0z"/>' +
+        '<path d="M30 34l-13-9 2 18z"/>' +
+        '<path d="M45 24c3-7 9-7 12 0"/>' +
+        '<circle cx="59" cy="31" r="1.9" fill="currentColor" stroke="none"/>' +
+        '<path d="M32 66c8 10 26 10 38 0-12-10-30-10-38 0z"/>' +
+        '<path d="M70 66l13-9-2 18z"/>' +
+        '<path d="M55 76c-3 7-9 7-12 0"/>' +
+        '<circle cx="41" cy="69" r="1.9" fill="currentColor" stroke="none"/>' +
+        '<path d="M17 43c8 8 8 16 0 24" opacity=".45" stroke-dasharray="4 4"/>' +
+        '<path d="M83 33c-8 8-8 16 0 24" opacity=".45" stroke-dasharray="4 4"/>',
       stars: [[22, 30], [30, 48], [46, 54], [62, 46], [74, 30], [80, 52], [66, 66], [46, 60]],
       lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 2]] }
   ];
   const ZMAP = {};
   ZODIACS.forEach(z => { ZMAP[z.name] = z; });
+  /** 把星座图腾包成可缩放的 SVG（stroke 跟随 currentColor） */
+  function emblemSvg(z) {
+    return '<svg class="zglyph" viewBox="0 0 100 100" fill="none" stroke="currentColor" ' +
+      'stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' + z.art + '</svg>';
+  }
 
 
   /* =========================================================
@@ -210,7 +237,7 @@
       icon: z.glyph,
       rarity: 'zodiac',
       zodiac: z.key,
-      desc: '在个人资料填入生日，或在观星页查看过' + z.name,
+      desc: z.range + ' · ' + z.elem,
       quote: z.quote,
       check: s => (s.signs || []).indexOf(z.name) >= 0
     });
@@ -232,10 +259,12 @@
       card.style.setProperty('--z1', z.palette[0]);
       card.style.setProperty('--z2', z.palette[1]);
       card.style.setProperty('--z3', z.palette[2]);
+      card.style.setProperty('--z4', z.palette[3] || z.palette[1]);
     } else {
       card.style.removeProperty('--z1');
       card.style.removeProperty('--z2');
       card.style.removeProperty('--z3');
+      card.style.removeProperty('--z4');
     }
     return z;
   }
@@ -585,26 +614,54 @@
 .ag-sky.on{opacity:1}
 .ag-sky svg{width:100%;height:100%;overflow:visible}
 
-/* 流动色情：大画布渐变 + transform 位移（GPU 合成，不重绘） */
-.ag-zflow{position:absolute;inset:-70%;z-index:0;pointer-events:none;opacity:.95;
-  background:linear-gradient(118deg,var(--z1),var(--z2),var(--z3),var(--z1),var(--z2));
-  background-size:200% 200%;
-  animation:agZflow 9s ease-in-out infinite alternate;
-  filter:saturate(1.18) brightness(.9)}
-@keyframes agZflow{
-  0%{transform:translate3d(-9%,-7%,0) scale(1.15)}
-  100%{transform:translate3d(9%,8%,0) scale(1.32)}}
+/* 流沙：几道柔和的沙色带缓慢流淌（纯 transform 位移，GPU 合成，零重绘） */
+.ag-zsand{position:absolute;inset:-45%;z-index:0;pointer-events:none;display:none;
+  overflow:hidden;
+  -webkit-mask-image:radial-gradient(closest-side at 50% 50%, #000 58%, transparent 100%);
+  mask-image:radial-gradient(closest-side at 50% 50%, #000 58%, transparent 100%)}
+/* 星尘点阵：多层不同颜色/大小的细小光点，缓缓漂移（静态背景，只做 transform） */
+.ag-zsand::before{content:'';position:absolute;inset:-30%;
+  background-image:
+    radial-gradient(circle, var(--z1) 1.6px, transparent 2.1px),
+    radial-gradient(circle, var(--z2) 1.3px, transparent 1.8px),
+    radial-gradient(circle, var(--z3) 1.5px, transparent 2px),
+    radial-gradient(circle, var(--z4) 1.7px, transparent 2.2px),
+    radial-gradient(circle, #ffffff 0.9px, transparent 1.4px);
+  background-size:23px 23px, 31px 31px, 37px 37px, 41px 41px, 17px 17px;
+  background-position:0 0, 11px 15px, 19px 9px, 22px 7px, 6px 24px;
+  animation:agSandA 19s ease-in-out infinite alternate}
+/* 彩色柔云斑：该星座四色大范围柔和叠加（无硬边），缓缓流动 */
+.ag-zsand::after{content:'';position:absolute;inset:-30%;
+  background-image:
+    radial-gradient(60% 60% at 18% 16%, var(--z1), transparent 72%),
+    radial-gradient(58% 58% at 84% 26%, var(--z3), transparent 74%),
+    radial-gradient(62% 62% at 24% 84%, var(--z2), transparent 74%),
+    radial-gradient(56% 56% at 80% 82%, var(--z4), transparent 74%),
+    radial-gradient(50% 50% at 52% 48%, var(--z1), transparent 70%);
+  background-size:170% 170%, 165% 165%, 175% 175%, 165% 165%, 150% 150%;
+  background-position:0 0, 0 0, 0 0, 0 0, 0 0;
+  mix-blend-mode:screen;opacity:.72;
+  animation:agSandB 29s ease-in-out infinite alternate}
+@keyframes agSandA{
+  0%{transform:translate3d(-7%,-5%,0) rotate(-4deg) scale(1.05)}
+  100%{transform:translate3d(7%,6%,0) rotate(5deg) scale(1.28)}}
+@keyframes agSandB{
+  0%{transform:translate3d(8%,4%,0) rotate(6deg) scale(1.2)}
+  100%{transform:translate3d(-6%,-6%,0) rotate(-5deg) scale(1.02)}}
 
-/* 缓慢旋转的星座符号（取代小图标，成为卡面主体） */
+/* 缓慢旋转的手绘星座图腾（取代小图标，成为卡面主体） */
 .ag-zmark{position:absolute;left:50%;top:50%;z-index:2;pointer-events:none;
-  font-size:16rem;line-height:1;color:rgba(255,255,255,.15);
-  text-shadow:0 0 70px var(--z2);
-  animation:agZspin 48s linear infinite}
+  width:58%;height:58%;color:rgba(255,255,255,.42);
+  filter:drop-shadow(0 0 16px var(--z2));
+  animation:agZspin 52s linear infinite}
+.ag-zmark svg,.zglyph{width:1em;height:1em;display:inline-block;overflow:visible}
+.ag-zmark svg{width:100%;height:100%}
 @keyframes agZspin{
   from{transform:translate(-50%,-50%) rotate(0deg)}
   to{transform:translate(-50%,-50%) rotate(360deg)}}
 
 .ag-card[data-rarity="zodiac"]{box-shadow:0 30px 70px rgba(0,0,0,.6), 0 0 50px var(--z2)}
+.ag-card[data-rarity="zodiac"] .ag-zsand{display:block}
 .ag-card[data-rarity="zodiac"] .ag-face{background:linear-gradient(160deg,#0b1424,#04070e)}
 .ag-card[data-rarity="zodiac"] .ag-inner{color:#eaf4ff}
 .ag-card[data-rarity="zodiac"] .ag-icon{display:none}
@@ -615,7 +672,14 @@
 .ag-card[data-rarity="zodiac"] .ag-quote{color:rgba(222,240,255,.94);text-shadow:0 0 16px var(--z2)}
 .ag-card[data-rarity="zodiac"] .ag-edge{
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.38), inset 0 0 30px rgba(0,0,0,.5)}
-.ag-card[data-rarity="zodiac"] .ag-shine{opacity:.5}
+.ag-card[data-rarity="zodiac"] .ag-shine{opacity:.42;
+  background-image:linear-gradient(-30deg,
+    var(--z1),var(--z2),var(--z4),var(--z2),var(--z1),
+    var(--z1),var(--z2),var(--z4),var(--z2),var(--z1),var(--z1))}
+.ag-card[data-rarity="zodiac"] .ag-shine::after{
+  background-image:linear-gradient(-60deg,
+    var(--z4),var(--z1),var(--z2),var(--z1),var(--z4),
+    var(--z4),var(--z1),var(--z2),var(--z1),var(--z4),var(--z4))}
 .ag-card[data-rarity="zodiac"] .ag-inner-back{color:#eaf4ff}
 .ag-card[data-rarity="zodiac"] .ag-bk-rar{color:#fff;border-color:rgba(255,255,255,.5)}
 .ag-card[data-rarity="zodiac"] .ag-bk-name{color:#fff;text-shadow:0 2px 18px var(--z2)}
@@ -626,18 +690,12 @@
   border:1px solid rgba(255,255,255,.2);box-shadow:0 4px 16px var(--z2)}
 .ab-card.r-zodiac .ab-rr{color:#c3dcff}
 .ab-card.r-zodiac .ab-nm{color:#eef6ff}
-.ab-card.r-zodiac .ab-ic{color:#fff;filter:drop-shadow(0 0 12px var(--z2))}
-.ab-card.r-zodiac .ab-holo{opacity:.32;
-  background:linear-gradient(120deg,var(--z1),var(--z2),var(--z3));
-  animation:agZflow 9s ease-in-out infinite alternate}
-.ag-lite .ag-zflow{animation:none}
+.ab-card.r-zodiac .ab-ic{color:#dceaff;filter:drop-shadow(0 0 12px var(--z2))}
+.ab-card.r-zodiac .ab-holo{opacity:.28;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%), var(--z2), transparent 62%)}
+.ag-lite .ag-zsand,.ag-lite .ag-zsand::before,.ag-lite .ag-zsand::after{animation:none}
 .ag-lite .ag-zmark{animation:none}
-
-/* ============ ⑤ 开卡爆发 ============ */
-.ag-flash{position:fixed;inset:0;pointer-events:none;z-index:520;opacity:0;
-  background:radial-gradient(circle at 50% 45%,rgba(255,246,210,.95),rgba(242,208,113,.35) 34%,rgba(0,0,0,0) 68%)}
-.ag-flash.fire{animation:agFlash .8s ease-out}
-@keyframes agFlash{0%{opacity:0}14%{opacity:.9}100%{opacity:0}}
+.ag-lite .ag-zmark svg{filter:none}
 
 /* ============ 关闭 & 提示 ============ */
 .ag-close{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
@@ -773,7 +831,7 @@
     <div class="ag-card" id="agCard" data-rarity="white">
       <!-- 正面 -->
       <div class="ag-face ag-front">
-        <div class="ag-zflow"></div>
+        <div class="ag-zsand"></div>
         <div class="ag-zmark" id="agZmark"></div>
         <div class="ag-shine"></div>
         <div class="ag-glare"></div>
@@ -788,7 +846,7 @@
       </div>
       <!-- 背面 -->
       <div class="ag-face ag-back">
-        <div class="ag-zflow"></div>
+        <div class="ag-zsand"></div>
         <div class="ag-zmark"></div>
         <div class="ag-shine"></div>
         <div class="ag-glare"></div>
@@ -806,8 +864,7 @@
   </div>
   <div class="ag-hint" id="agHint">拖动翻面 · 倾斜手机看体感</div>
   <button class="ag-close" id="agClose">收 起</button>
-</div>
-<div class="ag-flash" id="agFlash"></div>`;
+</div>`;
 
   const ALBUM_HTML = `
 <div class="ab-mask" id="abMask">
@@ -1064,9 +1121,9 @@
     $('agQuote').textContent = ach.quote || '';
     card.setAttribute('data-rarity', ach.rarity);
 
-    /* 星座主题：配色变量 + 缓转符号 + 卡外专属星图 */
+    /* 星座主题：配色变量 + 缓转图腾 SVG + 卡外专属星图 */
     const zdef = applyTheme(card, ach);
-    card.querySelectorAll('.ag-zmark').forEach(el => { el.textContent = zdef ? zdef.glyph : ''; });
+    card.querySelectorAll('.ag-zmark').forEach(el => { el.innerHTML = zdef ? emblemSvg(zdef) : ''; });
     const sky = $('agSky');
     if (sky) {
       sky.innerHTML = zdef ? skySvg(zdef) : '';
@@ -1100,14 +1157,9 @@
         typeof DeviceOrientationEvent.requestPermission !== 'function') bindGyro();
     } catch (e) {}
 
-    /* 仪式：闪光 + 爆发 + 音效 + 震动 */
+    /* 仪式：音效 + 震动 */
     chime(ach.rarity);
     buzz(ach.rarity);
-    if (isGold || ach.rarity === 'purple') {
-      const fl = $('agFlash');
-      fl.classList.remove('fire'); void fl.offsetWidth; fl.classList.add('fire');
-      setTimeout(() => fl.classList.remove('fire'), 900);
-    }
 
     /* 标记已读 */
     markSeen(ach.id);
