@@ -18,9 +18,9 @@
    * 1. 稀有度配置
    * =======================================================*/
   const RARITY = {
-    white:  { label: '普通', tilt: 6,  particles: 0,  vbr: [12] },
-    purple: { label: '稀有', tilt: 11, particles: 12, vbr: [16, 40, 16] },
-    gold:   { label: '传说', tilt: 16, particles: 26, vbr: [22, 55, 22, 55, 45] }
+    white:  { label: '普通', tilt: 7,  particles: 0,  vbr: [12] },
+    purple: { label: '稀有', tilt: 12, particles: 12, vbr: [16, 40, 16] },
+    gold:   { label: '传说', tilt: 18, particles: 26, vbr: [22, 55, 22, 55, 45] }
   };
 
   /* =========================================================
@@ -442,6 +442,12 @@
   color:rgba(240,207,130,.85);font-family:inherit;font-size:.76rem;letter-spacing:.16em;
   padding:10px 26px;border-radius:999px;cursor:pointer;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 .ag-close:active{transform:translateX(-50%) scale(.96)}
+.ag-flip{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  z-index:530;background:rgba(255,255,255,.08);border:1px solid rgba(240,207,130,.28);
+  color:rgba(240,207,130,.9);font-family:inherit;font-size:.74rem;letter-spacing:.16em;
+  padding:10px 24px;border-radius:999px;cursor:pointer;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.ag-flip:active{transform:translateX(-50%) scale(.96)}
 .ag-hint{position:fixed;left:50%;top:calc(22px + env(safe-area-inset-top,0px));transform:translateX(-50%);
   z-index:530;font-size:.68rem;color:rgba(240,207,130,.5);letter-spacing:.14em;pointer-events:none;
   animation:agFade 1s ease .5s both}
@@ -599,7 +605,8 @@
       <div class="ag-burst" id="agBurst"></div>
     </div>
   </div>
-  <div class="ag-hint" id="agHint">拖动翻转 · 双击翻面</div>
+  <div class="ag-hint" id="agHint">拖动翻转 · 轻点翻面</div>
+  <button class="ag-flip" id="agFlip">↻ 翻 面</button>
   <button class="ag-close" id="agClose">收 起</button>
 </div>
 <div class="ag-flash" id="agFlash"></div>`;
@@ -683,8 +690,7 @@
   let snapY = 0;       // 吸附目标
   let rotX = 0;        // 俯仰（度）
   let dragging = false;
-  let drag0 = null;
-  let spinV = 0;
+  let lastInput = 0;   // 最近一次输入时间（用于静止时的微倾）
 
   /** 归一到 180 的整数倍（0 / ±180 / ±360 …） */
   function normalizeFlip(v) { return Math.round(v / 180) * 180; }
@@ -710,27 +716,41 @@
       /* 松手后：惯性投影 → 吸附到正/反面 */
       rotY += (snapY - rotY) * 0.18;
       if (Math.abs(snapY - rotY) < 0.3) rotY = snapY;
-      /* 俯仰回中（由陀螺仪/鼠标接管） */
-      cur.tiltX += (pose.tx * 0.45 - cur.tiltX) * 0.09;
-      cur.tiltY += (pose.ty * 0.45 - cur.tiltY) * 0.09;
+      /* 俯仰/侧倾由陀螺仪/鼠标接管 */
+      cur.tiltX += (pose.tx - cur.tiltX) * 0.10;
+      cur.tiltY += (pose.ty - cur.tiltY) * 0.10;
     } else {
       cur.tiltX = rotX; cur.tiltY = 0;
     }
 
     const card = $('agCard');
     if (card && $('agMask') && $('agMask').classList.contains('open')) {
-      const ry = dragging ? rotY : (rotY + cur.tiltY);
-      const rx = dragging ? rotX : cur.tiltX;
+      /* 静止时给一点缓慢微倾，一打开就有「活」的立体感 */
+      const now = performance.now();
+      const idle = !dragging && (now - lastInput > 2600);
+      let swX = 0, swY = 0, swBx = 0, swBy = 0;
+      if (idle) {
+        const t = now * 0.001;
+        swX = Math.sin(t * 0.6) * 3.2;
+        swY = Math.cos(t * 0.45) * 4.2;
+        swBx = Math.sin(t * 0.5) * 12;
+        swBy = Math.cos(t * 0.33) * 12;
+      }
+      const rx = (dragging ? rotX : cur.tiltX + swX);
+      const ry = rotY + (dragging ? 0 : cur.tiltY + swY);
+      const pfc = Math.min(1, Math.hypot(cur.x - .5, cur.y - .5) * 2);
+      const depth = 1 + pfc * 0.02 + (idle ? (Math.sin(now * 0.0008) + 1) * 0.004 : 0);
       card.style.transform =
-        'perspective(900px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)';
+        'perspective(900px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) +
+        'deg) scale(' + depth.toFixed(4) + ')';
       const mx = cur.x * 100, my = cur.y * 100;
       card.style.setProperty('--mx', mx.toFixed(2) + '%');
       card.style.setProperty('--my', my.toFixed(2) + '%');
-      card.style.setProperty('--bx', (50 + (cur.x - .5) * 88).toFixed(2) + '%');
-      card.style.setProperty('--by', (50 + (cur.y - .5) * 88).toFixed(2) + '%');
+      card.style.setProperty('--bx', (50 + (cur.x - .5) * 88 + swBx).toFixed(2) + '%');
+      card.style.setProperty('--by', (50 + (cur.y - .5) * 88 + swBy).toFixed(2) + '%');
       card.style.setProperty('--sx', cur.px.toFixed(2) + 'px');
       card.style.setProperty('--sy', cur.py.toFixed(2) + 'px');
-      card.style.setProperty('--pfc', Math.min(1, Math.hypot(mx - 50, my - 50) / 50).toFixed(3));
+      card.style.setProperty('--pfc', pfc.toFixed(3));
     }
     /* 收藏册里的卡也随陀螺仪流动 */
     const ab = $('abMask');
@@ -749,6 +769,7 @@
   function pointerMove(e) {
     const card = $('agCard');
     if (!card) return;
+    lastInput = performance.now();
     const r = card.getBoundingClientRect();
     let px = (e.clientX - r.left) / r.width;
     let py = (e.clientY - r.top) / r.height;
@@ -778,6 +799,7 @@
     pose.tx = bx * tiltMax;
     pose.dx = -gx * 20;
     pose.dy = -bx * 20;
+    lastInput = performance.now();
     gyroReady = true;
   }
   /** 请求体感权限（iOS 13+ 必须由用户手势触发） */
@@ -864,6 +886,7 @@
     /* 姿态复位 */
     pose.tx = pose.ty = 0; pose.px = pose.py = .5; pose.dx = pose.dy = 0;
     cur.rx = cur.ry = 0; cur.x = cur.y = .5; cur.px = cur.py = 0;
+    rotY = 0; snapY = 0; rotX = 0; dragging = false; lastInput = performance.now();
 
     /* 装饰层：呼吸光晕只留给最低级（普通），旋转彩环只给传说 */
     const halo = $('agHalo'), ring = $('agRing');
@@ -880,7 +903,7 @@
 
     mask.classList.add('open');
     $('agHint').textContent = /Mobi|Android|iPhone/i.test(navigator.userAgent)
-      ? '倾斜手机 · 光影流动' : '移动鼠标 · 感受光栅';
+      ? '拖动 / 轻点翻面 · 倾斜手机看体感' : '拖动 / 轻点翻面 · 移动鼠标看光栅';
     startLoop();
 
     /* 仪式：闪光 + 爆发 + 音效 + 震动 */
@@ -904,12 +927,66 @@
     if (window.Achievements && window.Achievements.onClose) window.Achievements.onClose();
   }
 
+  /* 手动拖动翻转（鼠标 / 触摸通用；没陀螺仪、不会甩也能翻） */
+  function bindDrag() {
+    const card = $('agCard');
+    if (!card || card._dragBound) return;
+    card._dragBound = true;
+    let pid = null, x0 = 0, ry0 = 0, t0 = 0, lt = 0, lx = 0, v = 0, moved = 0;
+
+    const down = (e) => {
+      if (!($('agMask') && $('agMask').classList.contains('open'))) return;
+      pid = e.pointerId; dragging = true;
+      lastInput = performance.now();
+      card.classList.add('grabbing');
+      x0 = e.clientX; ry0 = rotY; t0 = lastInput; lt = t0; lx = e.clientX; v = 0; moved = 0;
+      try { card.setPointerCapture(pid); } catch (err) {}
+      if (e.cancelable) e.preventDefault();
+    };
+    const move = (e) => {
+      if (!dragging || e.pointerId !== pid) return;
+      const dx = e.clientX - x0, dy = e.clientY - y0;
+      moved = Math.max(moved, Math.hypot(dx, dy));
+      rotY = ry0 + dx * 0.7;
+      rotX = Math.max(-26, Math.min(26, -dy * 0.35));
+      const now = performance.now();
+      const dt = now - lt;
+      if (dt > 0) { v = (e.clientX - lx) / dt; lx = e.clientX; lt = now; }
+      lastInput = now;
+      if (e.cancelable) e.preventDefault();
+    };
+    const up = (e) => {
+      if (!dragging || (e.pointerId != null && e.pointerId !== pid)) return;
+      dragging = false; pid = null;
+      card.classList.remove('grabbing');
+      try { card.releasePointerCapture(e.pointerId); } catch (err) {}
+      const now = performance.now();
+      if ((now - t0) < 260 && moved < 8) {
+        flipCard();                        // 轻点 = 翻面
+      } else {
+        if (Math.abs(v) > 0.35) snapY = normalizeFlip(rotY) + (v > 0 ? 180 : -180);  // 快速甩 = 翻到下一面
+        else snapY = normalizeFlip(rotY);  // 慢拖 = 吸附最近一面
+      }
+      rotX = 0; lastInput = now;
+    };
+    card.addEventListener('pointerdown', down);
+    card.addEventListener('pointermove', move);
+    card.addEventListener('pointerup', up);
+    card.addEventListener('pointercancel', up);
+  }
+
   function bindCard() {
     $('agClose').addEventListener('click', closeCard);
+    if ($('agFlip')) $('agFlip').addEventListener('click', flipCard);
     $('agMask').addEventListener('click', e => { if (e.target === $('agMask') || e.target === $('agStage')) closeCard(); });
     window.addEventListener('mousemove', e => { if ($('agMask').classList.contains('open')) pointerMove(e); });
-    $('agMask').addEventListener('touchstart', () => { requestGyro(); }, { once: true });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCard(); });
+    $('agMask').addEventListener('touchstart', () => { requestGyro(); }, { once: true, passive: true });
+    document.addEventListener('keydown', e => {
+      if (!$('agMask').classList.contains('open')) return;
+      if (e.key === 'Escape') closeCard();
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') flipCard();
+    });
+    bindDrag();
   }
 
   /* =========================================================
