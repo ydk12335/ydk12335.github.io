@@ -438,6 +438,11 @@ function initAuth() {
     close(); location.reload();
   });
 
+  window.openAuthMask = function() {
+    const m = document.getElementById('authMask');
+    if (m) m.style.display = 'flex';
+  };
+
   // 全局登录保护
   (async () => {
     const user = await getCurrentUser();

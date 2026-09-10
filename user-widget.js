@@ -119,16 +119,12 @@
       var url=u.user_metadata&&u.user_metadata.avatar;
       if(url){av.style.backgroundImage='url('+url+')';av.textContent='';}
       else av.textContent=name[0].toUpperCase();
-      makeDraggable(btn,function(){
+makeDraggable(btn,function(){
         /* 点击逻辑 */
         if(btn.classList.contains('pinned')){
           /* 定格展开状态：点击直接打开资料 */
           btn.classList.remove('pinned','expanded');
-          try{sessionStorage.setItem('open_auth','1');}catch(e){}
-          var p=location.pathname;
-          var onHome=(p==='/'||/\/index\.html$/.test(p))&&!/\/(tarot|astro|memory|yijing)\//.test(p);
-          if(onHome){var m=document.getElementById('authMask');if(m)m.style.display='flex';}
-          else location.href='/';
+          try{window.openAuthMask();}catch(e){}
           return;
         }
         /* 普通状态：第一下展开显示名字，再点一下才打开资料 */
@@ -140,11 +136,7 @@
         }
         clearTimeout(btn._ct);
         btn.classList.remove('expanded');
-        try{sessionStorage.setItem('open_auth','1');}catch(e){}
-        var p2=location.pathname;
-        var onHome2=(p2==='/'||/\/index\.html$/.test(p2))&&!/\/(tarot|astro|memory|yijing)\//.test(p2);
-        if(onHome2){var m2=document.getElementById('authMask');if(m2)m2.style.display='flex';}
-        else location.href='/';
+        try{window.openAuthMask();}catch(e){}
       });
     }else{
       btn.style.display='none';
