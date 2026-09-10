@@ -490,8 +490,14 @@
   display:none;overflow:hidden;mix-blend-mode:screen}
 
 /* 下雨：Canvas 逐滴渲染（与主页同一套雨滴逻辑），疏密自然、不是条纹 */
-.ag-rain{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:1;display:none}
+.ag-rain{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:2;display:none}
 .ag-card[data-motion="rain"] .ag-rain{display:block}
+/* 雨夜卡面：深色夜空 + 万家灯火（Canvas 一次性绘制） */
+.ag-city{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;display:none}
+.ag-card[data-motion="rain"] .ag-city{display:block}
+/* 雨夜时卡面底改为深夜色，避免露出明亮渐变 */
+.ag-card[data-motion="rain"] .ag-face{background:#05070f !important}
+.ag-card[data-motion="rain"] .ag-shine{opacity:.2}
 
 /* 极光：两道柔光带缓缓漂移 */
 .ag-card[data-motion="aurora"] .ag-dyn{display:block;
@@ -914,6 +920,7 @@
         <div class="ag-zsand"></div>
         <div class="ag-zmark" id="agZmark"></div>
         <div class="ag-dyn"></div>
+        <canvas class="ag-city" id="agCity"></canvas>
         <canvas class="ag-rain" id="agRain"></canvas>
         <div class="ag-shine"></div>
         <div class="ag-glare"></div>
@@ -1151,6 +1158,7 @@
     rainDrops = [];
     const n = Math.max(16, Math.round(rainW * 0.14));
     for (let i = 0; i < n; i++) rainDrops.push(newDrop(true));
+    drawCity();
     rainActive = true;
   }
   function drawRain() {
@@ -1170,6 +1178,68 @@
       rainCtx.stroke();
     }
     rainCtx.globalAlpha = 1;
+  }
+
+  /* ===== 雨夜卡面：深色夜空 + 万家灯火（一次性绘制，静态背景） ===== */
+  function cityBuildings(c, w, h, baseY, color, winAlpha) {
+    let x = -6;
+    while (x < w + 6) {
+      const bw = 9 + Math.random() * 22;
+      const bh = (h - baseY * h) * (0.35 + Math.random() * 0.95);
+      const topY = baseY * h - bh;
+      c.fillStyle = color;
+      c.fillRect(x, topY, bw, bh);
+      /* 窗灯：密集的小暖点 → 万家灯火 */
+      const cols = Math.max(1, Math.floor(bw / 3.4));
+      const rows = Math.max(2, Math.floor(bh / 5.2));
+      for (let r = 0; r < rows; r++) {
+        for (let cc = 0; cc < cols; cc++) {
+          if (Math.random() < 0.42) {
+            const wx = x + 1.2 + cc * (bw / cols);
+            const wy = topY + 1.8 + r * (bh / rows);
+            const a = (0.2 + Math.random() * 0.65) * winAlpha;
+            const gg = 175 + Math.floor(Math.random() * 60);
+            const bb = 95 + Math.floor(Math.random() * 90);
+            c.fillStyle = 'rgba(255,' + gg + ',' + bb + ',' + a.toFixed(2) + ')';
+            c.fillRect(wx, wy, 1.3, 1.5);
+          }
+        }
+      }
+      x += bw + 1 + Math.random() * 3;
+    }
+  }
+  function drawCity() {
+    const cv = $('agCity');
+    if (!cv) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = rainW || 260, h = rainH || 364;
+    cv.width = Math.max(1, Math.round(w * dpr));
+    cv.height = Math.max(1, Math.round(h * dpr));
+    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    const c = cv.getContext('2d');
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    /* 夜空 */
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#070c1c');
+    g.addColorStop(0.55, '#0a1226');
+    g.addColorStop(1, '#05070f');
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+    /* 月亮柔光 */
+    const mg = c.createRadialGradient(w * 0.72, h * 0.16, 0, w * 0.72, h * 0.16, h * 0.34);
+    mg.addColorStop(0, 'rgba(255,240,205,.22)');
+    mg.addColorStop(1, 'rgba(255,240,205,0)');
+    c.fillStyle = mg;
+    c.fillRect(0, 0, w, h);
+    /* 远景楼群（暗、灯稀）→ 近景楼群（更暗、灯密）*/
+    cityBuildings(c, w, h, 0.66, 'rgba(14,20,40,1)', 0.55);
+    cityBuildings(c, w, h, 0.80, 'rgba(6,9,20,1)', 1);
+    /* 地平线附近的暖色城市辉光 */
+    const cg = c.createLinearGradient(0, h * 0.72, 0, h);
+    cg.addColorStop(0, 'rgba(255,190,110,0)');
+    cg.addColorStop(1, 'rgba(255,180,100,.16)');
+    c.fillStyle = cg;
+    c.fillRect(0, h * 0.72, w, h * 0.28);
   }
 
   /* mousemove 只记录最新坐标；真正的计算放到 rAF(loop) 里，避免高频重排/写样式 */
