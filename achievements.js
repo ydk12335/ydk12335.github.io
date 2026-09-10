@@ -1152,9 +1152,10 @@
       if (rainCtx) { rainCtx.clearRect(0, 0, rainW, rainH); }
       return;
     }
-    const r = card.getBoundingClientRect();
+    /* 用 offsetWidth/Height 量卡片布局尺寸：不受入场缩放动画（transform）影响，
+       否则会量到动画起始的小尺寸，导致夜景只铺一小块 */
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    rainW = r.width || 260; rainH = r.height || 364;
+    rainW = card.offsetWidth || 260; rainH = card.offsetHeight || 364;
     cv.width = Math.max(1, Math.round(rainW * dpr));
     cv.height = Math.max(1, Math.round(rainH * dpr));
     cv.style.width = rainW + 'px'; cv.style.height = rainH + 'px';
