@@ -196,7 +196,7 @@
     </div>
 
     <div class="pf-sec">
-      <h4>成就徽章</h4>
+      <h4>成就徽章 <a href="#" class="pf-more" id="pfBtnAlbum">收藏册 ›</a></h4>
       <div class="pf-badges" id="pfBadges"></div>
     </div>
 
@@ -295,18 +295,12 @@
       : '你还没有抽过牌，去塔罗看看？';
     $('pfLast').innerHTML = st.lastTime ? '最近一次占卜：<em>' + esc(st.lastTime) + '</em>' : '最近一次占卜：还不曾有';
 
-    /* 徽章 */
-    const badges = [
-      { ic: '🌙', tx: '初入星海', on: st.tarotCount >= 1 },
-      { ic: '☯', tx: '问卦者', on: st.yjCount >= 1 },
-      { ic: '🔥', tx: '连续 7 天', on: st.streak >= 7 },
-      { ic: '🃏', tx: '愚者之旅', on: st.majCount >= 22 },
-      { ic: '💯', tx: '百次占卜', on: (st.tarotCount + st.yjCount) >= 100 },
-      { ic: '✨', tx: '星尘使者', on: st.astroCount >= 1 }
-    ];
-    $('pfBadges').innerHTML = badges.map(b =>
-      '<div class="pf-badge' + (b.on ? ' on' : '') + '"><span class="ic">' + b.ic + '</span><span class="tx">' + b.tx + '</span></div>'
-    ).join('');
+    /* 徽章：交给成就系统渲染（含稀有度分级 / 点击开卡 / NEW 标记） */
+    if (window.Achievements && window.Achievements.renderBadges) {
+      window.Achievements.renderBadges($('pfBadges'));
+    } else {
+      $('pfBadges').innerHTML = '<div class="pf-empty">成就系统加载中…</div>';
+    }
 
     /* 时间轴 */
     const items = [];
@@ -408,6 +402,12 @@
       sessionStorage.removeItem('cloud_restored');
       try { await signOut(); } catch (e) {}
       location.reload();
+    });
+
+    /* 成就收藏册 */
+    $('pfBtnAlbum').addEventListener('click', e => {
+      e.preventDefault();
+      if (window.Achievements && window.Achievements.openAlbum) window.Achievements.openAlbum();
     });
 
     /* 小弹层按钮 */
