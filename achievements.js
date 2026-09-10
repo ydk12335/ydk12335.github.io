@@ -470,18 +470,14 @@
 /* ============ 全息彩虹层（poke-holo 配方 · 性能版） ============
    固定 background-image，用 transform 位移扫动（GPU 合成，
    不再每帧重绘渐变 / 重算 filter） */
-.ag-shine{position:absolute;inset:-50%;pointer-events:none;z-index:1;
-  background-repeat:no-repeat;background-size:200% 200%;background-position:center;
+.ag-shine{position:absolute;inset:-25%;pointer-events:none;z-index:1;
+  background-repeat:no-repeat;background-size:220% 220%;background-position:center;
   transform:translate3d(calc(var(--sxp,0) * 1%),calc(var(--syp,0) * 1%),0);
   will-change:transform;
-  filter:brightness(.86) contrast(2.2) saturate(.75);
-  mix-blend-mode:color-dodge}
-.ag-shine::after{content:'';position:absolute;inset:0;
-  background-repeat:no-repeat;background-size:200% 200%;background-position:center;
-  transform:translate3d(calc(var(--txp,0) * .55%),calc(var(--typ,0) * .55%),0);
-  will-change:transform;
-  filter:brightness(.7) contrast(2) saturate(1);
-  mix-blend-mode:color-dodge}
+  mix-blend-mode:screen;transition:opacity .35s ease;
+  -webkit-mask-image:radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%);
+  mask-image:radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%)}
+.ag-shine::after{display:none}
 /* ============ 高光眩光：固定径向渐变，靠 transform 跟随指针 ============ */
 .ag-glare{position:absolute;inset:-45%;pointer-events:none;z-index:2;
   background-image:radial-gradient(circle at 50% 50%,
@@ -539,10 +535,10 @@
 .ag-card[data-rarity="white"] .ag-face{
   background:linear-gradient(158deg,#2b2c40 0%,#1a1a2b 55%,#12121e 100%)}
 .ag-card[data-rarity="white"] .ag-inner-back{color:#e9e6ff}
-.ag-card[data-rarity="white"] .ag-shine{
-  background-image:linear-gradient(-30deg,
-    hsl(210,25%,72%),hsl(0,0%,88%),hsl(220,25%,76%),hsl(200,20%,64%),hsl(210,25%,82%),hsl(0,0%,70%),hsl(210,25%,72%));
-  mix-blend-mode:screen;opacity:.34;filter:brightness(.95) contrast(1.5) saturate(.35)}
+.ag-card[data-rarity="white"] .ag-shine{opacity:.5;
+  background-image:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.72) 46%,
+    rgba(190,210,255,.42) 54%,transparent 72%);
+  background-size:220% 220%}
 .ag-card[data-rarity="white"] .ag-shine::after{display:none}
 .ag-card[data-rarity="white"] .ag-glare{opacity:calc(var(--pfc,0) * .5 + .12)}
 .ag-card[data-rarity="white"] .ag-icon{color:#e9e6ff}
@@ -554,16 +550,12 @@
 .ag-card[data-rarity="purple"] .ag-face{
   background:linear-gradient(158deg,#3a2b5c 0%,#241a3d 52%,#160f26 100%)}
 .ag-card[data-rarity="purple"] .ag-inner-back{color:#d9c6ff}
-.ag-card[data-rarity="purple"] .ag-shine{opacity:.72;
-  background-image:linear-gradient(-30deg,
-    hsl(215,95%,72%),hsl(250,95%,74%),hsl(285,92%,74%),hsl(320,90%,74%),hsl(195,95%,72%),
-    hsl(265,95%,76%),hsl(215,95%,72%),hsl(250,95%,74%),hsl(285,92%,74%),hsl(320,90%,74%),
-    hsl(195,95%,72%),hsl(265,95%,76%),hsl(215,95%,72%))}
-.ag-card[data-rarity="purple"] .ag-shine::after{
-  background-image:linear-gradient(-60deg,
-    hsl(285,92%,74%),hsl(320,90%,74%),hsl(195,95%,72%),hsl(265,95%,76%),hsl(215,95%,72%),
-    hsl(250,95%,74%),hsl(285,92%,74%),hsl(320,90%,74%),hsl(195,95%,72%),hsl(265,95%,76%),
-    hsl(215,95%,72%),hsl(250,95%,74%),hsl(285,92%,74%))}
+.ag-card[data-rarity="purple"] .ag-shine{opacity:.62;
+  background-image:linear-gradient(115deg,
+    #6a3df0 0%, #b06bff 18%, #ff8ad6 38%, #7fd4ff 58%, #6affc0 76%, #b06bff 100%);
+  background-size:240% 240%;
+  filter:brightness(1.12) saturate(1.25)}
+.ag-card[data-rarity="purple"] .ag-shine::after{display:none}
 .ag-card[data-rarity="purple"] .ag-icon{color:#d9c6ff;filter:drop-shadow(0 0 16px rgba(160,110,255,.6))}
 .ag-card[data-rarity="purple"] .ag-name{color:#efe4ff}
 .ag-card[data-rarity="purple"] .ag-rar{color:#c9a7ff}
@@ -583,16 +575,12 @@
   background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:agFlow 5s linear infinite}
 .ag-card[data-rarity="gold"] .ag-bk-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.35)}
-.ag-card[data-rarity="gold"] .ag-shine{opacity:.92;
-  background-image:linear-gradient(-30deg,
-    hsl(2,100%,73%),hsl(53,100%,69%),hsl(93,100%,69%),hsl(176,100%,76%),hsl(228,100%,74%),hsl(283,100%,73%),
-    hsl(2,100%,73%),hsl(53,100%,69%),hsl(93,100%,69%),hsl(176,100%,76%),hsl(228,100%,74%),hsl(283,100%,73%),
-    hsl(2,100%,73%))}
-.ag-card[data-rarity="gold"] .ag-shine::after{
-  background-image:linear-gradient(-60deg,
-    hsl(93,100%,69%),hsl(176,100%,76%),hsl(228,100%,74%),hsl(283,100%,73%),hsl(2,100%,73%),hsl(53,100%,69%),
-    hsl(93,100%,69%),hsl(176,100%,76%),hsl(228,100%,74%),hsl(283,100%,73%),hsl(2,100%,73%),hsl(53,100%,69%),
-    hsl(93,100%,69%))}
+.ag-card[data-rarity="gold"] .ag-shine{opacity:.8;
+  background-image:linear-gradient(115deg,
+    #ff5fb0 0%, #ffd36e 15%, #6effb0 32%, #6ec7ff 50%, #b06eff 68%, #ffd36e 84%, #ff5fb0 100%);
+  background-size:280% 280%;
+  filter:brightness(1.18) saturate(1.35)}
+.ag-card[data-rarity="gold"] .ag-shine::after{display:none}
 .ag-card[data-rarity="gold"] .ag-icon{color:#ffe9a6;
   filter:drop-shadow(0 0 22px rgba(240,200,100,.85))}
 .ag-card[data-rarity="gold"] .ag-name{
@@ -672,14 +660,12 @@
 .ag-card[data-rarity="zodiac"] .ag-quote{color:rgba(222,240,255,.94);text-shadow:0 0 16px var(--z2)}
 .ag-card[data-rarity="zodiac"] .ag-edge{
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.38), inset 0 0 30px rgba(0,0,0,.5)}
-.ag-card[data-rarity="zodiac"] .ag-shine{opacity:.42;
-  background-image:linear-gradient(-30deg,
-    var(--z1),var(--z2),var(--z4),var(--z2),var(--z1),
-    var(--z1),var(--z2),var(--z4),var(--z2),var(--z1),var(--z1))}
-.ag-card[data-rarity="zodiac"] .ag-shine::after{
-  background-image:linear-gradient(-60deg,
-    var(--z4),var(--z1),var(--z2),var(--z1),var(--z4),
-    var(--z4),var(--z1),var(--z2),var(--z1),var(--z4),var(--z4))}
+.ag-card[data-rarity="zodiac"] .ag-shine{opacity:.46;
+  background-image:linear-gradient(115deg,
+    var(--z1) 0%, var(--z2) 22%, var(--z3) 44%, var(--z4) 66%, var(--z1) 88%, var(--z1) 100%);
+  background-size:250% 250%;
+  filter:brightness(1.15) saturate(1.2)}
+.ag-card[data-rarity="zodiac"] .ag-shine::after{display:none}
 .ag-card[data-rarity="zodiac"] .ag-inner-back{color:#eaf4ff}
 .ag-card[data-rarity="zodiac"] .ag-bk-rar{color:#fff;border-color:rgba(255,255,255,.5)}
 .ag-card[data-rarity="zodiac"] .ag-bk-name{color:#fff;text-shadow:0 2px 18px var(--z2)}
