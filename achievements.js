@@ -497,7 +497,12 @@
 .ag-card[data-motion="rain"] .ag-city{display:block}
 /* 雨夜时卡面底改为深夜色，避免露出明亮渐变 */
 .ag-card[data-motion="rain"] .ag-face{background:#05070f !important}
-.ag-card[data-motion="rain"] .ag-shine{opacity:.2}
+/* 雨夜：压掉彩色流光/高光，只留一点冷色微光 */
+.ag-card[data-motion="rain"] .ag-shine{opacity:.14 !important}
+.ag-card[data-motion="rain"] .ag-glare{opacity:calc(var(--pfc,0) * .3 + .05) !important;
+  background-image:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
+    rgba(180,205,255,.35) 5%, rgba(150,180,240,.1) 30%, transparent 74%) !important}
+.ag-card[data-motion="rain"] .ag-dyn{display:none !important}
 
 /* 极光：两道柔光带缓缓漂移 */
 .ag-card[data-motion="aurora"] .ag-dyn{display:block;
@@ -1129,7 +1134,7 @@
   function stopLoop() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
 
   /* ===== 卡面雨（复用主页雨滴思路：逐滴下落 + 圆头 + 随机疏密，非条纹） ===== */
-  let rainCtx = null, rainDrops = [], rainW = 0, rainH = 0, rainActive = false;
+  let rainCtx = null, rainDrops = [], rainSplashes = [], rainW = 0, rainH = 0, rainActive = false;
   function newDrop(spread) {
     return { x: Math.random() * rainW,
       y: spread ? Math.random() * rainH : -12,
@@ -1156,6 +1161,7 @@
     rainCtx = cv.getContext('2d');
     rainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     rainDrops = [];
+    rainSplashes = [];
     const n = Math.max(16, Math.round(rainW * 0.14));
     for (let i = 0; i < n; i++) rainDrops.push(newDrop(true));
     drawCity();
@@ -1164,18 +1170,43 @@
   function drawRain() {
     if (!rainCtx) return;
     rainCtx.clearRect(0, 0, rainW, rainH);
-    rainCtx.strokeStyle = 'rgba(214,232,255,1)';
+    rainCtx.strokeStyle = 'rgba(206,226,255,1)';
     rainCtx.lineCap = 'round';
     for (const d of rainDrops) {
       d.y += d.v; d.x += d.d;
-      if (d.y - d.l > rainH) { const nd = newDrop(false); d.y = nd.y; d.x = nd.x; }
-      else if (d.x < -4 || d.x > rainW + 4) { d.x = Math.random() * rainW; }
+      if (d.y > rainH) {
+        /* 落地：留下一圈涟漪 */
+        rainSplashes.push({ x: d.x, y: rainH - 1, r: 1, a: .55 });
+        const nd = newDrop(false); d.y = nd.y; d.x = nd.x;
+        continue;
+      } else if (d.x < -4 || d.x > rainW + 4) {
+        d.x = Math.random() * rainW;
+      }
       rainCtx.globalAlpha = d.a;
       rainCtx.lineWidth = d.w;
       rainCtx.beginPath();
       rainCtx.moveTo(d.x, d.y);
       rainCtx.lineTo(d.x - d.d * 2, d.y - d.l);
       rainCtx.stroke();
+    }
+    rainCtx.globalAlpha = 1;
+    /* 地面涟漪扩散（雨落地的特效） */
+    rainCtx.strokeStyle = 'rgba(228,240,255,1)';
+    rainSplashes = rainSplashes.filter(s => s.a > 0 && s.y > rainH - 10);
+    for (const s of rainSplashes) {
+      s.r += 1.5; s.a -= 0.035; s.y -= 0.6;
+      const y = Math.min(rainH, s.y);
+      rainCtx.globalAlpha = Math.min(0.8, Math.max(0, s.a));
+      rainCtx.lineWidth = 1;
+      rainCtx.beginPath();
+      rainCtx.ellipse(s.x, y, s.r, s.r * 0.26, 0, 0, 7);
+      rainCtx.stroke();
+      if (s.r > 4) {
+        rainCtx.globalAlpha = Math.max(0, s.a * 0.45);
+        rainCtx.beginPath();
+        rainCtx.ellipse(s.x, y, s.r * 0.5, s.r * 0.13, 0, 0, 7);
+        rainCtx.stroke();
+      }
     }
     rainCtx.globalAlpha = 1;
   }
