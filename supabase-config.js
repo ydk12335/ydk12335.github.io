@@ -109,7 +109,8 @@ const SYNC_KEYS = {
   astro:    'astro_hist_v1',
   pair:     'pair_hist_v1',
   syn:      'syn_hist_v1',
-  achSeen:  'ach_seen_v1'
+  achSeen:  'ach_seen_v1',
+  achRedeem:'ach_redeem_v1'
 };
 const SYNC_LS_KEYS = Object.values(SYNC_KEYS);
 

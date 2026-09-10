@@ -118,7 +118,13 @@
     { id: 'thirty_days', name: '一月不辍', icon: '🏆', rarity: 'gold',
       desc: '连续 30 天留下占卜足迹',
       quote: '三十个夜晚，你把自己点成了一盏灯。',
-      check: s => s.streak >= 30 }
+      check: s => s.streak >= 30 },
+
+    /* ---------- 隐藏 · 兑换码 ---------- */
+    { id: 'youdiankun', name: '有点困', icon: '😴', rarity: 'gold', hidden: true,
+      desc: '输入兑换码解锁的隐藏成就',
+      quote: '困了就睡吧，梦里也有星光。',
+      check: s => s.redeem }
   ];
 
   const RARE_ORDER = { white: 0, purple: 1, gold: 2 };
@@ -183,7 +189,8 @@
       cardKinds: cardSet.size,
       cardCnt,
       majCount: MAJ22.filter(n => cardCnt[n]).length,
-      fav, night, streak, days: days.size
+      fav, night, streak, days: days.size,
+      redeem: redeemUnlocked()
     };
   }
 
@@ -192,13 +199,12 @@
     try { return !!ach.check(stats || compute()); } catch (e) { return false; }
   }
 
-  /** 返回全部成就的实时状态 */
+  /** 返回全部成就的实时状态（隐藏成就未解锁时不出现） */
   function list() {
     const s = compute();
-    return ACHIEVEMENTS.map(a => ({
-      ...a,
-      unlocked: isUnlocked(a, s)
-    }));
+    return ACHIEVEMENTS
+      .map(a => ({ ...a, unlocked: isUnlocked(a, s) }))
+      .filter(a => !a.hidden || a.unlocked);
   }
 
   /* ---------- 已读记录（NEW 标记） ---------- */
@@ -209,6 +215,18 @@
       s.push(id);
       try { localStorage.setItem(SEEN_KEY, JSON.stringify(s)); } catch (e) {}
     }
+  }
+
+  /* ---------- 兑换码（隐藏成就） ---------- */
+  const REDEEM_KEY = 'ach_redeem_v1';
+  const REDEEM_CODE = 'youdiankun1314';
+  function redeemUnlocked() { try { return localStorage.getItem(REDEEM_KEY) === '1'; } catch (e) { return false; } }
+  function redeem(code) {
+    if (String(code == null ? '' : code).trim().toLowerCase() === REDEEM_CODE) {
+      try { localStorage.setItem(REDEEM_KEY, '1'); } catch (e) {}
+      return true;
+    }
+    return false;
   }
 
   /* =========================================================
@@ -403,17 +421,33 @@
   80%{opacity:.7}
   100%{opacity:0;transform:translateY(-210px) translateX(var(--drift,10px)) scale(1.15)}}
 
-/* ============ 旋转彩环（传说专属 · 动态彩色） ============ */
-.ag-ring{position:absolute;inset:-14px;border-radius:26px;padding:1.8px;pointer-events:none;z-index:5;
-  opacity:0;transition:opacity .5s;
+/* ============ 星环 · 传说专属（星球环，非矩形框） ============ */
+.ag-orbit{position:absolute;left:50%;top:50%;width:134%;height:134%;
+  transform:translate(-50%,-50%);pointer-events:none;z-index:-1;
+  opacity:0;transition:opacity .8s ease;perspective:520px}
+.ag-orbit.on{opacity:1}
+.ag-orbit::before{content:'';position:absolute;left:50%;top:50%;width:118%;height:118%;
+  transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle,rgba(120,150,255,.22),rgba(120,90,220,.10) 46%,rgba(0,0,0,0) 70%);
+  filter:blur(30px)}
+.ag-orbit i{position:absolute;left:50%;top:50%;width:100%;height:100%;border-radius:50%;
+  transform:translate(-50%,-50%) rotateX(74deg) rotateZ(0deg);
+  -webkit-mask:radial-gradient(closest-side,transparent 63%,#000 64%,#000 72%,transparent 73%);
+  mask:radial-gradient(closest-side,transparent 63%,#000 64%,#000 72%,transparent 73%);
   background:conic-gradient(from 0deg,
-    #ff3d81,#ff9a3d,#ffe23d,#5bff9e,#3dd1ff,#8a5cff,#ff3d81);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-  -webkit-mask-composite:xor;mask-composite:exclude;
-  filter:saturate(1.3) brightness(1.12);
-  animation:agSpin 9s linear infinite}
-.ag-ring.on{opacity:1}
-@keyframes agSpin{to{transform:rotate(360deg)}}
+    rgba(150,190,255,0) 0%, rgba(150,205,255,.9) 10%, rgba(255,255,255,1) 16%,
+    rgba(170,150,255,.55) 26%, rgba(150,190,255,0) 40%,
+    rgba(255,222,160,.7) 60%, rgba(150,190,255,0) 76%,
+    rgba(150,205,255,.6) 90%, rgba(150,190,255,0) 100%);
+  filter:drop-shadow(0 0 6px rgba(150,200,255,.7));
+  animation:agOrbit 34s linear infinite}
+.ag-orbit i:nth-child(2){width:80%;height:80%;opacity:.75;
+  animation-duration:26s;animation-delay:-9s}
+.ag-orbit i:nth-child(3){width:118%;height:118%;opacity:.55;
+  animation-duration:46s;animation-delay:-20s}
+@keyframes agOrbit{
+  from{transform:translate(-50%,-50%) rotateX(74deg) rotateZ(0deg)}
+  to{transform:translate(-50%,-50%) rotateX(74deg) rotateZ(360deg)}}
 
 /* ============ ⑤ 开卡爆发 ============ */
 .ag-flash{position:fixed;inset:0;pointer-events:none;z-index:520;opacity:0;
@@ -450,6 +484,16 @@
 .ab-bar{height:5px;border-radius:99px;background:rgba(255,255,255,.09);margin:12px auto 0;max-width:260px;overflow:hidden}
 .ab-bar>i{display:block;height:100%;width:0;border-radius:99px;
   background:linear-gradient(90deg,#f0cf82,#fff3c9,#c9a04c);transition:width .8s cubic-bezier(.2,1,.3,1)}
+.ab-redeem{display:flex;gap:8px;justify-content:center;max-width:320px;margin:16px auto 0}
+.ab-redeem input{flex:1;min-width:0;font-family:inherit;font-size:.72rem;color:#f2ecd8;
+  background:rgba(255,255,255,.06);border:1px solid rgba(240,207,130,.28);border-radius:999px;
+  padding:9px 16px;outline:none;-webkit-appearance:none;appearance:none}
+.ab-redeem input::placeholder{color:rgba(240,207,130,.4)}
+.ab-redeem input:focus{border-color:rgba(240,207,130,.6);background:rgba(255,255,255,.1)}
+.ab-redeem button{font-family:inherit;font-size:.72rem;letter-spacing:.18em;color:#1a1408;
+  background:linear-gradient(135deg,#f2d071,#fff3c9);border:none;border-radius:999px;
+  padding:9px 18px;cursor:pointer;flex:none}
+.ab-redeem button:active{transform:scale(.96)}
 .ab-filters{display:flex;gap:7px;justify-content:center;margin:16px 0 20px;flex-wrap:wrap}
 .ab-chip{font-size:.68rem;padding:6px 15px;border-radius:999px;cursor:pointer;font-family:inherit;
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:rgba(240,207,130,.6);
@@ -503,8 +547,7 @@
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .ag-lite .ag-halo{animation:none;opacity:.5;transform:none;
   background:radial-gradient(circle,rgba(180,200,255,.35),rgba(180,200,255,0) 70%)}
-.ag-lite .ag-ring{animation:none;
-  background:linear-gradient(90deg,#ff3d81,#ffe23d,#5bff9e,#3dd1ff,#8a5cff)}
+.ag-lite .ag-orbit i{animation:none}
 .ag-lite .ag-particles{display:none}
 .ag-lite .ag-foil{display:none}
 .ag-lite .ag-card[data-rarity="gold"] .ag-holo,
@@ -522,17 +565,10 @@
 .pf-badge.r-purple.on{border-color:rgba(190,150,255,.45);
   background:linear-gradient(165deg,rgba(200,160,255,.18),rgba(120,80,200,.07));
   box-shadow:0 4px 16px rgba(150,100,255,.16)}
-.pf-badge.r-gold.on{border-color:transparent;
-  background:linear-gradient(120deg,rgba(255,61,129,.32),rgba(255,154,61,.32),rgba(255,226,61,.32),
-    rgba(91,255,158,.32),rgba(61,209,255,.32),rgba(138,92,255,.32),rgba(255,61,129,.32));
-  background-size:300% 300%;
-  animation:agBadgeFlow 6s linear infinite;
-  box-shadow:0 4px 20px rgba(180,140,255,.3)}
-.pf-badge.r-gold.on .tx{
-  background:linear-gradient(100deg,#ff8ac2,#ffe27a,#7affc6,#7fd4ff,#c39bff,#ff8ac2);
-  background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
-  animation:agBadgeFlow 5s linear infinite}
-@keyframes agBadgeFlow{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+.pf-badge.r-gold.on{border-color:rgba(180,160,255,.42);
+  background:linear-gradient(140deg,rgba(120,110,255,.22),rgba(90,70,200,.10) 55%,rgba(255,200,120,.14));
+  box-shadow:0 4px 18px rgba(140,120,255,.28)}
+.pf-badge.r-gold.on .tx{color:#f2d071}
 .pf-badge.justnew::after{content:'';position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;
   background:#ff5fa8;box-shadow:0 0 8px #ff5fa8;animation:agPulse 1.4s ease-in-out infinite}
 @keyframes agPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.55}}
@@ -546,7 +582,7 @@
 }
 @media (prefers-reduced-motion: reduce){
   .ag-card.enter{animation-duration:.01ms}
-  .ag-holo,.ag-ring,.ag-halo,.ag-icon,.ab-holo{animation:none!important}
+  .ag-holo,.ag-orbit i,.ag-halo,.ag-icon,.ab-holo{animation:none!important}
 }
 `;
 
@@ -588,7 +624,7 @@
         </div>
         <div class="ag-bk-no" id="agBkNo"></div>
       </div>
-      <div class="ag-ring" id="agRing"></div>
+      <div class="ag-orbit" id="agOrbit"><i></i><i></i><i></i></div>
       <div class="ag-burst" id="agBurst"></div>
     </div>
   </div>
@@ -604,6 +640,10 @@
     <h3 class="ab-title">成 就 收 藏 册</h3>
     <div class="ab-sub" id="abSub">已解锁 0 / 0</div>
     <div class="ab-bar"><i id="abBar"></i></div>
+    <div class="ab-redeem">
+      <input id="abCode" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="输入兑换码领取隐藏成就" />
+      <button id="abRedeem" type="button">兑 换</button>
+    </div>
   </div>
   <div class="ab-filters" id="abFilters">
     <button class="ab-chip on" data-f="all">全部</button>
@@ -874,11 +914,11 @@
     cur.rx = cur.ry = 0; cur.x = cur.y = .5; cur.px = cur.py = 0;
     rotY = 0; snapY = 0; rotX = 0; dragging = false; lastInput = performance.now();
 
-    /* 装饰层：呼吸光晕只留给最低级（普通），旋转彩环只给传说 */
-    const halo = $('agHalo'), ring = $('agRing');
+    /* 装饰层：呼吸光晕只留给最低级（普通），星环只给传说 */
+    const halo = $('agHalo'), orbit = $('agOrbit');
     halo.className = 'ag-halo' + (ach.rarity === 'white' ? ' on r-white' : '');
     halo.style.background = ''; halo.style.filter = '';
-    ring.className = 'ag-ring' + (isGold ? ' on' : '');
+    if (orbit) orbit.className = 'ag-orbit' + (isGold ? ' on' : '');
     spawnFloaters($('agParticles'), LITE ? 0 : r.particles);
 
     /* 入场动画 */
@@ -1095,6 +1135,19 @@
       $('abGrid')._bound = false;
       renderAlbum();
     });
+    /* 兑换码 */
+    const codeInput = $('abCode');
+    const doRedeem = () => {
+      const ok = redeem(codeInput ? codeInput.value : '');
+      if (codeInput && ok) codeInput.value = '';
+      $('abGrid')._bound = false;
+      renderAlbum();
+      toast(ok ? '兑换成功 ✦ 解锁隐藏成就「有点困」' : '兑换码不对哦，再想想 ✦');
+    };
+    if ($('abRedeem')) $('abRedeem').addEventListener('click', doRedeem);
+    if (codeInput) codeInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); doRedeem(); codeInput.blur(); }
+    });
   }
 
   /* =========================================================
@@ -1118,7 +1171,7 @@
     RARITY, ACHIEVEMENTS, RARE_ORDER,
     compute, list, isUnlocked,
     renderBadges, openCard, openAlbum,
-    requestGyro,
+    requestGyro, redeem,
     get lite() { return LITE; },
     setLite(v) { LITE = !!v; applyLite(); }
   };
