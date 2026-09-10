@@ -474,20 +474,18 @@
   background-repeat:no-repeat;background-size:220% 220%;background-position:center;
   transform:translate3d(calc(var(--sxp,0) * 1%),calc(var(--syp,0) * 1%),0);
   will-change:transform;
-  mix-blend-mode:screen;transition:opacity .35s ease;
-  -webkit-mask-image:radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%);
-  mask-image:radial-gradient(closest-side at 50% 50%, #000 62%, transparent 100%)}
+  mix-blend-mode:screen;transition:opacity .35s ease}
 .ag-shine::after{display:none}
 /* ============ 高光眩光：固定径向渐变，靠 transform 跟随指针 ============ */
 .ag-glare{position:absolute;inset:-45%;pointer-events:none;z-index:2;
   background-image:radial-gradient(circle at 50% 50%,
-    rgba(255,255,255,.85) 0%, rgba(255,255,255,.3) 20%, rgba(0,0,0,.5) 60%);
+    rgba(255,255,255,.6) 0%, rgba(255,255,255,.2) 30%, transparent 66%);
   transform:translate3d(calc(var(--gxp,0) * 1%),calc(var(--gyp,0) * 1%),0);
   will-change:transform;
-  mix-blend-mode:overlay;filter:brightness(.92) contrast(1.6);
-  opacity:calc(var(--pfc,0) * .7 + .22)}
+  mix-blend-mode:screen;
+  opacity:calc(var(--pfc,0) * .5 + .12)}
 .ag-edge{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:4;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 0 22px rgba(0,0,0,.45)}
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 0 18px rgba(0,0,0,.16)}
 
 /* 内容 */
 .ag-inner{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
@@ -603,10 +601,8 @@
 .ag-sky svg{width:100%;height:100%;overflow:visible}
 
 /* 流沙：几道柔和的沙色带缓慢流淌（纯 transform 位移，GPU 合成，零重绘） */
-.ag-zsand{position:absolute;inset:-45%;z-index:0;pointer-events:none;display:none;
-  overflow:hidden;
-  -webkit-mask-image:radial-gradient(closest-side at 50% 50%, #000 58%, transparent 100%);
-  mask-image:radial-gradient(closest-side at 50% 50%, #000 58%, transparent 100%)}
+.ag-zsand{position:absolute;inset:-12%;z-index:0;pointer-events:none;display:none;
+  overflow:hidden}
 /* 星尘点阵：多层不同颜色/大小的细小光点，缓缓漂移（静态背景，只做 transform） */
 .ag-zsand::before{content:'';position:absolute;inset:-30%;
   background-image:
@@ -650,7 +646,10 @@
 
 .ag-card[data-rarity="zodiac"]{box-shadow:0 30px 70px rgba(0,0,0,.6), 0 0 50px var(--z2)}
 .ag-card[data-rarity="zodiac"] .ag-zsand{display:block}
-.ag-card[data-rarity="zodiac"] .ag-face{background:linear-gradient(160deg,#0b1424,#04070e)}
+.ag-card[data-rarity="zodiac"] .ag-face{
+  background:
+    linear-gradient(150deg, rgba(8,12,26,.42), rgba(8,12,26,.26)),
+    linear-gradient(135deg, var(--z1), var(--z2) 34%, var(--z4) 68%, var(--z3))}
 .ag-card[data-rarity="zodiac"] .ag-inner{color:#eaf4ff}
 .ag-card[data-rarity="zodiac"] .ag-icon{display:none}
 .ag-card[data-rarity="zodiac"] .ag-name{color:#fff;text-shadow:0 2px 20px var(--z2)}
@@ -659,7 +658,7 @@
 .ag-card[data-rarity="zodiac"] .ag-desc{color:rgba(230,242,255,.86)}
 .ag-card[data-rarity="zodiac"] .ag-quote{color:rgba(222,240,255,.94);text-shadow:0 0 16px var(--z2)}
 .ag-card[data-rarity="zodiac"] .ag-edge{
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.38), inset 0 0 30px rgba(0,0,0,.5)}
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.4), inset 0 0 22px rgba(0,0,0,.15)}
 .ag-card[data-rarity="zodiac"] .ag-shine{opacity:.46;
   background-image:linear-gradient(115deg,
     var(--z1) 0%, var(--z2) 22%, var(--z3) 44%, var(--z4) 66%, var(--z1) 88%, var(--z1) 100%);
