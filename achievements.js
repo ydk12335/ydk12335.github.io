@@ -477,7 +477,13 @@
   mix-blend-mode:screen;transition:opacity .35s ease}
 .ag-shine::after{display:none}
 /* ============ 高光眩光：固定径向渐变，靠 transform 跟随指针 ============ */
-.ag-glare{display:none}
+.ag-glare{position:absolute;inset:-30%;pointer-events:none;z-index:2;
+  background-image:radial-gradient(circle at 50% 50%,
+    rgba(255,255,255,.5) 0%, rgba(255,255,255,.16) 28%, transparent 62%);
+  transform:translate3d(calc(var(--gxp,0) * 1%),calc(var(--gyp,0) * 1%),0);
+  will-change:transform;
+  mix-blend-mode:screen;
+  opacity:calc(var(--pfc,0) * .5 + .1)}
 .ag-edge{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:4;
   box-shadow:none}
 
@@ -526,10 +532,9 @@
 .ag-card[data-rarity="white"] .ag-face{
   background:linear-gradient(158deg,#2b2c40 0%,#1a1a2b 55%,#12121e 100%)}
 .ag-card[data-rarity="white"] .ag-inner-back{color:#e9e6ff}
-.ag-card[data-rarity="white"] .ag-shine{opacity:.42;
-  background-image:linear-gradient(115deg,
-    rgba(255,255,255,.16), rgba(255,255,255,.5), rgba(190,210,255,.28),
-    rgba(215,228,255,.46), rgba(255,255,255,.16));
+.ag-card[data-rarity="white"] .ag-shine{opacity:.5;
+  background-image:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.7) 47%,
+    rgba(190,210,255,.42) 54%,transparent 70%);
   background-size:220% 220%}
 .ag-card[data-rarity="white"] .ag-shine::after{display:none}
 .ag-card[data-rarity="white"] .ag-glare{opacity:calc(var(--pfc,0) * .5 + .12)}
