@@ -2,8 +2,11 @@
  * 有点困 · 成就光栅卡系统（Holographic Achievement Cards）
  * -----------------------------------------------------------
  * 稀有度：white 普通 / purple 稀有 / gold 传说
- * 交互：鼠标高光跟随 + 移动端陀螺仪 + 3D 倾斜
- * 金色专属：液态金 / 粒子 / 呼吸光环 / 旋转星轨 / 开卡爆发 / 手写寄语
+ * 交互：3D 双面 · 手动拖动翻转（rotateY 吸附）+ 双击翻面
+ * 光效：跟随指针的棱彩光栅（poke-holo 思路）
+ *   · white  平淡银反光 + 呼吸光晕（最低级专属）
+ *   · purple 顺滑彩虹光栅（随指针流动 + 缓慢色相漂移）
+ *   · gold   彩色棱镜光栅 + 旋转彩环 + 粒子 + 开卡爆发（必须彩色 + 动态）
  * 降级：低端机自动进入 lite 模式（关 backdrop-filter / conic-gradient）
  * -----------------------------------------------------------
  * 纯前端，无后端依赖；数据来源与 profile.js 一致（localStorage）。
@@ -264,19 +267,21 @@
 .ag-front{transform:rotateY(0deg)}
 .ag-back{transform:rotateY(180deg)}
 
-/* 液金 / 虹彩层 */
-.ag-holo{position:absolute;inset:-20%;pointer-events:none;z-index:1;
-  background-size:300% 300%;background-position:50% 50%;mix-blend-mode:screen;opacity:0;
-  transition:opacity .5s ease;transform:translate3d(var(--px,0px),var(--py,0px),0)}
+/* 光栅层：跟随指针的棱彩反光 */
+.ag-holo{position:absolute;inset:-6%;pointer-events:none;z-index:1;
+  background-repeat:no-repeat;background-size:200% 200%;
+  background-position:var(--bx,50%) var(--by,50%);
+  mix-blend-mode:color-dodge;opacity:0;
+  transition:opacity .5s ease;
+  transform:translate3d(var(--sx,0px),var(--sy,0px),0)}
 .ag-foil{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:0;
-  background:
-    repeating-linear-gradient(105deg, rgba(255,255,255,.055) 0 1px, transparent 1px 4px);
+  background:repeating-linear-gradient(105deg, rgba(255,255,255,.05) 0 1px, transparent 1px 4px);
   mix-blend-mode:overlay}
-/* 高光跟随层 */
-.ag-sheen{position:absolute;inset:0;pointer-events:none;z-index:3;opacity:.5;
-  background:radial-gradient(circle at var(--x,50%) var(--y,50%),
-    rgba(255,255,255,.55), rgba(255,255,255,.1) 26%, rgba(255,255,255,0) 52%);
-  transition:opacity .3s}
+/* 高光眩光：跟随指针 */
+.ag-sheen{position:absolute;inset:0;pointer-events:none;z-index:3;opacity:.45;
+  background:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
+    rgba(255,255,255,.8) 6%, rgba(255,255,255,.12) 34%, rgba(0,0,0,.4) 96%);
+  mix-blend-mode:overlay;transition:opacity .3s}
 .ag-edge{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:4;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 0 22px rgba(0,0,0,.45)}
 
@@ -309,36 +314,54 @@
   font-size:.55rem;letter-spacing:.34em;text-indent:.34em;opacity:.42}
 .ag-bk-mark{position:absolute;right:14px;top:12px;font-size:.9rem;opacity:.5}
 
-/* ============ 白色 · 安静克制 ============ */
+/* ============ 呼吸光晕（现只给最低级 · 普通） ============ */
+.ag-halo{position:absolute;inset:-30px;border-radius:36px;pointer-events:none;z-index:-1;opacity:0;
+  transition:opacity .6s}
+.ag-halo.on{opacity:1;animation:agBreathe 4.2s ease-in-out infinite}
+.ag-halo.r-white{background:radial-gradient(circle,rgba(180,200,255,.42),rgba(150,170,225,.12) 46%,rgba(0,0,0,0) 72%);
+  filter:blur(22px)}
+@keyframes agBreathe{
+  0%,100%{transform:scale(.94);opacity:.4}
+  50%{transform:scale(1.08);opacity:.85}}
+
+/* ============ 白色 · 安静克制（保留呼吸光晕） ============ */
 .ag-card[data-rarity="white"] .ag-face{
   background:linear-gradient(158deg,#2b2c40 0%,#1a1a2b 55%,#12121e 100%)}
 .ag-card[data-rarity="white"] .ag-inner-back{color:#e9e6ff}
-.ag-card[data-rarity="white"] .ag-holo{opacity:.13;
-  background-image:linear-gradient(112deg,transparent 34%,rgba(255,255,255,.75) 48%,transparent 62%)}
-.ag-card[data-rarity="white"] .ag-sheen{opacity:.32}
+.ag-card[data-rarity="white"] .ag-holo{opacity:.5;
+  background-image:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.7) 47%,
+    rgba(190,210,255,.42) 54%,transparent 70%);
+  background-size:220% 220%;mix-blend-mode:screen}
+.ag-card[data-rarity="white"] .ag-sheen{opacity:.28}
 .ag-card[data-rarity="white"] .ag-icon{color:#e9e6ff}
 .ag-card[data-rarity="white"] .ag-name{color:#f2f0ff}
 .ag-card[data-rarity="white"] .ag-rar{color:#cfcbe8}
 .ag-card[data-rarity="white"] .ag-quote{color:rgba(226,222,255,.8)}
 
-/* ============ 紫色 · 彩虹渐变 ============ */
+/* ============ 紫色 · 稀有（顺滑彩虹光栅） ============ */
 .ag-card[data-rarity="purple"] .ag-face{
   background:linear-gradient(158deg,#3a2b5c 0%,#241a3d 52%,#160f26 100%)}
 .ag-card[data-rarity="purple"] .ag-inner-back{color:#d9c6ff}
-.ag-card[data-rarity="purple"] .ag-holo{opacity:.34;
-  background-image:linear-gradient(112deg,#ff5fa8,#8b5cff,#39d0ff,#ff8ae2,#ff5fa8);
-  animation:agFlow 7s ease-in-out infinite}
-.ag-card[data-rarity="purple"] .ag-sheen{opacity:.5}
+.ag-card[data-rarity="purple"] .ag-holo{opacity:.72;
+  background-image:repeating-linear-gradient(112deg,
+    #7a4bff 0%, #c07bff 9%, #5ec8ff 18%, #ff8ad6 27%, #8b5cff 36%,
+    #7a4bff 45%, #c07bff 54%, #5ec8ff 63%, #ff8ad6 72%, #8b5cff 81%, #7a4bff 90%);
+  background-size:320% 320%;
+  filter:brightness(1.2) contrast(1.08) saturate(1.15) hue-rotate(var(--hh,0deg));
+  animation:agHue 26s linear infinite}
+.ag-card[data-rarity="purple"] .ag-foil{opacity:.2}
+.ag-card[data-rarity="purple"] .ag-sheen{opacity:.42}
 .ag-card[data-rarity="purple"] .ag-icon{color:#d9c6ff;filter:drop-shadow(0 0 16px rgba(160,110,255,.6))}
 .ag-card[data-rarity="purple"] .ag-name{color:#efe4ff}
 .ag-card[data-rarity="purple"] .ag-rar{color:#c9a7ff}
 .ag-card[data-rarity="purple"] .ag-quote{color:rgba(214,190,255,.85)}
 .ag-card[data-rarity="purple"] .ag-edge{box-shadow:inset 0 0 0 1px rgba(190,150,255,.4), inset 0 0 26px rgba(80,40,140,.5)}
-@keyframes agFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
-/* ============ 金色 · 传说（分层克制） ============ */
+/* ============ 金色 · 传说（彩色 + 动态） ============ */
+.ag-card[data-rarity="gold"]{
+  box-shadow:0 30px 70px rgba(0,0,0,.6), 0 0 42px rgba(255,180,80,.22), 0 0 90px rgba(120,160,255,.14)}
 .ag-card[data-rarity="gold"] .ag-face{
-  background:linear-gradient(158deg,#4a3a1c 0%,#2e2410 46%,#1a1408 100%)}
+  background:linear-gradient(158deg,#3a2e14 0%,#2a2110 46%,#17120a 100%)}
 .ag-card[data-rarity="gold"] .ag-inner-back{color:#ffe9a6}
 .ag-card[data-rarity="gold"] .ag-bk-rar{border-color:rgba(242,208,113,.6);color:#f2d071;
   box-shadow:0 0 14px rgba(242,208,113,.25)}
@@ -347,33 +370,35 @@
   background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:agFlow 5s linear infinite}
 .ag-card[data-rarity="gold"] .ag-bk-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.35)}
-/* ① 液态金缓慢流动 */
-.ag-card[data-rarity="gold"] .ag-holo{opacity:.58;
-  background-image:linear-gradient(115deg,#7d6326,#f7e7a8,#d4af37,#fff8cf,#c9a227,#8a6d2f,#f0d989);
-  animation:agLiquid 9s linear infinite}
-@keyframes agLiquid{0%{background-position:0% 50%}100%{background-position:300% 50%}}
-.ag-card[data-rarity="gold"] .ag-foil{opacity:.5}
-.ag-card[data-rarity="gold"] .ag-sheen{opacity:.6;
-  background:radial-gradient(circle at var(--x,50%) var(--y,50%),
-    rgba(255,250,220,.85), rgba(255,238,180,.22) 24%, rgba(255,215,120,0) 54%)}
+/* 彩色棱镜光栅：跟随指针 + 缓慢色相漂移（动态） */
+.ag-card[data-rarity="gold"] .ag-holo{opacity:.85;
+  background-image:repeating-linear-gradient(115deg,
+    #ff3d81 0%, #ff9a3d 8%, #ffe23d 17%, #5bff9e 26%, #3dd1ff 35%,
+    #8a5cff 44%, #ff3d81 53%, #ff9a3d 62%, #ffe23d 71%, #5bff9e 80%, #3dd1ff 89%, #8a5cff 100%);
+  background-size:480% 480%;
+  filter:brightness(1.35) contrast(1.12) saturate(1.35) hue-rotate(var(--hh,0deg));
+  animation:agHue 16s linear infinite}
+.ag-card[data-rarity="gold"] .ag-foil{opacity:.42}
+.ag-card[data-rarity="gold"] .ag-sheen{opacity:.5;
+  background:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
+    rgba(255,255,240,.9) 5%, rgba(255,240,180,.16) 34%, rgba(0,0,0,.4) 96%)}
 .ag-card[data-rarity="gold"] .ag-icon{color:#ffe9a6;
-  filter:drop-shadow(0 0 22px rgba(240,200,100,.85));
-  animation:agIconGlow 3.6s ease-in-out infinite}
-@keyframes agIconGlow{0%,100%{filter:drop-shadow(0 0 16px rgba(240,200,100,.65))}
-  50%{filter:drop-shadow(0 0 30px rgba(255,225,140,1))}}
+  filter:drop-shadow(0 0 22px rgba(240,200,100,.85))}
 .ag-card[data-rarity="gold"] .ag-name{
-  background:linear-gradient(100deg,#fff4c4,#f2d071,#fffbe8,#d4af37,#fff4c4);
-  background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  background:linear-gradient(100deg,#ffe1a8,#ff9a3d,#ffe23d,#5bff9e,#7fd4ff,#c39bff,#ffe1a8);
+  background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:agFlow 5s linear infinite;font-weight:700;letter-spacing:.2em}
 .ag-card[data-rarity="gold"] .ag-rar{color:#f2d071;border-color:rgba(242,208,113,.6);
   box-shadow:0 0 14px rgba(242,208,113,.25)}
 .ag-card[data-rarity="gold"] .ag-desc{color:rgba(255,240,200,.82)}
-/* ⑥ 常驻签名 · 手写体寄语 */
 .ag-card[data-rarity="gold"] .ag-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.4);font-size:.78rem}
 .ag-card[data-rarity="gold"] .ag-edge{
-  box-shadow:inset 0 0 0 1px rgba(242,208,113,.55), inset 0 0 34px rgba(120,90,20,.55)}
+  box-shadow:inset 0 0 0 1px rgba(255,235,170,.6), inset 0 0 36px rgba(120,90,20,.5)}
+@keyframes agFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@property --hh{syntax:'<angle>';initial-value:0deg;inherits:false}
+@keyframes agHue{to{--hh:360deg}}
 
-/* ============ ② 粒子层（金色） ============ */
+/* ============ 粒子层（金色） ============ */
 .ag-particles{position:absolute;inset:-46px;pointer-events:none;z-index:0;overflow:visible}
 .ag-particles i{position:absolute;bottom:-10px;width:3px;height:3px;border-radius:50%;
   background:radial-gradient(circle,#fff6cf,rgba(242,208,113,0));
@@ -385,22 +410,15 @@
   80%{opacity:.7}
   100%{opacity:0;transform:translateY(-210px) translateX(var(--drift,10px)) scale(1.15)}}
 
-/* ============ ③ 光环层（呼吸） ============ */
-.ag-halo{position:absolute;inset:-34px;border-radius:34px;pointer-events:none;z-index:-1;opacity:0;
-  transition:opacity .6s}
-.ag-halo.on{opacity:1;animation:agBreathe 3.8s ease-in-out infinite}
-@keyframes agBreathe{
-  0%,100%{transform:scale(.94);opacity:.5}
-  50%{transform:scale(1.07);opacity:.95}}
-
-/* ============ ④ 边缘层 · 旋转星轨 ============ */
-.ag-ring{position:absolute;inset:-15px;border-radius:24px;padding:1.6px;pointer-events:none;z-index:5;
+/* ============ 旋转彩环（传说专属 · 动态彩色） ============ */
+.ag-ring{position:absolute;inset:-14px;border-radius:26px;padding:1.8px;pointer-events:none;z-index:5;
   opacity:0;transition:opacity .5s;
-  background:conic-gradient(from 0deg,transparent 0deg,rgba(242,208,113,.95) 42deg,transparent 108deg,
-    transparent 178deg,rgba(255,240,190,.8) 218deg,transparent 288deg,rgba(242,208,113,.6) 330deg,transparent 360deg);
+  background:conic-gradient(from 0deg,
+    #ff3d81,#ff9a3d,#ffe23d,#5bff9e,#3dd1ff,#8a5cff,#ff3d81);
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
   -webkit-mask-composite:xor;mask-composite:exclude;
-  animation:agSpin 16s linear infinite}
+  filter:saturate(1.3) brightness(1.12);
+  animation:agSpin 9s linear infinite}
 .ag-ring.on{opacity:1}
 @keyframes agSpin{to{transform:rotate(360deg)}}
 
@@ -453,7 +471,7 @@
   animation:agCardIn .5s cubic-bezier(.2,1,.3,1) both}
 @keyframes agCardIn{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
 .ab-card .ab-sheen{position:absolute;inset:0;pointer-events:none;z-index:3;opacity:.35;
-  background:radial-gradient(circle at var(--x,50%) var(--y,50%),rgba(255,255,255,.5),rgba(255,255,255,0) 50%)}
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.5),rgba(255,255,255,0) 50%)}
 .ab-card .ab-holo{position:absolute;inset:-15%;pointer-events:none;z-index:1;opacity:0;
   background-size:300% 300%;mix-blend-mode:screen}
 .ab-card .ab-ic{position:relative;z-index:4;font-size:1.6rem;display:block;line-height:1.4}
@@ -490,14 +508,14 @@
 /* ============ 低端机降级 ============ */
 .ag-lite .ag-mask,.ag-lite .ab-mask,.ag-lite .ag-close,.ag-lite .ab-close{
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-.ag-lite .ag-halo{animation:none;opacity:.55;transform:none;
-  background:radial-gradient(circle,rgba(242,208,113,.35),rgba(242,208,113,0) 70%)}
-.ag-lite .ag-ring{animation:none;background:none;
-  box-shadow:0 0 0 1.5px rgba(242,208,113,.5), 0 0 18px rgba(242,208,113,.25)}
+.ag-lite .ag-halo{animation:none;opacity:.5;transform:none;
+  background:radial-gradient(circle,rgba(180,200,255,.35),rgba(180,200,255,0) 70%)}
+.ag-lite .ag-ring{animation:none;
+  background:linear-gradient(90deg,#ff3d81,#ffe23d,#5bff9e,#3dd1ff,#8a5cff)}
 .ag-lite .ag-particles{display:none}
 .ag-lite .ag-foil{display:none}
-.ag-lite .ag-card[data-rarity="gold"] .ag-holo{animation:none;background-position:50% 50%}
-.ag-lite .ag-card[data-rarity="gold"] .ag-icon{animation:none}
+.ag-lite .ag-card[data-rarity="gold"] .ag-holo,
+.ag-lite .ag-card[data-rarity="purple"] .ag-holo{animation:none}
 .ag-lite .ag-card[data-rarity="gold"] .ag-name{animation:none;background-position:50% 50%}
 .ag-lite .ab-card.r-purple .ab-holo,.ag-lite .ab-card.r-gold .ab-holo{animation:none;background-position:50% 50%}
 .ag-lite .ag-burst{display:none}
@@ -511,10 +529,17 @@
 .pf-badge.r-purple.on{border-color:rgba(190,150,255,.45);
   background:linear-gradient(165deg,rgba(200,160,255,.18),rgba(120,80,200,.07));
   box-shadow:0 4px 16px rgba(150,100,255,.16)}
-.pf-badge.r-gold.on{border-color:rgba(242,208,113,.5);
-  background:linear-gradient(165deg,rgba(255,240,190,.2),rgba(200,160,60,.08));
-  box-shadow:0 4px 18px rgba(242,208,113,.22)}
-.pf-badge.r-gold.on .tx{color:#f2d071}
+.pf-badge.r-gold.on{border-color:transparent;
+  background:linear-gradient(120deg,rgba(255,61,129,.32),rgba(255,154,61,.32),rgba(255,226,61,.32),
+    rgba(91,255,158,.32),rgba(61,209,255,.32),rgba(138,92,255,.32),rgba(255,61,129,.32));
+  background-size:300% 300%;
+  animation:agBadgeFlow 6s linear infinite;
+  box-shadow:0 4px 20px rgba(180,140,255,.3)}
+.pf-badge.r-gold.on .tx{
+  background:linear-gradient(100deg,#ff8ac2,#ffe27a,#7affc6,#7fd4ff,#c39bff,#ff8ac2);
+  background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:agBadgeFlow 5s linear infinite}
+@keyframes agBadgeFlow{0%{background-position:0% 50%}100%{background-position:300% 50%}}
 .pf-badge.justnew::after{content:'';position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;
   background:#ff5fa8;box-shadow:0 0 8px #ff5fa8;animation:agPulse 1.4s ease-in-out infinite}
 @keyframes agPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.55}}
@@ -698,22 +723,22 @@
       const rx = dragging ? rotX : cur.tiltX;
       card.style.transform =
         'perspective(900px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)';
-      card.style.setProperty('--x', (cur.x * 100).toFixed(2) + '%');
-      card.style.setProperty('--y', (cur.y * 100).toFixed(2) + '%');
-      card.style.setProperty('--px', cur.px.toFixed(2) + 'px');
-      card.style.setProperty('--py', cur.py.toFixed(2) + 'px');
+      const mx = cur.x * 100, my = cur.y * 100;
+      card.style.setProperty('--mx', mx.toFixed(2) + '%');
+      card.style.setProperty('--my', my.toFixed(2) + '%');
+      card.style.setProperty('--bx', (50 + (cur.x - .5) * 88).toFixed(2) + '%');
+      card.style.setProperty('--by', (50 + (cur.y - .5) * 88).toFixed(2) + '%');
+      card.style.setProperty('--sx', cur.px.toFixed(2) + 'px');
+      card.style.setProperty('--sy', cur.py.toFixed(2) + 'px');
+      card.style.setProperty('--pfc', Math.min(1, Math.hypot(mx - 50, my - 50) / 50).toFixed(3));
     }
     /* 收藏册里的卡也随陀螺仪流动 */
     const ab = $('abMask');
     if (ab && ab.classList.contains('open')) {
       const cx = (50 + (cur.x - .5) * 90).toFixed(1) + '%';
       const cy = (50 + (cur.y - .5) * 90).toFixed(1) + '%';
-      const ty = (cur.ry * 0.28).toFixed(2);
-      const tx = (-cur.rx * 0.28).toFixed(2);
       ab.querySelectorAll('.ab-card').forEach(c => {
-        c.style.setProperty('--x', cx); c.style.setProperty('--y', cy);
-        c.style.setProperty('--ax', cx); c.style.setProperty('--ay', cy);
-        c.style.setProperty('--tiltY', ty); c.style.setProperty('--tiltX', tx);
+        c.style.setProperty('--mx', cx); c.style.setProperty('--my', cy);
       });
     }
     rafId = requestAnimationFrame(loop);
@@ -840,14 +865,11 @@
     pose.tx = pose.ty = 0; pose.px = pose.py = .5; pose.dx = pose.dy = 0;
     cur.rx = cur.ry = 0; cur.x = cur.y = .5; cur.px = cur.py = 0;
 
-    /* 装饰层 */
-    $('agHalo').className = 'ag-halo' + (isGold ? ' on' : '');
-    $('agRing').className = 'ag-ring' + (isGold ? ' on' : '');
-    if (isGold) {
-      $('agHalo').style.background =
-        'radial-gradient(circle, rgba(255,228,150,.55), rgba(242,208,113,.18) 45%, rgba(242,208,113,0) 72%)';
-      $('agHalo').style.filter = 'blur(26px)';
-    }
+    /* 装饰层：呼吸光晕只留给最低级（普通），旋转彩环只给传说 */
+    const halo = $('agHalo'), ring = $('agRing');
+    halo.className = 'ag-halo' + (ach.rarity === 'white' ? ' on r-white' : '');
+    halo.style.background = ''; halo.style.filter = '';
+    ring.className = 'ag-ring' + (isGold ? ' on' : '');
     spawnFloaters($('agParticles'), LITE ? 0 : r.particles);
 
     /* 入场动画 */
@@ -968,8 +990,8 @@
         const c = e.target.closest('.ab-card'); if (!c) return;
         const r = c.getBoundingClientRect();
         const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-        c.style.setProperty('--x', (px * 100).toFixed(1) + '%');
-        c.style.setProperty('--y', (py * 100).toFixed(1) + '%');
+        c.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+        c.style.setProperty('--my', (py * 100).toFixed(1) + '%');
         c.style.setProperty('--tiltX', (-(py - .5) * 9).toFixed(2) + 'deg');
         c.style.setProperty('--tiltY', ((px - .5) * 12).toFixed(2) + 'deg');
         c.style.transform = 'perspective(600px) rotateX(var(--tiltX)) rotateY(var(--tiltY)) translateY(-3px)';
