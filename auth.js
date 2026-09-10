@@ -33,7 +33,8 @@ const AUTH_HTML = `
       </div>
       <button class="auth-btn-primary" id="btnLogin">登 录</button>
       <button class="auth-btn-ghost" id="btnSendCode" style="display:none">发送验证码</button>
-      <div class="auth-footer"><a href="#" id="authClose1">关闭</a></div>
+      <div class="auth-tip" id="forgotTip" style="display:none;margin-top:8px">💡 忘记密码？切到上方「验证码登录」，用邮箱验证码进来后就能重新设置密码</div>
+      <div class="auth-footer"><a href="#" id="btnForgot">忘记密码？</a> · <a href="#" id="authClose1">关闭</a></div>
     </div>
 
     <!-- 步骤R: 注册 -->
@@ -250,6 +251,23 @@ function initAuth() {
   }));
   // 初始定位（不播动画）
   moveSlider(tabs.querySelector('.auth-tab.active'), false);
+
+  // 忘记密码：切到验证码登录并提示
+  const forgotTip = document.getElementById('forgotTip');
+  const btnForgot = document.getElementById('btnForgot');
+  btnForgot._show = false;
+  btnForgot.addEventListener('click', e => {
+    e.preventDefault();
+    btnForgot._show = true;
+    const codeTab = tabs.querySelector('.auth-tab[data-mode="code"]');
+    if (codeTab) codeTab.click();
+    forgotTip.style.display = 'block';
+    toast('用邮箱验证码登录后，即可重新设置密码');
+  });
+  // 切到密码登录时隐藏提示
+  tabs.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => {
+    if (forgotTip) forgotTip.style.display = (t.dataset.mode === 'code' && btnForgot._show) ? 'block' : 'none';
+  }));
 
   const close = () => { if (!locked) mask.style.display = 'none'; };
   ['authClose1', 'authCloseR', 'authClose2', 'authClose3', 'authClose4'].forEach(id =>
