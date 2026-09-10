@@ -270,11 +270,11 @@
   }
   /** 生成该星座的专属星图 SVG（卡外背景用） */
   /* 星图绘制节奏：先一颗颗点出星星，再一条条连起来 */
-  const SKY_START = 0.15, SKY_STAR_STEP = 0.16, SKY_LINE_STEP = 0.1;
+  const SKY_START = 0.1, SKY_STAR_STEP = 0.1, SKY_LINE_STEP = 0.07;
   /** 整段星图绘制完成所需时间（秒，含最后一条线画完） */
   function skyTotal(z) {
     return SKY_START + z.stars.length * SKY_STAR_STEP +
-      Math.max(0, z.lines.length - 1) * SKY_LINE_STEP + 0.62;
+      Math.max(0, z.lines.length - 1) * SKY_LINE_STEP + 0.45;
   }
   function skySvg(z) {
     let g = '';
@@ -704,17 +704,17 @@
 
 /* ============ 星座 · 专属卡（流动背景 + 缓转星座符号） ============ */
 /* 卡外背景：该星座专属星图（由 JS 注入 SVG） */
-.ag-sky{position:absolute;inset:-110px;z-index:-3;pointer-events:none;opacity:0;
-  transition:opacity .8s ease;display:flex;align-items:center;justify-content:center}
+.ag-sky{position:absolute;inset:-150px;z-index:-3;pointer-events:none;opacity:0;
+  transition:opacity .6s ease;display:flex;align-items:center;justify-content:center}
 .ag-sky.on{opacity:1}
 .ag-sky svg{width:100%;height:100%;overflow:visible}
 
 /* ---- 星座卡开场序列：先连出星图 → 再浮现卡片 → 最后逐条出现文字 ---- */
 .ag-stage.seq .ag-sky svg line{
   stroke-dasharray:140;stroke-dashoffset:140;
-  animation:agStarDraw .6s ease-out forwards}
+  animation:agStarDraw .45s ease-out forwards}
 .ag-stage.seq .ag-sky svg circle{
-  opacity:0;animation:agStarPop .5s ease-out forwards}
+  opacity:0;animation:agStarPop .35s ease-out forwards}
 @keyframes agStarDraw{to{stroke-dashoffset:0}}
 @keyframes agStarPop{from{opacity:0}to{opacity:1}}
 /* 卡片：等星图连完再浮现（--skyDur 由 JS 按星数/线数算出） */
