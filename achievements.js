@@ -188,28 +188,28 @@
       check: s => s.cardKinds >= 30 },
 
     /* ---------- 金 · 传说 ---------- */
-    { id: 'all_major', name: '愚者之旅', icon: '🃏', rarity: 'gold',
+    { id: 'all_major', name: '愚者之旅', icon: '🃏', rarity: 'gold', motion: 'aurora',
       desc: '集齐全部 22 张大阿尔卡纳',
       quote: '从愚者到世界，你走完了整段旅程。',
       check: s => s.majCount >= 22 },
 
-    { id: 'gua_64', name: '六十四卦全图', icon: '☯', rarity: 'gold',
+    { id: 'gua_64', name: '六十四卦全图', icon: '☯', rarity: 'gold', motion: 'pulse',
       desc: '集齐全部 64 卦',
       quote: '天地万象，已在你指尖合拢成环。',
       check: s => s.guaKinds >= 64 },
 
-    { id: 'three_hundred', name: '三百次占卜', icon: '👑', rarity: 'gold',
+    { id: 'three_hundred', name: '三百次占卜', icon: '👑', rarity: 'gold', motion: 'spark',
       desc: '累计占卜满 300 次',
       quote: '三百次叩问之后，答案已不必外求。',
       check: s => s.total >= 300 },
 
-    { id: 'thirty_days', name: '一月不辍', icon: '🏆', rarity: 'gold',
+    { id: 'thirty_days', name: '一月不辍', icon: '🏆', rarity: 'gold', motion: 'flame',
       desc: '连续 30 天留下占卜足迹',
       quote: '三十个夜晚，你把自己点成了一盏灯。',
       check: s => s.streak >= 30 },
 
     /* ---------- 隐藏 · 兑换码 ---------- */
-    { id: 'youdiankun', name: '有点困', icon: '😴', rarity: 'gold', hidden: true,
+    { id: 'youdiankun', name: '有点困', icon: '😴', rarity: 'gold', hidden: true, motion: 'rain',
       art: '<svg class="ach-art" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
         '<defs><linearGradient id="agMoon" x1="16" y1="8" x2="52" y2="58" gradientUnits="userSpaceOnUse">' +
         '<stop offset="0" stop-color="#fff8e0"/><stop offset=".5" stop-color="#f3cf73"/>' +
@@ -484,6 +484,62 @@
   opacity:calc(var(--pfc,0) * .5 + .12)}
 .ag-edge{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:4;
   box-shadow:none}
+
+/* ============ 专属动态层（每张卡自己的动效，data-motion 驱动） ============ */
+.ag-dyn{position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;
+  display:none;overflow:hidden;mix-blend-mode:screen}
+
+/* 下雨：多层斜向雨丝持续下落 */
+.ag-card[data-motion="rain"] .ag-dyn{display:block;
+  background-image:
+    repeating-linear-gradient(103deg, transparent 0 5px, rgba(186,220,255,.55) 5px 6px),
+    repeating-linear-gradient(99deg, transparent 0 10px, rgba(150,196,255,.34) 10px 11px),
+    repeating-linear-gradient(107deg, transparent 0 16px, rgba(214,238,255,.22) 16px 17px);
+  background-size:90px 220px, 140px 300px, 210px 400px;
+  animation:agRain .8s linear infinite}
+@keyframes agRain{
+  from{background-position:0 -220px, 0 -300px, 0 -400px}
+  to{background-position:0 0, 0 0, 0 0}}
+
+/* 极光：两道柔光带缓缓漂移 */
+.ag-card[data-motion="aurora"] .ag-dyn{display:block;
+  background-image:
+    linear-gradient(112deg, transparent 12%, rgba(120,220,255,.4) 32%, rgba(170,140,255,.22) 44%, transparent 62%),
+    linear-gradient(68deg, transparent 18%, rgba(255,150,220,.34) 40%, rgba(140,255,220,.24) 56%, transparent 74%);
+  background-size:150% 150%, 175% 175%;
+  animation:agAurora 9s ease-in-out infinite}
+@keyframes agAurora{
+  0%{background-position:-35% 0, 130% 20%}
+  50%{background-position:55% 34%, 42% -12%}
+  100%{background-position:135% 8%, -35% 28%}}
+
+/* 星火：细碎金点缓缓上浮 */
+.ag-card[data-motion="spark"] .ag-dyn{display:block;
+  background-image:
+    radial-gradient(circle, rgba(255,244,208,.95) 1.4px, transparent 2px),
+    radial-gradient(circle, rgba(255,224,158,.75) 1.2px, transparent 1.8px),
+    radial-gradient(circle, rgba(255,255,255,.6) 1px, transparent 1.6px);
+  background-size:62px 92px, 94px 132px, 42px 72px;
+  animation:agSpark 3.4s linear infinite}
+@keyframes agSpark{
+  from{background-position:0 92px, 30px 132px, 15px 72px}
+  to{background-position:0 -92px, 30px -132px, 15px -72px}}
+
+/* 炉火：底部暖光呼吸 */
+.ag-card[data-motion="flame"] .ag-dyn{display:block;
+  background:radial-gradient(125% 62% at 50% 120%, rgba(255,152,64,.6), rgba(255,92,44,.26) 42%, transparent 74%);
+  animation:agFlame 2.6s ease-in-out infinite}
+@keyframes agFlame{
+  0%,100%{opacity:.72; transform:translateY(0) scaleY(1)}
+  50%{opacity:1; transform:translateY(-3%) scaleY(1.09)}}
+
+/* 太极辉光：中心光晕缓缓明灭扩散 */
+.ag-card[data-motion="pulse"] .ag-dyn{display:block;
+  background:radial-gradient(circle at 50% 50%, rgba(200,232,255,.34), rgba(160,200,255,.12) 42%, transparent 66%);
+  animation:agPulse 4s ease-in-out infinite}
+@keyframes agPulse{
+  0%,100%{opacity:.38; transform:scale(.9)}
+  50%{opacity:.92; transform:scale(1.07)}}
 
 /* 内容 */
 .ag-inner{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
@@ -865,6 +921,7 @@
       <div class="ag-face ag-front">
         <div class="ag-zsand"></div>
         <div class="ag-zmark" id="agZmark"></div>
+        <div class="ag-dyn"></div>
         <div class="ag-shine"></div>
         <div class="ag-glare"></div>
         <div class="ag-edge"></div>
@@ -1157,6 +1214,8 @@
     $('agDesc').textContent = ach.desc;
     $('agQuote').textContent = ach.quote || '';
     card.setAttribute('data-rarity', ach.rarity);
+    /* 专属动态：有 motion 用专属，传说卡默认极光，其余无 */
+    card.setAttribute('data-motion', ach.motion || (ach.rarity === 'gold' ? 'aurora' : ''));
 
     /* 星座主题：配色变量 + 缓转图腾 SVG + 卡外专属星图 */
     const zdef = applyTheme(card, ach);
