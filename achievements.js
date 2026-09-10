@@ -562,8 +562,18 @@
 /* ============ 金色 · 传说（彩色 + 动态） ============ */
 .ag-card[data-rarity="gold"]{
   box-shadow:none}
+/* 底层：缓慢流动的金色液态渐变 */
 .ag-card[data-rarity="gold"] .ag-face{
-  background:linear-gradient(158deg,#3a2e14 0%,#2a2110 46%,#17120a 100%)}
+  background:
+    radial-gradient(120% 90% at 20% 15%, rgba(255,222,140,.5), transparent 60%),
+    radial-gradient(120% 90% at 82% 88%, rgba(255,190,70,.4), transparent 62%),
+    linear-gradient(120deg,#3a2c0e 0%,#6b4d18 38%,#241a0d 62%,#7a5a1e 100%);
+  background-size:200% 200%, 200% 200%, 200% 200%;
+  animation:agGoldFlow 9s ease-in-out infinite}
+@keyframes agGoldFlow{
+  0%{background-position:0% 50%, 100% 50%, 0% 50%}
+  50%{background-position:100% 50%, 0% 50%, 100% 50%}
+  100%{background-position:0% 50%, 100% 50%, 0% 50%}}
 .ag-card[data-rarity="gold"] .ag-inner-back{color:#ffe9a6}
 .ag-card[data-rarity="gold"] .ag-bk-rar{border-color:rgba(242,208,113,.6);color:#f2d071;
   box-shadow:0 0 14px rgba(242,208,113,.25)}
@@ -572,11 +582,25 @@
   background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:agFlow 5s linear infinite}
 .ag-card[data-rarity="gold"] .ag-bk-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.35)}
-.ag-card[data-rarity="gold"] .ag-shine{opacity:.8;
-  background-image:linear-gradient(115deg,
-    #ff5fb0 0%, #ffd36e 15%, #6effb0 32%, #6ec7ff 50%, #b06eff 68%, #ffd36e 84%, #ff5fb0 100%);
-  background-size:280% 280%;
-  filter:brightness(1.18) saturate(1.35)}
+/* 金属扫光：conic 角度随倾斜转动 + 背景视差（overlay 叠加） */
+.ag-card[data-rarity="gold"] .ag-shine{opacity:.72;
+  background-image:
+    conic-gradient(from calc(120deg + var(--tilt-y,0deg)),
+      #6b4d18 0%, #ffd76e 12%, #fff6d6 20%, #ffb43d 32%, #7a5a1e 46%,
+      #ffe9a8 60%, #ff9a3d 72%, #6b4d18 86%, #ffd76e 100%),
+    linear-gradient(115deg, transparent 34%, rgba(255,255,255,.5) 48%, transparent 64%);
+  background-size:210% 210%, 250% 250%;
+  background-position:
+    calc(50% + var(--sxp,0) * .9%) calc(50% + var(--syp,0) * .9%),
+    calc(50% + var(--sxp,0) * 1.5%) calc(50% + var(--syp,0) * 1.5%);
+  mix-blend-mode:overlay;
+  filter:brightness(1.16) saturate(1.35)}
+/* 跟随指针的金色高光（hard-light，金属“活”起来） */
+.ag-card[data-rarity="gold"] .ag-glare{
+  background-image:radial-gradient(farthest-corner circle at var(--pointer-x,50%) var(--pointer-y,50%),
+    rgba(255,248,220,.8) 5%, rgba(255,214,120,.4) 22%, rgba(255,180,60,.16) 44%, transparent 72%);
+  mix-blend-mode:hard-light;
+  opacity:calc(var(--pfc,0) * .7 + .22)}
 .ag-card[data-rarity="gold"] .ag-shine::after{display:none}
 .ag-card[data-rarity="gold"] .ag-icon{color:#ffe9a6;
   filter:drop-shadow(0 0 22px rgba(240,200,100,.85))}
@@ -588,7 +612,20 @@
   box-shadow:0 0 14px rgba(242,208,113,.25)}
 .ag-card[data-rarity="gold"] .ag-desc{color:rgba(255,240,200,.82)}
 .ag-card[data-rarity="gold"] .ag-quote{color:#f6dd9a;text-shadow:0 0 16px rgba(242,208,113,.4);font-size:.78rem}
-.ag-card[data-rarity="gold"] .ag-edge{box-shadow:none}
+.ag-card[data-rarity="gold"] .ag-edge{
+  padding:2px;border-radius:22px;
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite:exclude;
+  overflow:hidden}
+.ag-card[data-rarity="gold"] .ag-edge::before{
+  content:'';position:absolute;inset:-70%;
+  background:conic-gradient(from 0deg,
+    transparent 0 68%, rgba(255,214,120,.85) 76%, rgba(255,255,230,1) 80%,
+    rgba(255,190,80,.85) 84%, transparent 92% 100%);
+  animation:agGoldTrack 7s linear infinite}
+@keyframes agGoldTrack{to{transform:rotate(360deg)}}
 @keyframes agFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
 /* ============ 星座 · 专属卡（流动背景 + 缓转星座符号） ============ */
@@ -979,7 +1016,7 @@
       const pfc = Math.min(1, Math.hypot(cur.x - .5, cur.y - .5) * 2);
       const depth = 1 + pfc * 0.02 + (idle ? (Math.sin(now * 0.0008) + 1) * 0.004 : 0);
       card.style.transform =
-        'perspective(900px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) +
+        'perspective(800px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) +
         'deg) scale(' + depth.toFixed(4) + ')';
       const mx = cur.x * 100, my = cur.y * 100;
       card.style.setProperty('--mx', mx.toFixed(2) + '%');
@@ -998,6 +1035,11 @@
       card.style.setProperty('--gxp', ((mx - 50) * 0.52).toFixed(2));
       card.style.setProperty('--gyp', ((my - 50) * 0.52).toFixed(2));
       card.style.setProperty('--pfc', pfc.toFixed(3));
+      /* 标准化交互变量（gold.css 风格）：指针位置 + 倾斜角，供金属光层使用 */
+      card.style.setProperty('--pointer-x', mx.toFixed(2) + '%');
+      card.style.setProperty('--pointer-y', my.toFixed(2) + '%');
+      card.style.setProperty('--tilt-x', rx.toFixed(2) + 'deg');
+      card.style.setProperty('--tilt-y', ry.toFixed(2) + 'deg');
     }
     /* 收藏册里的卡也随陀螺仪流动 */
     const ab = $('abMask');
