@@ -35,7 +35,9 @@
     }
     function down(x,y){
       dragging=true;moved=false;
-      el.classList.remove('expanded','pinned');   /* 开始拖动：收起 */
+      /* 记住按下前的展开状态（供点击判断），再收起 */
+      el._wasOpen=el.classList.contains('expanded')||el.classList.contains('pinned');
+      el.classList.remove('expanded','pinned');
       var r=el.getBoundingClientRect();
       ox=r.left;oy=r.top;sx=x;sy=y;
       el.style.transition='none';
@@ -69,12 +71,14 @@
         },300);
       }else if(onTap)onTap();
     }
-    el.addEventListener('touchstart',function(e){down(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+    var lastTouch=0;
+    el.addEventListener('touchstart',function(e){lastTouch=Date.now();down(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
     el.addEventListener('touchmove',function(e){move(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
-    el.addEventListener('touchend',up);
-    el.addEventListener('mousedown',function(e){down(e.clientX,e.clientY);});
-    document.addEventListener('mousemove',function(e){move(e.clientX,e.clientY);});
-    document.addEventListener('mouseup',up);
+    el.addEventListener('touchend',function(){lastTouch=Date.now();up();});
+    /* 触摸后浏览器会模拟 mouse 事件，500ms 内忽略，防止双触发 */
+    el.addEventListener('mousedown',function(e){if(Date.now()-lastTouch<500)return;down(e.clientX,e.clientY);});
+    document.addEventListener('mousemove',function(e){if(Date.now()-lastTouch<500)return;move(e.clientX,e.clientY);});
+    document.addEventListener('mouseup',function(e){if(Date.now()-lastTouch<500)return;up();});
   }
   function init(){
     if(document.getElementById('uwFab'))return;
@@ -120,50 +124,25 @@
       if(url){av.style.backgroundImage='url('+url+')';av.textContent='';}
       else av.textContent=name[0].toUpperCase();
 makeDraggable(btn,function(){
-        /* 点击逻辑 */
-        if(btn.classList.contains('pinned')){
-          /* 定格展开状态：点击直接打开资料 */
-          btn.classList.remove('pinned','expanded');
-          if(typeof window.openAuthMask==='function'){
-            window.openAuthMask();
-          }else{
-            /* auth.js 未加载时，等它加载完再打开 */
-            var checkOpen=function(){
-              if(typeof window.openAuthMask==='function'){
-                window.openAuthMask();
-              }else{
-                setTimeout(checkOpen,100);
-              }
-            };
-            checkOpen();
-          }
+        /* 点击逻辑：按下前是否已展开（_wasOpen），已展开则直接打开资料 */
+        if(el0WasOpen(btn)){
+          if(typeof window.openAuthMask==='function')window.openAuthMask();
+          else{var co=function(){if(typeof window.openAuthMask==='function')window.openAuthMask();else setTimeout(co,100);};co();}
           return;
         }
-        /* 普通状态：第一下展开显示名字，再点一下才打开资料 */
-        if(!btn.classList.contains('expanded')){
-          btn.classList.add('expanded');
-          clearTimeout(btn._ct);
-          btn._ct=setTimeout(function(){if(!btn.classList.contains('pinned'))btn.classList.remove('expanded');},2600);
-          return;
-        }
+        /* 未展开：第一下展开显示名字，2.6秒后收回 */
+        btn.classList.add('expanded');
         clearTimeout(btn._ct);
-         btn.classList.remove('expanded');
-         if(typeof window.openAuthMask==='function'){
-           window.openAuthMask();
-         }else{
-           var checkOpen2=function(){
-             if(typeof window.openAuthMask==='function'){
-               window.openAuthMask();
-             }else{
-               setTimeout(checkOpen2,100);
-             }
-           };
-           checkOpen2();
-         }
+        btn._ct=setTimeout(function(){if(!btn.classList.contains('pinned'))btn.classList.remove('expanded');},2600);
       });
     }else{
       btn.style.display='none';
     }
+  }
+  function el0WasOpen(btn){
+    /* down() 把按下前状态存在 _wasOpen；若为 true 则同时清掉定格 */
+    if(btn._wasOpen){btn.classList.remove('pinned','expanded');btn._wasOpen=false;return true;}
+    return btn.classList.contains('expanded')||btn.classList.contains('pinned');
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
   else init();
