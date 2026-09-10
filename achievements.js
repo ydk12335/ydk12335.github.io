@@ -122,8 +122,20 @@
 
     /* ---------- 隐藏 · 兑换码 ---------- */
     { id: 'youdiankun', name: '有点困', icon: '😴', rarity: 'gold', hidden: true,
+      art: '<svg class="ach-art" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+        '<defs><linearGradient id="agMoon" x1="16" y1="8" x2="52" y2="58" gradientUnits="userSpaceOnUse">' +
+        '<stop offset="0" stop-color="#fff8e0"/><stop offset=".5" stop-color="#f3cf73"/>' +
+        '<stop offset="1" stop-color="#b8842c"/></linearGradient></defs>' +
+        '<path d="M44 9A22 22 0 1 0 44 55 18 18 0 1 1 44 9Z" fill="url(#agMoon)" fill-opacity=".2"/>' +
+        '<path d="M44 9A22 22 0 1 0 44 55 18 18 0 1 1 44 9Z" fill="none" stroke="url(#agMoon)" ' +
+        'stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M20.5 33q4.3 4.8 8.6 0" fill="none" stroke="url(#agMoon)" stroke-width="2.4" stroke-linecap="round"/>' +
+        '<path d="M20.5 42q4.3 3 8.6 0" fill="none" stroke="url(#agMoon)" stroke-width="2.4" stroke-linecap="round"/>' +
+        '<path d="M48.5 13.5l1.45 3.75 3.75 1.45-3.75 1.45-1.45 3.75-1.45-3.75-3.75-1.45 3.75-1.45z" fill="#fff3c9"/>' +
+        '<path d="M53.5 32l.95 2.45 2.45.95-2.45.95-.95 2.45-.95-2.45-2.45-.95 2.45-.95z" fill="#fff3c9" fill-opacity=".78"/>' +
+        '</svg>',
       desc: '输入兑换码解锁的隐藏成就',
-      quote: '困了就睡吧，梦里也有星光。',
+      quote: '星河溺进深海的幻念',
       check: s => s.redeem }
   ];
 
@@ -134,6 +146,8 @@
    * =======================================================*/
   const $ = (id) => document.getElementById(id);
   const esc = (t) => { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; };
+  /** 成就图标：有手绘 SVG 用 SVG，否则用 emoji */
+  const iconHtml = (a) => (a && a.art) ? a.art : esc(a ? a.icon : '');
   const arr = (k) => { try { return JSON.parse(localStorage.getItem(k) || '[]') || []; } catch (e) { return []; } };
 
   const MAJ22 = ['愚者', '魔术师', '女祭司', '女皇', '皇帝', '教皇', '恋人', '战车', '力量', '隐士',
@@ -255,8 +269,7 @@
   const CSS = `
 /* ============ 遮罩 & 舞台 ============ */
 .ag-mask{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;
-  background:radial-gradient(circle at 50% 42%, rgba(28,18,52,.72), rgba(4,2,12,.94));
-  -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+  background:radial-gradient(circle at 50% 42%, rgba(22,14,44,.9), rgba(3,2,10,.97));
   perspective:1000px;animation:agFade .3s ease;padding:20px}
 .ag-mask.open{display:flex}
 @keyframes agFade{from{opacity:0}to{opacity:1}}
@@ -285,20 +298,17 @@
 .ag-front{transform:rotateY(0deg)}
 .ag-back{transform:rotateY(180deg)}
 
-/* 光栅层：只靠背景位移流动（不做整体位移，避免被卡片边框裁出界限） */
-.ag-holo{position:absolute;inset:0;pointer-events:none;z-index:1;
-  background-repeat:no-repeat;background-size:220% 220%;
-  background-position:var(--bx,50%) var(--by,50%);
-  mix-blend-mode:screen;opacity:0;
-  transition:opacity .35s ease}
-.ag-foil{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:0;
-  background:repeating-linear-gradient(105deg, rgba(255,255,255,.05) 0 1px, transparent 1px 4px);
-  mix-blend-mode:overlay}
-/* 高光眩光：跟随指针的清晰反光点 */
-.ag-sheen{position:absolute;inset:0;pointer-events:none;z-index:3;opacity:.5;
-  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),
-    rgba(255,255,255,.72) 0%, rgba(255,255,255,.16) 22%, rgba(255,255,255,0) 48%);
-  mix-blend-mode:screen;transition:opacity .3s}
+/* 光栅层：整体 transform 位移（GPU 合成，不重绘、不卡，也不会被边框裁出界限） */
+.ag-holo{position:absolute;inset:-34%;pointer-events:none;z-index:1;
+  background-repeat:no-repeat;background-size:100% 100%;background-position:center;
+  mix-blend-mode:screen;opacity:0;transition:opacity .35s ease;will-change:transform;
+  transform:translate3d(var(--hx,0px),var(--hy,0px),0)}
+/* 高光眩光：transform 位移跟随指针的反光点 */
+.ag-sheen{position:absolute;inset:-46%;pointer-events:none;z-index:3;opacity:.5;
+  background:radial-gradient(circle at 50% 50%,
+    rgba(255,255,255,.75) 0%, rgba(255,255,255,.12) 26%, rgba(255,255,255,0) 52%);
+  mix-blend-mode:screen;transition:opacity .3s;will-change:transform;
+  transform:translate3d(var(--gx,0px),var(--gy,0px),0)}
 .ag-edge{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:4;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 0 22px rgba(0,0,0,.45)}
 
@@ -308,6 +318,9 @@
   transform:translateZ(18px)}
 .ag-icon{font-size:3rem;line-height:1;filter:drop-shadow(0 6px 18px rgba(0,0,0,.5));
   transition:transform .5s cubic-bezier(.18,1.4,.4,1)}
+/* 手绘 SVG 成就图标（随字号自适应） */
+.ach-art{display:inline-block;width:1em;height:1em;vertical-align:-.14em;overflow:visible}
+.ag-icon .ach-art{vertical-align:middle}
 .ag-card:hover .ag-icon{transform:translateY(-3px) scale(1.06)}
 .ag-rar{font-size:.62rem;letter-spacing:.42em;text-indent:.42em;padding:3px 12px;border-radius:999px;
   border:1px solid currentColor;opacity:.85}
@@ -348,7 +361,7 @@
 .ag-card[data-rarity="white"] .ag-holo{opacity:.5;
   background-image:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.7) 47%,
     rgba(190,210,255,.42) 54%,transparent 70%);
-  background-size:220% 220%;mix-blend-mode:screen}
+  mix-blend-mode:screen}
 .ag-card[data-rarity="white"] .ag-sheen{opacity:.28}
 .ag-card[data-rarity="white"] .ag-icon{color:#e9e6ff}
 .ag-card[data-rarity="white"] .ag-name{color:#f2f0ff}
@@ -362,9 +375,7 @@
 .ag-card[data-rarity="purple"] .ag-holo{opacity:.6;
   background-image:linear-gradient(115deg,
     #6a3df0 0%, #b06bff 18%, #ff8ad6 38%, #7fd4ff 58%, #6affc0 76%, #b06bff 100%);
-  background-size:240% 240%;
   filter:brightness(1.12) saturate(1.25)}
-.ag-card[data-rarity="purple"] .ag-foil{opacity:.2}
 .ag-card[data-rarity="purple"] .ag-sheen{opacity:.42}
 .ag-card[data-rarity="purple"] .ag-icon{color:#d9c6ff;filter:drop-shadow(0 0 16px rgba(160,110,255,.6))}
 .ag-card[data-rarity="purple"] .ag-name{color:#efe4ff}
@@ -389,12 +400,10 @@
 .ag-card[data-rarity="gold"] .ag-holo{opacity:.78;
   background-image:linear-gradient(115deg,
     #ff5fb0 0%, #ffd36e 15%, #6effb0 32%, #6ec7ff 50%, #b06eff 68%, #ffd36e 84%, #ff5fb0 100%);
-  background-size:280% 280%;
   filter:brightness(1.18) saturate(1.35)}
-.ag-card[data-rarity="gold"] .ag-foil{opacity:.42}
 .ag-card[data-rarity="gold"] .ag-sheen{opacity:.5;
-  background:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
-    rgba(255,255,240,.9) 5%, rgba(255,240,180,.16) 34%, rgba(0,0,0,.4) 96%)}
+  background:radial-gradient(circle at 50% 50%,
+    rgba(255,255,240,.9) 0%, rgba(255,240,180,.15) 26%, rgba(255,240,180,0) 52%)}
 .ag-card[data-rarity="gold"] .ag-icon{color:#ffe9a6;
   filter:drop-shadow(0 0 22px rgba(240,200,100,.85))}
 .ag-card[data-rarity="gold"] .ag-name{
@@ -421,33 +430,10 @@
   80%{opacity:.7}
   100%{opacity:0;transform:translateY(-210px) translateX(var(--drift,10px)) scale(1.15)}}
 
-/* ============ 星环 · 传说专属（星球环，非矩形框） ============ */
-.ag-orbit{position:absolute;left:50%;top:50%;width:134%;height:134%;
-  transform:translate(-50%,-50%);pointer-events:none;z-index:-1;
-  opacity:0;transition:opacity .8s ease;perspective:520px}
-.ag-orbit.on{opacity:1}
-.ag-orbit::before{content:'';position:absolute;left:50%;top:50%;width:118%;height:118%;
-  transform:translate(-50%,-50%);border-radius:50%;
-  background:radial-gradient(circle,rgba(120,150,255,.22),rgba(120,90,220,.10) 46%,rgba(0,0,0,0) 70%);
-  filter:blur(30px)}
-.ag-orbit i{position:absolute;left:50%;top:50%;width:100%;height:100%;border-radius:50%;
-  transform:translate(-50%,-50%) rotateX(74deg) rotateZ(0deg);
-  -webkit-mask:radial-gradient(closest-side,transparent 63%,#000 64%,#000 72%,transparent 73%);
-  mask:radial-gradient(closest-side,transparent 63%,#000 64%,#000 72%,transparent 73%);
-  background:conic-gradient(from 0deg,
-    rgba(150,190,255,0) 0%, rgba(150,205,255,.9) 10%, rgba(255,255,255,1) 16%,
-    rgba(170,150,255,.55) 26%, rgba(150,190,255,0) 40%,
-    rgba(255,222,160,.7) 60%, rgba(150,190,255,0) 76%,
-    rgba(150,205,255,.6) 90%, rgba(150,190,255,0) 100%);
-  filter:drop-shadow(0 0 6px rgba(150,200,255,.7));
-  animation:agOrbit 34s linear infinite}
-.ag-orbit i:nth-child(2){width:80%;height:80%;opacity:.75;
-  animation-duration:26s;animation-delay:-9s}
-.ag-orbit i:nth-child(3){width:118%;height:118%;opacity:.55;
-  animation-duration:46s;animation-delay:-20s}
-@keyframes agOrbit{
-  from{transform:translate(-50%,-50%) rotateX(74deg) rotateZ(0deg)}
-  to{transform:translate(-50%,-50%) rotateX(74deg) rotateZ(360deg)}}
+/* ============ Canvas 粒子层（星环粒子 + 无双爆发） ============ */
+.ag-fx{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  pointer-events:none;z-index:5;opacity:0;transition:opacity .6s ease;display:block}
+.ag-fx.on{opacity:1}
 
 /* ============ ⑤ 开卡爆发 ============ */
 .ag-flash{position:fixed;inset:0;pointer-events:none;z-index:520;opacity:0;
@@ -475,8 +461,8 @@
 
 /* ============ 收藏册 ============ */
 .ab-mask{position:fixed;inset:0;z-index:480;display:none;overflow-y:auto;overscroll-behavior:contain;
-  background:linear-gradient(170deg,rgba(16,10,32,.96),rgba(6,4,14,.98));
-  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);padding:26px 18px 60px}
+  background:linear-gradient(170deg,rgba(16,10,32,.98),rgba(6,4,14,.99));
+  padding:26px 18px 60px}
 .ab-mask.open{display:block;animation:agFade .32s ease}
 .ab-head{max-width:640px;margin:0 auto 16px;text-align:center}
 .ab-title{font-size:1rem;letter-spacing:.34em;color:#f0cf82;font-weight:600;margin:0 0 6px}
@@ -547,9 +533,8 @@
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .ag-lite .ag-halo{animation:none;opacity:.5;transform:none;
   background:radial-gradient(circle,rgba(180,200,255,.35),rgba(180,200,255,0) 70%)}
-.ag-lite .ag-orbit i{animation:none}
+.ag-lite .ag-fx{display:none}
 .ag-lite .ag-particles{display:none}
-.ag-lite .ag-foil{display:none}
 .ag-lite .ag-card[data-rarity="gold"] .ag-holo,
 .ag-lite .ag-card[data-rarity="purple"] .ag-holo{animation:none}
 .ag-lite .ag-card[data-rarity="gold"] .ag-name{animation:none;background-position:50% 50%}
@@ -582,7 +567,8 @@
 }
 @media (prefers-reduced-motion: reduce){
   .ag-card.enter{animation-duration:.01ms}
-  .ag-holo,.ag-orbit i,.ag-halo,.ag-icon,.ab-holo{animation:none!important}
+  .ag-holo,.ag-halo,.ag-icon,.ab-holo{animation:none!important}
+  .ag-fx{display:none}
 }
 `;
 
@@ -598,7 +584,6 @@
       <!-- 正面 -->
       <div class="ag-face ag-front">
         <div class="ag-holo"></div>
-        <div class="ag-foil"></div>
         <div class="ag-sheen"></div>
         <div class="ag-edge"></div>
         <div class="ag-inner">
@@ -612,7 +597,6 @@
       <!-- 背面 -->
       <div class="ag-face ag-back">
         <div class="ag-holo"></div>
-        <div class="ag-foil"></div>
         <div class="ag-sheen"></div>
         <div class="ag-edge"></div>
         <div class="ag-inner ag-inner-back">
@@ -624,7 +608,7 @@
         </div>
         <div class="ag-bk-no" id="agBkNo"></div>
       </div>
-      <div class="ag-orbit" id="agOrbit"><i></i><i></i><i></i></div>
+      <canvas class="ag-fx" id="agFx"></canvas>
       <div class="ag-burst" id="agBurst"></div>
     </div>
   </div>
@@ -753,7 +737,7 @@
     if (card && $('agMask') && $('agMask').classList.contains('open')) {
       /* 静止时给一点缓慢微倾，一打开就有「活」的立体感 */
       const now = performance.now();
-      const idle = !dragging && (now - lastInput > 2600);
+      const idle = !dragging && (now - lastInput > 1500);
       let swX = 0, swY = 0, swBx = 0, swBy = 0;
       if (idle) {
         const t = now * 0.001;
@@ -772,10 +756,17 @@
       const mx = cur.x * 100, my = cur.y * 100;
       card.style.setProperty('--mx', mx.toFixed(2) + '%');
       card.style.setProperty('--my', my.toFixed(2) + '%');
-      card.style.setProperty('--bx', (50 + (cur.x - .5) * 88 + swBx).toFixed(2) + '%');
-      card.style.setProperty('--by', (50 + (cur.y - .5) * 88 + swBy).toFixed(2) + '%');
-      card.style.setProperty('--sx', cur.px.toFixed(2) + 'px');
-      card.style.setProperty('--sy', cur.py.toFixed(2) + 'px');
+      /* 光栅流动：指针位移 + 恒定缓慢漂移 → 卡面始终有流光 */
+      const idleK = idle ? 1 : 0.3;
+      const hx = (cur.x - .5) * -54 + swBx * 1.7 * idleK + Math.sin(now * 0.00042) * 11;
+      const hy = (cur.y - .5) * -54 + swBy * 1.7 * idleK + Math.cos(now * 0.00033) * 13;
+      card.style.setProperty('--hx', hx.toFixed(2) + 'px');
+      card.style.setProperty('--hy', hy.toFixed(2) + 'px');
+      /* 高光点：跟手位移 */
+      const gx = (cur.x - .5) * -78 + Math.sin(now * 0.0005) * 7;
+      const gy = (cur.y - .5) * -78 + Math.cos(now * 0.0004) * 8;
+      card.style.setProperty('--gx', gx.toFixed(2) + 'px');
+      card.style.setProperty('--gy', gy.toFixed(2) + 'px');
       card.style.setProperty('--pfc', pfc.toFixed(3));
     }
     /* 收藏册里的卡也随陀螺仪流动 */
@@ -875,6 +866,190 @@
     setTimeout(() => { box.innerHTML = ''; }, 1300);
   }
 
+  /* ---------------------------------------------------------
+   * Canvas 粒子：传说「星环」+ 可触碰「无双」爆发
+   * -------------------------------------------------------*/
+  const FX = { canvas: null, ctx: null, raf: 0, w: 0, h: 0, dpr: 1,
+    running: false, on: false, rings: [], burst: [], sprites: {}, last: 0,
+    px: null, py: null, pLast: 0 };
+
+  /** 预渲染柔光粒子贴图（金/白两种），避免每帧 createRadialGradient 的开销 */
+  function fxSprite(kind) {
+    if (FX.sprites[kind]) return FX.sprites[kind];
+    const s = 48, c = document.createElement('canvas');
+    c.width = c.height = s;
+    const g = c.getContext('2d');
+    const rg = g.createRadialGradient(s * .5, s * .5, 0, s * .5, s * .5, s * .5);
+    if (kind === 'w') {
+      rg.addColorStop(0, 'rgba(255,255,255,1)');
+      rg.addColorStop(.25, 'rgba(232,240,255,.85)');
+      rg.addColorStop(.6, 'rgba(180,205,255,.3)');
+      rg.addColorStop(1, 'rgba(180,205,255,0)');
+    } else {
+      rg.addColorStop(0, 'rgba(255,252,235,1)');
+      rg.addColorStop(.22, 'rgba(255,235,170,.95)');
+      rg.addColorStop(.55, 'rgba(242,208,113,.4)');
+      rg.addColorStop(1, 'rgba(242,208,113,0)');
+    }
+    g.fillStyle = rg; g.fillRect(0, 0, s, s);
+    FX.sprites[kind] = c;
+    return c;
+  }
+
+  /** 初始化画布尺寸 + 构建多层「斜置星环」粒子 */
+  function fxInit() {
+    const card = $('agCard'), cv = $('agFx');
+    if (!card || !cv) return false;
+    const cw = card.offsetWidth || 260, ch = card.offsetHeight || 364;
+    const w = Math.round(cw * 1.95), h = Math.round(ch * 1.7);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    FX.w = w; FX.h = h; FX.dpr = dpr;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    FX.canvas = cv; FX.ctx = cv.getContext('2d');
+    FX.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    /* 三层不同倾角的星环 → 叠出「斜着转」的立体感 */
+    const cfg = [
+      { rx: w * .40, ry: w * .112, tilt: -0.42, spd: 0.16, n: 52, size: 1.00, kind: 'g' },
+      { rx: w * .325, ry: w * .092, tilt: 0.55, spd: -0.10, n: 40, size: 0.82, kind: 'g' },
+      { rx: w * .47, ry: w * .140, tilt: 0.16, spd: 0.06, n: 30, size: 0.62, kind: 'w' }
+    ];
+    FX.rings = [];
+    if (!LITE) cfg.forEach(c => {
+      for (let i = 0; i < c.n; i++) {
+        FX.rings.push({
+          c, a: (i / c.n) * Math.PI * 2 + Math.random() * .05,
+          r: (1.3 + Math.random() * 2.6) * c.size,
+          spd: c.spd * (0.85 + Math.random() * 0.3),
+          ph: Math.random() * Math.PI * 2,          // 闪烁相位
+          tw: .45 + Math.random() * 1.0,
+          ox: 0, oy: 0, vx: 0, vy: 0                // 搅动偏移 / 速度（会被指针拨动）
+        });
+      }
+    });
+    return true;
+  }
+
+  /** 在指针位置炸出一簇无双粒子 */
+  function fxBurstAt(clientX, clientY, n) {
+    if (!FX.on || !FX.canvas) return;
+    const r = FX.canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const x = Math.max(0, Math.min(FX.w, (clientX - r.left) * (FX.w / r.width)));
+    const y = Math.max(0, Math.min(FX.h, (clientY - r.top) * (FX.h / r.height)));
+    /* 记录指针：星环粒子会被它拨动（可搅动） */
+    FX.px = x; FX.py = y; FX.pLast = performance.now();
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 70 + Math.random() * 340;
+      FX.burst.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 50,
+        life: 0, max: .4 + Math.random() * .7,
+        size: 5 + Math.random() * 20,
+        kind: Math.random() < .28 ? 'w' : 'g'
+      });
+    }
+    if (FX.burst.length > 300) FX.burst.splice(0, FX.burst.length - 300);
+  }
+
+  function fxFrame(now) {
+    if (!FX.running || !FX.ctx) return;
+    const ctx = FX.ctx, w = FX.w, h = FX.h, cx = w * .5, cy = h * .5;
+    const dt = Math.min(.05, (now - FX.last) / 1000 || .016);
+    FX.last = now;
+    const t = now * .001;
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'lighter';
+    const spr = fxSprite('g');
+
+    /* 多层斜置星环：椭圆轨道 + 固定倾角；指针划过会把粒子「拨散」再弹回 */
+    const stirring = FX.px != null && (now - FX.pLast) < 260;
+    for (let i = 0; i < FX.rings.length; i++) {
+      const p = FX.rings[i], c = p.c;
+      const a = p.a + t * p.spd;
+      const ex = Math.cos(a) * c.rx, ey = Math.sin(a) * c.ry;
+      const ct = Math.cos(c.tilt), st = Math.sin(c.tilt);
+      let x = cx + ex * ct - ey * st;
+      let y = cy + ex * st + ey * ct;
+      if (stirring) {
+        const dx = x - FX.px, dy = y - FX.py, d2 = dx * dx + dy * dy, RR = 74;
+        if (d2 < RR * RR && d2 > .01) {
+          const d = Math.sqrt(d2), f = 1 - d / RR;
+          p.vx += (dx / d) * f * 3.2 + (Math.random() - .5) * f * 1.4;
+          p.vy += (dy / d) * f * 3.2 + (Math.random() - .5) * f * 1.4;
+        }
+      }
+      /* 弹回原位（弹簧 + 阻尼） */
+      p.vx += -p.ox * .075; p.vy += -p.oy * .075;
+      p.vx *= .90; p.vy *= .90;
+      p.ox += p.vx; p.oy += p.vy;
+      x += p.ox; y += p.oy;
+      const depth = (Math.sin(a) + 1) * .5;
+      const tw = .5 + .5 * Math.sin(t * 2.4 * p.tw + p.ph);
+      const s = p.r * (0.6 + depth * 1.5) * 3.6;
+      ctx.globalAlpha = (0.16 + depth * 0.84) * tw;
+      ctx.drawImage(fxSprite(c.kind), x - s * .5, y - s * .5, s, s);
+    }
+
+    /* 无双爆发：向外飞溅 + 轻微重力衰减 */
+    for (let i = FX.burst.length - 1; i >= 0; i--) {
+      const p = FX.burst[i];
+      p.life += dt;
+      if (p.life >= p.max) { FX.burst.splice(i, 1); continue; }
+      p.vy += 380 * dt;
+      p.vx *= .985; p.vy *= .985;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      const k = 1 - p.life / p.max;
+      const s = p.size * (0.45 + k * 0.85);
+      ctx.globalAlpha = k * k;
+      ctx.drawImage(fxSprite(p.kind), p.x - s * .5, p.y - s * .5, s, s);
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    FX.raf = requestAnimationFrame(fxFrame);
+  }
+
+  function fxStart() {
+    if (LITE) return;
+    const cv = $('agFx');
+    if (!cv || !fxInit()) return;
+    FX.on = true; FX.running = true; FX.last = performance.now();
+    cv.classList.add('on');
+    if (!FX.raf) FX.raf = requestAnimationFrame(fxFrame);
+  }
+
+  function fxStop() {
+    FX.on = false;
+    const cv = $('agFx');
+    if (cv) cv.classList.remove('on');
+    setTimeout(() => {                    // 等爆发粒子自然散尽再停
+      if (FX.on) return;
+      FX.running = false;
+      if (FX.raf) { cancelAnimationFrame(FX.raf); FX.raf = 0; }
+      if (FX.ctx) FX.ctx.clearRect(0, 0, FX.w, FX.h);
+      FX.burst.length = 0;
+    }, 700);
+  }
+
+  /** 指针在卡面任意位置划过 / 按下 → 炸出无双粒子 */
+  function bindFxInput() {
+    const mask = $('agMask');
+    if (!mask || mask._fxBound) return;
+    mask._fxBound = true;
+    let last = 0;
+    mask.addEventListener('pointerdown', (e) => {
+      if (FX.on) fxBurstAt(e.clientX, e.clientY, 34);
+    });
+    mask.addEventListener('pointermove', (e) => {
+      if (!FX.on) return;
+      const now = performance.now();
+      if (now - last < 34) return;        // 限流，避免每帧都生成一堆粒子
+      last = now;
+      fxBurstAt(e.clientX, e.clientY, 6);
+    });
+  }
+
   /* =========================================================
    * 10. 开卡
    * =======================================================*/
@@ -902,7 +1077,7 @@
     const isGold = ach.rarity === 'gold', isHi = ach.rarity !== 'white';
 
     /* 内容 */
-    $('agIcon').textContent = ach.icon;
+    $('agIcon').innerHTML = iconHtml(ach);
     $('agRar').textContent = r.label;
     $('agName').textContent = ach.name;
     $('agDesc').textContent = ach.desc;
@@ -914,11 +1089,10 @@
     cur.rx = cur.ry = 0; cur.x = cur.y = .5; cur.px = cur.py = 0;
     rotY = 0; snapY = 0; rotX = 0; dragging = false; lastInput = performance.now();
 
-    /* 装饰层：呼吸光晕只留给最低级（普通），星环只给传说 */
-    const halo = $('agHalo'), orbit = $('agOrbit');
+    /* 装饰层：呼吸光晕只留给最低级（普通），Canvas 星环只给传说 */
+    const halo = $('agHalo');
     halo.className = 'ag-halo' + (ach.rarity === 'white' ? ' on r-white' : '');
     halo.style.background = ''; halo.style.filter = '';
-    if (orbit) orbit.className = 'ag-orbit' + (isGold ? ' on' : '');
     spawnFloaters($('agParticles'), LITE ? 0 : r.particles);
 
     /* 入场动画 */
@@ -931,6 +1105,15 @@
     $('agHint').textContent = /Mobi|Android|iPhone/i.test(navigator.userAgent)
       ? '拖动翻面 · 倾斜手机看体感' : '拖动翻面 · 移动鼠标看光影';
     startLoop();
+
+    /* 传说：启动 Canvas 星环 + 可触碰无双粒子 */
+    if (isGold) fxStart(); else fxStop();
+
+    /* 体感：Android 直接绑定；iOS 仍需用户手势（下面 touchstart 已兜底） */
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission !== 'function') bindGyro();
+    } catch (e) {}
 
     /* 仪式：闪光 + 爆发 + 音效 + 震动 */
     chime(ach.rarity);
@@ -950,6 +1133,7 @@
   function closeCard() {
     const m = $('agMask'); if (m) m.classList.remove('open');
     stopLoop();
+    fxStop();
     if (window.Achievements && window.Achievements.onClose) window.Achievements.onClose();
   }
 
@@ -1020,6 +1204,7 @@
       else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') flipCard();
     });
     bindDrag();
+    bindFxInput();
   }
 
   /* =========================================================
@@ -1045,7 +1230,7 @@
       if (a.unlocked && seen.indexOf(a.id) < 0) cls.push('justnew');
       return '<button class="' + cls.join(' ') + '" data-id="' + a.id + '" title="' +
         esc(a.rarity === 'gold' ? '传说 · ' : a.rarity === 'purple' ? '稀有 · ' : '') + esc(a.name) + '">' +
-        '<span class="ic">' + (a.unlocked ? a.icon : '🔒') + '</span>' +
+        '<span class="ic">' + (a.unlocked ? iconHtml(a) : '🔒') + '</span>' +
         '<span class="tx">' + esc(a.name) + '</span></button>';
     }).join('');
     if (!box._bound) {
@@ -1081,7 +1266,7 @@
       return '<div class="ab-card r-' + a.rarity + (a.unlocked ? '' : ' locked') + (isNew ? ' new' : '') +
         '" data-id="' + a.id + '" style="animation-delay:' + (i * 28) + 'ms">' +
         '<div class="ab-holo"></div><div class="ab-sheen"></div>' +
-        '<span class="ab-ic">' + (a.unlocked ? a.icon : '🔒') + '</span>' +
+        '<span class="ab-ic">' + (a.unlocked ? iconHtml(a) : '🔒') + '</span>' +
         '<div class="ab-nm">' + esc(a.name) + '</div>' +
         '<div class="ab-rr">' + RARITY[a.rarity].label + '</div>' +
         (a.unlocked ? '' : '<div class="ab-lock">🔒</div>') +
