@@ -269,16 +269,29 @@
     return z;
   }
   /** 生成该星座的专属星图 SVG（卡外背景用） */
+  /* 星图绘制节奏：先一颗颗点出星星，再一条条连起来 */
+  const SKY_START = 0.15, SKY_STAR_STEP = 0.16, SKY_LINE_STEP = 0.1;
+  /** 整段星图绘制完成所需时间（秒，含最后一条线画完） */
+  function skyTotal(z) {
+    return SKY_START + z.stars.length * SKY_STAR_STEP +
+      Math.max(0, z.lines.length - 1) * SKY_LINE_STEP + 0.62;
+  }
   function skySvg(z) {
     let g = '';
-    z.lines.forEach(l => {
-      const a = z.stars[l[0]], b = z.stars[l[1]];
-      g += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] +
-        '" stroke="' + z.palette[1] + '" stroke-width="0.5" stroke-opacity=".55"/>';
+    /* ① 依次点出星点（每颗错开一点，像一笔一笔点上去） */
+    z.stars.forEach((s, i) => {
+      const d = (SKY_START + i * SKY_STAR_STEP).toFixed(2) + 's';
+      g += '<circle cx="' + s[0] + '" cy="' + s[1] + '" r="3.4" fill="' + z.palette[1] +
+        '" fill-opacity=".26" style="animation-delay:' + d + '"/>';
+      g += '<circle cx="' + s[0] + '" cy="' + s[1] + '" r="1.35" fill="#fff" style="animation-delay:' + d + '"/>';
     });
-    z.stars.forEach(s => {
-      g += '<circle cx="' + s[0] + '" cy="' + s[1] + '" r="3.4" fill="' + z.palette[1] + '" fill-opacity=".26"/>';
-      g += '<circle cx="' + s[0] + '" cy="' + s[1] + '" r="1.35" fill="#fff"/>';
+    /* ② 星点都亮起后，再沿连线一条条画出来 */
+    const starsDone = SKY_START + z.stars.length * SKY_STAR_STEP;
+    z.lines.forEach((l, i) => {
+      const a = z.stars[l[0]], b = z.stars[l[1]];
+      const d = (starsDone + i * SKY_LINE_STEP).toFixed(2) + 's';
+      g += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] +
+        '" stroke="' + z.palette[1] + '" stroke-width="0.5" stroke-opacity=".55" style="animation-delay:' + d + '"/>';
     });
     return '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">' + g + '</svg>';
   }
@@ -699,23 +712,23 @@
 /* ---- 星座卡开场序列：先连出星图 → 再浮现卡片 → 最后逐条出现文字 ---- */
 .ag-stage.seq .ag-sky svg line{
   stroke-dasharray:140;stroke-dashoffset:140;
-  animation:agStarDraw .9s ease-out forwards}
+  animation:agStarDraw .6s ease-out forwards}
 .ag-stage.seq .ag-sky svg circle{
-  opacity:0;animation:agStarPop .7s ease-out .4s forwards}
+  opacity:0;animation:agStarPop .5s ease-out forwards}
 @keyframes agStarDraw{to{stroke-dashoffset:0}}
 @keyframes agStarPop{from{opacity:0}to{opacity:1}}
-/* 卡片：等星图连完再浮现 */
-.ag-stage.seq .ag-card.enter{animation-delay:.62s}
+/* 卡片：等星图连完再浮现（--skyDur 由 JS 按星数/线数算出） */
+.ag-stage.seq .ag-card.enter{animation-delay:calc(var(--skyDur,1s) + .05s)}
 /* 星象图腾：卡片出现后淡入（保留自转） */
-.ag-stage.seq .ag-zmark{animation:agZspin 52s linear infinite, agFade .9s ease-out 1.15s both}
+.ag-stage.seq .ag-zmark{animation:agZspin 52s linear infinite, agFade .9s ease-out calc(var(--skyDur,1s) + .5s) both}
 @keyframes agFade{from{opacity:0}to{opacity:1}}
 /* 文字：最后逐条浮出 */
 .ag-stage.seq .ag-front .ag-inner > *{opacity:0;animation:agTextIn .55s ease-out forwards}
-.ag-stage.seq .ag-front .ag-inner > *:nth-child(1){animation-delay:1.35s}
-.ag-stage.seq .ag-front .ag-inner > *:nth-child(2){animation-delay:1.42s}
-.ag-stage.seq .ag-front .ag-inner > *:nth-child(3){animation-delay:1.48s}
-.ag-stage.seq .ag-front .ag-inner > *:nth-child(4){animation-delay:1.55s}
-.ag-stage.seq .ag-front .ag-inner > *:nth-child(5){animation-delay:1.62s}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(1){animation-delay:calc(var(--skyDur,1s) + .72s)}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(2){animation-delay:calc(var(--skyDur,1s) + .79s)}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(3){animation-delay:calc(var(--skyDur,1s) + .85s)}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(4){animation-delay:calc(var(--skyDur,1s) + .92s)}
+.ag-stage.seq .ag-front .ag-inner > *:nth-child(5){animation-delay:calc(var(--skyDur,1s) + .99s)}
 @keyframes agTextIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 
 /* 流沙：几道柔和的沙色带缓慢流淌（纯 transform 位移，GPU 合成，零重绘） */
@@ -1402,9 +1415,13 @@
       sky.innerHTML = zdef ? skySvg(zdef) : '';
       sky.classList.toggle('on', !!zdef);
     }
-    /* 星座卡专属开场序列：连星图 → 浮出卡 → 出文字（非星座卡关闭） */
+    /* 星座卡专属开场序列：依次点星 → 连线 → 浮出卡 → 出文字（非星座卡关闭） */
     const stageEl = $('agStage');
-    if (stageEl) stageEl.classList.toggle('seq', !!zdef);
+    if (stageEl) {
+      stageEl.classList.toggle('seq', !!zdef);
+      if (zdef) stageEl.style.setProperty('--skyDur', skyTotal(zdef).toFixed(2) + 's');
+      else stageEl.style.removeProperty('--skyDur');
+    }
 
     /* 姿态复位 */
     pose.tx = pose.ty = 0; pose.px = pose.py = .5; pose.dx = pose.dy = 0;
