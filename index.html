@@ -6,7 +6,7 @@
 <title>有点困 · Sleepy Space</title>
 <link rel="preconnect" href="https://fonts.loli.net">
 <link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&display=swap">
-<link rel="stylesheet" href="style.css?v=rev9">
+<link rel="stylesheet" href="style.css?v=rev11">
 </head>
 <body>
 <canvas id="sky"></canvas>
@@ -64,6 +64,37 @@
   </div>
 
   <footer class="p-foot">‥ 有点困 ‥</footer>
+  <button class="p-guide" id="btnGuide">✦ 使用介绍</button>
+
+  <!-- 使用介绍 全屏目录页 -->
+  <div class="gd-mask" id="gdMask">
+    <div class="gd-panel">
+      <div class="gd-head">
+        <div class="gd-title">使用介绍</div>
+        <div class="gd-sub">有点困 · Sleepy Space 全攻略</div>
+        <button class="gd-close" id="gdClose">✕</button>
+      </div>
+      <div class="gd-body" id="gdBody"></div>
+    </div>
+  </div>
+
+  <!-- 使用介绍内：联系方式 全屏弹层（自包含，不依赖 auth.js） -->
+  <div class="gd-contact-mask" id="gdContactMask">
+    <div class="gd-contact-panel">
+      <div class="gd-contact-head">
+        <div class="gd-contact-title">有问题加我</div>
+        <div class="gd-contact-sub">长按识别二维码</div>
+        <button class="gd-contact-close" id="gdContactClose">✕</button>
+      </div>
+      <div class="gd-contact-body">
+        <div class="gd-contact-box">
+          <div class="gdc-tip">遇到问题？欢迎加我聊聊<br>反馈建议、报 bug、闲聊都行 ✦</div>
+          <img src="assets/qr-contact.png" alt="联系方式二维码">
+          <div class="gdc-sub">长按识别二维码 · 添加好友</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -414,11 +445,188 @@ if(_wToggle)_wToggle.addEventListener('click',()=>{
 });
 </script>
 <script src="music-widget.js?v=4"></script>
-<script src="supabase-config.js?v=5"></script>
-<script src="auth.js?v=10"></script>
+<script src="personalize.js?v=2"></script>
+<script src="supabase-config.js?v=6"></script>
+<script src="auth.js?v=12"></script>
 <script src="achievements.js?v=35"></script>
-<script src="profile.js?v=3"></script>
+<script src="profile.js?v=6"></script>
 <script src="user-widget.js?v=15"></script>
+
+<!-- 使用介绍：目录式板块攻略 -->
+<script>
+(function () {
+  'use strict';
+  /* 各板块介绍内容 */
+  var SECTIONS = [
+    {
+      ic: '🌙', name: '塔罗占卜',
+      body: '七十八张韦特塔罗，月下 AI 解读。',
+      steps: [
+        '选择牌阵：单张 / 三张 / 凯尔特十字等',
+        '在心中默念问题，点击「洗牌抽牌」',
+        '翻开牌面，AI 结合正逆位逐张解读',
+        '解读会自动存入「占卜记录」，用于生成你的专属情绪报告',
+        '支持追问：本次占卜最多可追问 3 次'
+      ]
+    },
+    {
+      ic: '✦', name: '今日观星',
+      body: '十二星座每日运势，AI 即兴推演。',
+      steps: [
+        '点击你的星座，或查看今日整体星象',
+        'AI 根据星座 + 日期区间生成专属推演',
+        '运势自动记录，可随时回看',
+        '支持分享当日运势给朋友'
+      ]
+    },
+    {
+      ic: '☯', name: '易经问卦',
+      body: '五种起卦方式，六十四卦深度解读。',
+      steps: [
+        '默念所问之事，选择起卦方式（掷币/数字/时间等）',
+        '系统成卦，AI 解读本卦、变卦与动爻',
+        '历史卦象自动记录，供常问问题分析参考',
+        '变卦显示：本卦 → 变卦的完整推演'
+      ]
+    },
+    {
+      ic: '◈', name: '记忆库',
+      body: '查看你的记忆网络：所有占卜、运势、问答的沉淀。',
+      steps: [
+        '浏览历史占卜记录与结果',
+        '按时间轴回看你的「情绪轨迹」',
+        '所有数据仅保存在本机（localStorage），不上传服务器',
+        '清除浏览器数据会清空记录，请留意'
+      ]
+    },
+    {
+      ic: '💌', name: 'AI 个性化解读',
+      body: '「让解读越用越准」——AI 会学习你的历史。',
+      steps: [
+        '占卜时自动注入你最近 10 次记录',
+        '若反复抽到某张牌（如月亮×3），AI 会点名指出',
+        '本月情绪报告：情绪指数 + 趋势 + 高频牌 + 关键大牌',
+        '常问问题分析：统计你最常问的方向（感情/事业/学业…）',
+        '个人资料页可随时查看完整情绪报告'
+      ]
+    },
+    {
+      ic: '👤', name: '个人中心',
+      body: '悬浮球点击打开，管理你的资料与成就。',
+      steps: [
+        '填写生日/星座 → 解读更贴合你',
+        '查看占卜统计、成就徽章、情绪卡片',
+        '「本月情绪」卡片始终可见：无数据时显示引导，有数据自动点亮',
+        '成就系统：占卜解锁徽章，收藏册可查看'
+      ]
+    },
+    {
+      ic: '🎵', name: '音乐与氛围',
+      body: '页面右下角音乐控件，沉浸式占卜体验。',
+      steps: [
+        '切换不同音效与背景乐',
+        '配合动态星空背景（随时间/天气变化）',
+        '深空彩蛋：页面底部点一下进入'
+      ]
+    },
+    {
+      ic: '📜', name: '免责声明 · 用户协议',
+      body: '使用本产品即代表你已阅读并同意以下条款。',
+      steps: [
+        '【服务性质】本站所有内容（塔罗、星象、易学解读等）均由 AI 生成，仅供娱乐与参考，不构成任何专业建议',
+        '【不作保证】所有解读结果仅供参考，不构成医疗、法律、金融、心理或其他专业领域的建议；据此作出的任何决策与本站无关',
+        '【责任豁免】因使用本站内容导致的任何直接或间接损失，本站及开发者不承担任何责任',
+        '【内容版权】页面设计、代码与原创内容版权归开发者所有，未经许可不得复制、转载或商用',
+        '【数据说明】占卜记录保存在你的设备本地，请妥善保管设备；开发者不收集、不存储你的个人信息',
+        '【协议更新】本站有权随时修改本协议，修改后继续使用即视为同意新协议',
+        '【争议解决】如有争议，双方应友好协商；协商不成的，提交开发者所在地有管辖权的人民法院处理',
+        '凡使用本站即视为同意上述全部条款。如有疑问，请通过页面底部的「使用介绍」查看完整协议。'
+      ]
+    }
+  ];
+
+  function buildGuide() {
+    var body = document.getElementById('gdBody');
+    if (!body) return;
+    var html = '';
+    for (var i = 0; i < SECTIONS.length; i++) {
+      var s = SECTIONS[i];
+      var steps = '';
+      if (s.steps && s.steps.length) {
+        steps = '<ul class="gd-steps">';
+        for (var j = 0; j < s.steps.length; j++) steps += '<li>' + s.steps[j] + '</li>';
+        steps += '</ul>';
+      }
+      html += '<div class="gd-item" data-i="' + i + '">' +
+        '<div class="gd-item-head"><span class="gd-item-ic">' + s.ic + '</span>' +
+        '<span class="gd-item-name">' + s.name + '</span>' +
+        '<span class="gd-item-arrow">▾</span></div>' +
+        '<div class="gd-item-body"><div>' + s.body + '</div>' + steps + '</div></div>';
+    }
+    /* 请我喝杯咖啡：独立页面入口 */
+    html += '<a class="gd-coffee" href="coffee.html">' +
+      '<div class="gd-coffee-ic">☕</div>' +
+      '<div class="gd-coffee-title">请我喝杯咖啡</div>' +
+      '<div class="gd-coffee-sub">如果你喜欢这个小小的占卜空间，欢迎支持我继续做下去 ✦</div>' +
+      '<div class="gd-coffee-go">打开支持页 ›</div></a>';
+    /* 有问题加我：打开联系方式弹层 */
+    html += '<a class="gd-contact" href="javascript:void(0)" id="btnGuideContact">' +
+      '<div class="gd-contact-ic">💬</div>' +
+      '<div class="gd-contact-title">有问题加我</div>' +
+      '<div class="gd-contact-sub">反馈建议、报 bug、闲聊都行 ✦</div>' +
+      '<div class="gd-contact-go">查看联系方式 ›</div></a>';
+    body.innerHTML = html;
+  }
+
+  function bindGuide() {
+    var mask = document.getElementById('gdMask');
+    var btn = document.getElementById('btnGuide');
+    var close = document.getElementById('gdClose');
+    if (!mask || !btn) return;
+    btn.addEventListener('click', function () {
+      mask.style.display = 'flex';
+      buildGuide();
+      /* 绑定展开/收起 */
+      var items = mask.querySelectorAll('.gd-item-head');
+      for (var i = 0; i < items.length; i++) {
+        (function (head) {
+          head.addEventListener('click', function () {
+            var item = head.parentNode;
+            var isOpen = item.classList.contains('open');
+            /* 手风琴：同时只展开一个 */
+            var all = mask.querySelectorAll('.gd-item');
+            for (var k = 0; k < all.length; k++) all[k].classList.remove('open');
+            if (!isOpen) item.classList.add('open');
+          });
+        })(items[i]);
+      }
+      /* 有问题加我 → 打开联系方式弹层（自包含 gdContactMask） */
+      var btnGC = document.getElementById('btnGuideContact');
+      if (btnGC) btnGC.addEventListener('click', function (e) {
+        e.preventDefault();
+        var cm = document.getElementById('gdContactMask');
+        if (cm) cm.classList.add('show');
+      });
+    });
+    if (close) close.addEventListener('click', function () { mask.style.display = 'none'; });
+    mask.addEventListener('click', function (e) { if (e.target === mask) mask.style.display = 'none'; });
+
+    /* 联系方式弹层：关闭 */
+    var cm = document.getElementById('gdContactMask');
+    var cmClose = document.getElementById('gdContactClose');
+    if (cm && cmClose) cmClose.addEventListener('click', function () { cm.classList.remove('show'); });
+    if (cm) cm.addEventListener('click', function (e) { if (e.target === cm) cm.classList.remove('show'); });
+  }
+
+  function init() {
+    buildGuide();
+    bindGuide();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else { init(); }
+})();
+</script>
 
 </body>
 </html>

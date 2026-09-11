@@ -604,6 +604,11 @@ function buildPrompt(){
   L.push('【问题】'+(q?q:'（未提供具体问题。请围绕求问者近期整体状态与当下最重要的能量线索展开解读，并在结尾温和提示：聚焦更具体的问题会让指引更精准。）'));
   L.push('【抽牌结果】');
   drawn.forEach((d,i)=>L.push((i+1)+'. '+curSpread.slots[i]+'：《'+d.card.en+'》「'+d.card.zh+'」'+(d.maj?'（大阿卡纳）':'（小阿卡纳）')+'，'+(d.rev?'逆位':'正位')+'。韦特体系通行词义——'+(d.rev?('逆位通常指向：'+d.card.r):('正位通常指向：'+d.card.u))+'。'));
+  /* AI 个性化：注入用户历史占卜数据，让解读越用越准 */
+  if(typeof window.Personalize !== 'undefined'){
+    const pz=window.Personalize.buildPersonalizedPrompt('tarot');
+    if(pz)L.push(pz);
+  }
   return L.join('\n');
 }
 const SYS_PROMPT=`你是一位经验丰富、口碑极好的华人专业塔罗师，人称"月下塔罗师"。你现在收到的是一套真实的韦特塔罗抽牌结果（含日期星期、牌阵、各位置的牌、正逆位与通行词义）。请严格基于这套给出的牌进行解读，绝不虚构或替换任何一张牌。\
@@ -983,7 +988,7 @@ $('btnHistCopyMem').onclick=()=>{
   const payload={moon_import:1,records:h.map(r=>({type:'story',title:'☽ 塔罗 · '+((r.q||'').replace(/\s+/g,' ').slice(0,12)||r.spread||'占卜'),note:'时间：'+(r.time||'')+'\n问题：'+(r.q||'无')+'\n牌面：'+(r.cards||'')+'\n解读：'+(r.text||''),createdAt:Date.now()}))};
   navigator.clipboard.writeText(JSON.stringify(payload)).then(()=>alert('已复制 '+h.length+' 条占卜记录\n请到记忆库点右上角 ⇩ 粘贴导入')).catch(()=>{const t=document.createElement('textarea');t.value=JSON.stringify(payload);document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();alert('已复制，请到记忆库点右上角 ⇩ 粘贴导入');});
 };
-$('btnClearHist').onclick=()=>{localStorage.removeItem('tarot_hist_v1');$('btnHist').click();};
+$('btnClearHist').onclick=async ()=>{localStorage.removeItem('tarot_hist_v1');if(typeof window.clearCloudSnapshot==='function'){try{await window.clearCloudSnapshot(['tarot_hist_v1']);}catch(e){}};$('btnHist').click();};
 
 /* ---------- 公告 / 使用说明 ---------- */
 const openNotice=()=>{$('noticeMask').classList.add('open')};
@@ -999,8 +1004,13 @@ const closeNotice=()=>{$('noticeMask').classList.remove('open');
 $('btnNotice').onclick=openNotice;
 $('btnNoticeOk').onclick=closeNotice;
 $('noticeMask').onclick=e=>{if(e.target===$('noticeMask'))closeNotice()};
-/* 每次打开页面都自动弹出公告指引 */
-try{setTimeout(openNotice,1200)}catch(e){}
+/* 首次打开页面自动弹出公告指引（之后不再自动弹，可随时点右上角 ✦ 查看） */
+try{
+  if(!localStorage.getItem('tarot_notice_shown')){
+    localStorage.setItem('tarot_notice_shown','1');
+    setTimeout(openNotice,1200);
+  }
+}catch(e){}
 
 /* ---------- 音乐播放器：夜色电台 ---------- */
 (function(){

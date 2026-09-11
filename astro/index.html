@@ -151,9 +151,11 @@ a.soon-pill:active{transform:scale(.95)}
   document.getElementById('btnAstroHist').onclick=function(){render();mask.classList.add('open');};
   document.getElementById('ahClose').onclick=function(){mask.classList.remove('open');};
   mask.onclick=function(e){if(e.target===mask)mask.classList.remove('open');};
-  document.getElementById('ahClear').onclick=function(){
+  document.getElementById('ahClear').onclick=async function(){
     if(!confirm('清空全部记录吗？'))return;
-    localStorage.removeItem(HKEY);render();
+    localStorage.removeItem(HKEY);
+    if(typeof window.clearCloudSnapshot==='function'){try{await window.clearCloudSnapshot([HKEY]);}catch(e){}}
+    render();
   };
   document.getElementById('ahCopy').onclick=function(){
     var h=loadH();
@@ -362,10 +364,16 @@ async function pick(i){
   $('aNow').innerHTML='<span class="h-now-sym">'+sym+'</span><b>'+name+'</b><span class="h-now-range">'+range+'</span>';
   $('aText').innerHTML='<div class="a-loading"><span class="orb-ring"></span><span>🌙 正在为你观星推演……</span></div>';
   try{
+    let userMsg='请为「'+name+'」（日期区间'+range+'，属'+astro+'，核心性格特质：'+trait+'）推演今日（'+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日，周'+wk+'）的运势。请严格贴合该星座特质，避免通用套话。';
+    /* AI 个性化：注入用户历史观星记录，让解读越用越准 */
+    if(typeof window.Personalize !== 'undefined'){
+      const pz=window.Personalize.buildPersonalizedPrompt('astro');
+      if(pz)userMsg+=pz;
+    }
     const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
       body:JSON.stringify({model:MODEL,messages:[{role:'system',content:HORO_SYS},
-        {role:'user',content:'请为「'+name+'」（日期区间'+range+'，属'+astro+'，核心性格特质：'+trait+'）推演今日（'+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日，周'+wk+'）的运势。请严格贴合该星座特质，避免通用套话。'}],temperature:.8,max_tokens:1500})});
+        {role:'user',content:userMsg}],temperature:.8,max_tokens:1500})});
     if(my!==horoSeq)return;
     if(!res.ok)throw new Error('HTTP '+res.status);
     const j=await res.json();
@@ -468,9 +476,10 @@ $('btnShot').onclick=()=>{
 </script>
 <script src="../memory.js"></script>
 <script src="../music-widget.js?v=1"></script>
-<script src="../supabase-config.js?v=5"></script>
+<script src="../personalize.js?v=2"></script>
+<script src="../supabase-config.js?v=6"></script>
 <script src="../achievements.js?v=21"></script>
-<script src="../profile.js?v=3"></script>
+<script src="../profile.js?v=6"></script>
 <script src="../user-widget.js?v=15"></script>
 </body>
 </html>

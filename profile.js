@@ -128,6 +128,27 @@
 .pf-line{font-size:.74rem;color:rgba(240,207,130,.72);line-height:1.75;margin-top:9px;
   background:rgba(255,255,255,.05);border-radius:12px;padding:9px 12px}
 .pf-line em{color:#f0cf82;font-style:normal;font-weight:600}
+.pf-mood{margin-top:10px;padding:12px 13px;border-radius:15px;text-align:left;
+  background:linear-gradient(165deg,rgba(255,238,196,.1),rgba(240,207,130,.04));
+  border:1px solid rgba(240,207,130,.2)}
+.pf-mood-head{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.pf-mood-ic{font-size:1rem}
+.pf-mood-title{font-size:.72rem;color:#f0cf82;font-weight:600;letter-spacing:.15em;flex:1}
+.pf-mood-tag{font-size:.6rem;color:rgba(240,207,130,.6);border:1px solid rgba(240,207,130,.25);
+  padding:2px 9px;border-radius:999px}
+.pf-mood-gauge{display:flex;align-items:center;justify-content:center;margin:4px 0 8px}
+.pf-mood-gauge .bar{width:100%;height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;position:relative}
+.pf-mood-gauge .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;transition:width .8s ease}
+.pf-mood-gauge .bar b{position:absolute;top:-4px;width:14px;height:14px;border-radius:50%;background:#f0cf82;
+  border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transform:translateX(-50%);transition:left .8s ease}
+.pf-mood-info{font-size:.68rem;color:rgba(240,207,130,.65);line-height:1.7;text-align:left}
+.pf-mood-info em{color:#f0cf82;font-style:normal;font-weight:600}
+.pf-qa{display:flex;align-items:center;gap:6px;margin-top:9px;padding-top:9px;border-top:1px dashed rgba(240,207,130,.22);
+  font-size:.68rem;color:rgba(240,207,130,.65);line-height:1.6;flex-wrap:wrap}
+.pf-qa-ic{font-size:.8rem;color:#f0cf82}
+.pf-qa-label{font-size:.62rem;color:rgba(240,207,130,.5);letter-spacing:.15em;font-weight:600}
+.pf-qa-txt em{color:#f0cf82;font-style:normal;font-weight:600}
+.pf-qa-total{font-size:.6rem;color:rgba(240,207,130,.4);margin-left:auto}
 .pf-badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .pf-badge{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:14px;
   padding:10px 4px;text-align:center;transition:.25s}
@@ -193,6 +214,21 @@
       </div>
       <div class="pf-line" id="pfTopCards">你最常遇见：—</div>
       <div class="pf-line" id="pfLast">最近一次占卜：—</div>
+      <div class="pf-mood" id="pfMoodBox" style="display:none">
+        <div class="pf-mood-head">
+          <span class="pf-mood-ic">☾</span>
+          <span class="pf-mood-title">本月情绪</span>
+          <span class="pf-mood-tag" id="pfMoodTag">—</span>
+        </div>
+        <div class="pf-mood-gauge" id="pfMoodGauge"></div>
+        <div class="pf-mood-info" id="pfMoodInfo"></div>
+        <div class="pf-qa" id="pfQaBox" style="display:none">
+          <span class="pf-qa-ic">✦</span>
+          <span class="pf-qa-label">常问问题</span>
+          <span class="pf-qa-txt" id="pfQaTxt">—</span>
+        </div>
+        <button class="pf-btn full" id="pfBtnMood" style="margin-top:10px">✦ 查看完整情绪报告</button>
+      </div>
     </div>
 
     <div class="pf-sec">
@@ -294,6 +330,45 @@
       ? '你最常遇见：' + st.topCards.map(c => '<em>' + esc(c) + '</em>').join('、')
       : '你还没有抽过牌，去塔罗看看？';
     $('pfLast').innerHTML = st.lastTime ? '最近一次占卜：<em>' + esc(st.lastTime) + '</em>' : '最近一次占卜：还不曾有';
+
+    /* 本月情绪摘要（AI 个性化内嵌卡片，始终显示） */
+    const moodBox = $('pfMoodBox');
+    if (moodBox && window.Personalize) {
+      const mood = window.Personalize.computeMoodTrend();
+      if (mood && mood.count > 0) {
+        moodBox.style.display = 'block';
+        const tagTxt = mood.avg >= 0.55 ? '明亮' : mood.avg >= 0.25 ? '温和' : mood.avg >= -0.1 ? '平稳' : mood.avg >= -0.4 ? '低沉' : '灰暗';
+        $('pfMoodTag').textContent = tagTxt;
+        const pct = Math.max(0, Math.min(100, (mood.avg + 1) / 2 * 100));
+        const hue = 200 - pct * 1.6;
+        $('pfMoodGauge').innerHTML =
+          '<div class="bar"><i style="width:' + pct + '%;background:hsl(' + hue + ',65%,60%)"></i>' +
+          '<b style="left:' + pct + '%"></b></div>';
+        const cardsTxt = (mood.major.length ? mood.major.map(c => c.name).join('、') : (mood.topCards.length ? mood.topCards.map(c => c.name).join('、') : '—'));
+        const trendTxt = mood.trend === 'up' ? '回暖' : mood.trend === 'down' ? '下沉' : '平稳';
+        $('pfMoodInfo').innerHTML = '情绪指数 <em>' + mood.avg.toFixed(2) + '</em>（-1~1） · ' + mood.count + ' 次占卜 · 趋势' + trendTxt +
+          '<br>关键牌：<em>' + esc(cardsTxt) + '</em>' +
+          (mood.reversed.total ? ' · 逆位 ' + mood.reversed.count + '/' + mood.reversed.total : '');
+      } else {
+        /* 无数据：显示引导，不再隐藏整张卡片 */
+        moodBox.style.display = 'block';
+        $('pfMoodTag').textContent = '待点亮';
+        $('pfMoodGauge').innerHTML = '<div class="bar empty"><i style="width:0%"></i><b style="left:0%"></b></div>';
+        $('pfMoodInfo').innerHTML = '完成一次占卜后，这里会生成你的专属情绪报告<br>情绪指数 · 趋势 · 关键牌都会随记录累积';
+      }
+      /* 常问问题分析（独立于情绪数据，有历史即显示） */
+      const qaBox = $('pfQaBox');
+      if (qaBox) {
+        const qa = window.Personalize.computeTopQuestions(3);
+        if (qa && qa.total > 0 && qa.top.length) {
+          qaBox.style.display = 'flex';
+          $('pfQaTxt').innerHTML = qa.top.map(t => '<em>' + esc(t.name) + '</em>' + (t.count > 1 ? '×' + t.count : '')).join('、') +
+            '<span class="pf-qa-total">共 ' + qa.total + ' 问</span>';
+        } else {
+          qaBox.style.display = 'none';
+        }
+      }
+    }
 
     /* 徽章：交给成就系统渲染（含稀有度分级 / 点击开卡 / NEW 标记） */
     if (window.Achievements && window.Achievements.renderBadges) {
@@ -408,6 +483,15 @@
     $('pfBtnAlbum').addEventListener('click', e => {
       e.preventDefault();
       if (window.Achievements && window.Achievements.openAlbum) window.Achievements.openAlbum();
+    });
+
+    /* 本月情绪报告（AI 个性化） */
+    $('pfBtnMood').addEventListener('click', () => {
+      if (window.Personalize && window.Personalize.openMoodReport) {
+        window.Personalize.openMoodReport();
+      } else {
+        toast('个性化模块加载中，请稍后再试');
+      }
     });
 
     /* 小弹层按钮 */

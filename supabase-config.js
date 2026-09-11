@@ -198,6 +198,85 @@ async function uploadSnapshot() {
   }
 }
 
+/**
+ * 彻底清空：本地同步键 + 云端快照（支持局部）。
+ * 用于「一键清空 / 清空记录」类按钮：避免只清本地导致下次登录云端数据回灌。
+ * @param {string[]} [onlyKeys] 可选，只清指定本地键（默认清全部同步键）
+ *   全清：删除整个云端快照；
+ *   局部：从云端快照 items 中移除对应 key、meta 打墓碑后写回（保留其他类型数据）。
+ */
+async function clearCloudSnapshot(onlyKeys) {
+  const keys = onlyKeys && onlyKeys.length ? onlyKeys : SYNC_LS_KEYS;
+  const isFull = !onlyKeys || !onlyKeys.length;
+  /* 1. 清本地键 + 同步元数据（临时抑制写入钩子，避免触发防抖上传） */
+  window.__ssSyncing = true;
+  try {
+    keys.forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+    const meta = readSyncMeta();
+    const now = Date.now();
+    keys.forEach(k => { meta[k] = { t: now, s: '' }; });   // 墓碑：标记为已删除
+    writeSyncMeta(meta);
+  } catch (e) { console.warn('[sync] 清空本地失败:', e); }
+  window.__ssSyncing = false;
+  /* 2. 清云端快照（已登录才需要） */
+  try {
+    const sb = await initSupabase();
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.user) return { ok: true, cloud: false };   // 未登录：仅本地
+    const { data: snap } = await sb.from('memories')
+      .select('id,note').eq('user_id', session.user.id).eq('type', SNAP_TYPE).maybeSingle();
+    if (!snap?.id) return { ok: true, cloud: true };         // 云端本来就无快照
+
+    if (isFull) {
+      /* 全清 → 删除云端快照（RLS 拦截则退化为写入空快照） */
+      const { error } = await sb.from('memories').delete().eq('id', snap.id);
+      if (error) { throw error; }
+    } else {
+      /* 局部清空 → 保留其他 key，移除指定 key 并打墓碑后写回 */
+      let payload = null;
+      try { payload = JSON.parse(snap.note); } catch (e) {}
+      if (payload && payload.v === 2 && payload.items) {
+        keys.forEach(k => { delete payload.items[k]; });
+        const curMeta = payload.meta || {};
+        const now = Date.now();
+        keys.forEach(k => { curMeta[k] = { t: now, s: '' }; });
+        payload.meta = curMeta;
+        payload.at = now;
+        const { error: upErr } = await sb.from('memories')
+          .update({ note: JSON.stringify(payload), sig: 'v2', updated_at: new Date().toISOString() })
+          .eq('id', snap.id);
+        if (upErr) throw upErr;
+      }
+    }
+    return { ok: true, cloud: true };
+  } catch (e) {
+    /* RLS 兜底：删不掉就写入空快照 / 移除本地键后的空快照 */
+    try {
+      const sb = await initSupabase();
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session?.user) return { ok: false, cloud: false, error: e };
+      const emptyPayload = { v: 2, at: Date.now(), items: {}, meta: readSyncMeta() };
+      if (!isFull) { keys.forEach(k => { emptyPayload.meta[k] = { t: Date.now(), s: '' }; }); }
+      const { data: existing } = await sb.from('memories')
+        .select('id').eq('user_id', session.user.id).eq('type', SNAP_TYPE).maybeSingle();
+      if (existing?.id) {
+        await sb.from('memories')
+          .update({ note: JSON.stringify(emptyPayload), sig: 'v2', updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+      } else {
+        await sb.from('memories').insert({
+          user_id: session.user.id, type: SNAP_TYPE, title: 'memory_snapshot',
+          note: JSON.stringify(emptyPayload), source: 'auto', sig: 'v2'
+        });
+      }
+      return { ok: true, cloud: true, fallback: true };
+    } catch (e2) {
+      console.warn('[sync] 清空云端失败:', e2);
+      return { ok: false, cloud: false, error: e2 };
+    }
+  }
+}
+
 /** ========== 下载（非破坏性 · 逐 key 按时间戳取新） ========== */
 async function downloadSnapshot() {
   window.__ssSyncing = true;   // 抑制写入钩子，避免边下载边触发上传
@@ -307,6 +386,7 @@ window.downloadSnapshot = downloadSnapshot;
 window.scheduleUpload = scheduleUpload;
 window.flushUpload = flushUpload;
 window.bootCloudSync = bootCloudSync;
+window.clearCloudSnapshot = clearCloudSnapshot;
 
 /**
  * 自动挂钩：任何页面「直接」写同步键（如 tarot/app.js 自己 setItem tarot_hist_v1）

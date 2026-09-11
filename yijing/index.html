@@ -696,7 +696,9 @@ async function aiRead(){
     '起卦方式：'+(cur.methodText||'铜钱摇卦')+'\n'+
     '本卦：'+cur.benName+'（'+cur.benDetail+'）\n'+
     (cur.moving.length?('动爻：'+cur.moving.join('、')+'　'+cur.movingText+'\n'):'六爻皆静，以本卦断之\n')+
-    (cur.bianName&&cur.bianName!==cur.benName?('变卦：'+cur.bianName+'（'+cur.bianDetail+'）'):'无变卦');
+    (cur.bianName&&cur.bianName!==cur.benName?('变卦：'+cur.bianName+'（'+cur.bianDetail+'）'):'无变卦')+
+    /* AI 个性化：注入用户历史问卦记录，让解卦越用越准 */
+    (typeof window.Personalize !== 'undefined' ? window.Personalize.buildPersonalizedPrompt('yijing') : '');
   let txt='';
   try{
     const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
@@ -796,7 +798,7 @@ $('btnAI').onclick=aiRead;
 $('btnHist').onclick=()=>{renderHist();$('histMask').classList.add('open');};
 $('histClose').onclick=()=>$('histMask').classList.remove('open');
 $('histMask').onclick=e=>{if(e.target===$('histMask'))$('histMask').classList.remove('open');};
-$('histClear').onclick=()=>{if(!confirm('清空全部问卦记录吗？'))return;localStorage.removeItem(HKEY);renderHist();toast('记录已清空');};
+$('histClear').onclick=async()=>{if(!confirm('清空全部问卦记录吗？'))return;localStorage.removeItem(HKEY);if(typeof window.clearCloudSnapshot==='function'){try{await window.clearCloudSnapshot([HKEY]);}catch(e){}}renderHist();toast('记录已清空');};
 $('histCopy').onclick=doCopy;
 $('histCopyMem').onclick=()=>{doCopy();toast('已复制 · 到记忆库点 ⇩ 粘贴导入');};
 
@@ -807,9 +809,10 @@ fetch('gua.json').then(r=>r.json()).then(d=>{
   toast('卦象数据加载失败，请刷新重试');
 });
 </script>
-<script src="../supabase-config.js?v=5"></script>
+<script src="../personalize.js?v=2"></script>
+<script src="../supabase-config.js?v=6"></script>
 <script src="../achievements.js?v=21"></script>
-<script src="../profile.js?v=3"></script>
+<script src="../profile.js?v=6"></script>
 <script src="../user-widget.js?v=15"></script>
 </body>
 </html>

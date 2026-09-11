@@ -608,13 +608,23 @@ document.getElementById('btnImport').onclick=()=>{importPanel.style.display='fle
 document.getElementById('importCancel').onclick=()=>importPanel.style.display='none';
 
 /* ================= 清空全部 ================= */
-document.getElementById('btnClearAll').onclick=()=>{
+document.getElementById('btnClearAll').onclick=async ()=>{
   const db=dbLoad();
   if(!db.items.length){toast('夜空已经是空的');return;}
-  if(!confirm('确定要让整片夜空熄灭吗？\n将删除全部 '+db.items.length+' 颗记忆，且无法恢复。'))return;
+  if(!confirm('确定要让整片夜空熄灭吗？\n将删除全部 '+db.items.length+' 颗记忆（含云端备份），且无法恢复。'))return;
+  try{
+    /* 彻底清空：本地全部同步键 + 云端快照，避免下次登录数据回灌 */
+    if(typeof window.clearCloudSnapshot==='function'){
+      const r=await window.clearCloudSnapshot();
+      if(!r.ok){toast('云端清理失败，请稍后重试');return;}
+    }else{
+      localStorage.removeItem(STORE_KEY);
+    }
+  }catch(e){console.warn('清空失败',e);}
   localStorage.removeItem(STORE_KEY);
+  localStorage.removeItem('ss_sync_meta_v1');
   buildNodes();
-  toast('夜空已清空');
+  toast('夜空已清空（含云端）');
 };
 
 /* 内容指纹：与已有节点比对，避免重复导入 */
@@ -749,9 +759,10 @@ const migrated=migrateOldData();
 buildNodes();
 if(migrated)setTimeout(()=>toast('已点亮 '+migrated+' 颗旧记忆的星 ✦'),600);
 </script>
-<script src="../supabase-config.js?v=5"></script>
+<script src="../supabase-config.js?v=6"></script>
 <script src="../achievements.js?v=21"></script>
-<script src="../profile.js?v=3"></script>
+<script src="../personalize.js?v=2"></script>
+<script src="../profile.js?v=6"></script>
 <script src="../user-widget.js?v=15"></script>
 </body>
 </html>

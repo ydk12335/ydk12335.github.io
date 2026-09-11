@@ -19,10 +19,15 @@ const AUTH_HTML = `
       <div class="form-group">
         <label class="form-label">密码</label>
         <input class="form-input" id="loginPwd" type="password" placeholder="你的密码" autocomplete="current-password">
-      </div>
       <button class="auth-btn-primary" id="btnLogin">登 录</button>
       <button class="auth-btn-ghost" id="btnToCode">用邮箱验证码登录</button>
       <div class="auth-footer"><a href="#" id="btnForgot">忘记密码？</a> · <a href="#" id="btnToRegister">创建账号</a> · <a href="#" id="authClose1">关闭</a></div>
+      <div class="auth-legal">
+        <a href="#" id="btnAgreement">《用户协议与免责声明》</a>
+        <span class="auth-legal-sep">·</span>
+        <a href="#" id="btnContact">有问题加我</a>
+      </div>
+    </div>
     </div>
 
     <!-- ② 注册 -->
@@ -98,6 +103,18 @@ const AUTH_HTML = `
     </div>
   </div>
 </div>
+
+<!-- 用户协议 / 联系方式 全屏弹层 -->
+<div class="legal-mask" id="legalMask">
+  <div class="legal-panel">
+    <div class="legal-head">
+      <div class="legal-title" id="legalTitle">用户协议</div>
+      <div class="legal-sub" id="legalSub"></div>
+      <button class="legal-close" id="legalClose">✕</button>
+    </div>
+    <div class="legal-body" id="legalBody"></div>
+  </div>
+</div>
 `;
 
 const AUTH_CSS = `
@@ -158,6 +175,39 @@ button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
 .avatar-tip{font-size:.64rem;color:rgba(240,207,130,.35);text-align:center;margin:-2px 0 8px}
 .user-name{font-size:.98rem;color:#f0cf82;text-align:center;margin-bottom:4px;font-weight:600;letter-spacing:.08em}
 .user-email{font-size:.76rem;color:rgba(240,207,130,.5);text-align:center;margin-bottom:6px;word-break:break-all}
+.auth-legal{margin-top:14px;padding-top:12px;border-top:1px dashed rgba(240,207,130,.18);
+  font-size:.66rem;color:rgba(240,207,130,.4);display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.auth-legal a{color:rgba(240,207,130,.6);text-decoration:none;letter-spacing:.05em}
+.auth-legal a:active{color:#f0cf82}
+.auth-legal-sep{color:rgba(240,207,130,.25)}
+/* 协议 / 联系方式 全屏弹层 */
+.legal-mask{position:fixed;inset:0;z-index:500;background:rgba(4,2,16,.7);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:none;align-items:stretch;justify-content:stretch;padding:0;animation:authFade .28s ease}
+.legal-panel{width:100%;height:100%;background:rgba(20,13,38,.97);color:#f2ede0;
+  font-family:"Ma Shan Zheng","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi","楷体",serif;
+  display:flex;flex-direction:column;overflow:hidden;animation:authPop .35s cubic-bezier(.16,1,.3,1)}
+.legal-head{position:relative;padding:18px 20px 13px;text-align:center;
+  background:linear-gradient(165deg,rgba(255,238,196,.1),rgba(240,207,130,.03));
+  border-bottom:1px solid rgba(240,207,130,.14)}
+.legal-title{font-size:1.02rem;color:#f0cf82;font-weight:600;letter-spacing:.2em;text-indent:.2em}
+.legal-sub{font-size:.62rem;color:rgba(240,207,130,.5);margin-top:3px}
+.legal-close{position:absolute;top:12px;right:14px;width:30px;height:30px;border-radius:50%;
+  border:1px solid rgba(240,207,130,.25);background:rgba(255,255,255,.04);color:#f0cf82;
+  font-size:.7rem;cursor:pointer;font-family:inherit;line-height:1;transition:.2s}
+.legal-close:active{transform:scale(.9);background:rgba(240,207,130,.15)}
+.legal-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px 18px 26px;
+  font-size:.74rem;color:rgba(240,207,130,.75);line-height:2}
+.legal-body::-webkit-scrollbar{width:0}
+.legal-body b{color:#f0cf82;font-weight:600}
+.legal-body p{margin-bottom:10px}
+.legal-contact{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px 20px;text-align:center}
+.legal-contact .lc-tip{font-size:.7rem;color:rgba(240,207,130,.6);margin-bottom:14px;line-height:1.8}
+.legal-contact img{display:block;width:auto;height:auto;max-width:78vw;max-height:60vh;
+  -webkit-user-select:all;user-select:all;-webkit-touch-callout:default;touch-action:manipulation;
+  border-radius:16px;border:2px solid rgba(240,207,130,.3);background:#fff;box-shadow:0 14px 44px rgba(0,0,0,.45)}
+.legal-contact .lc-sub{font-size:.62rem;color:rgba(240,207,130,.4);margin-top:14px}
 `;
 
 function initAuth() {
@@ -214,6 +264,53 @@ function initAuth() {
   ['authClose1', 'authCloseR', 'authClose2', 'authClose3', 'authClose4'].forEach(id =>
     $(id).addEventListener('click', e => { e.preventDefault(); close(); }));
   mask.addEventListener('click', e => { if (e.target === mask) close(); });
+
+  // ===== 用户协议 / 联系方式（登录下方链接） =====
+  const legalMask = $('legalMask');
+  const legalTitle = $('legalTitle');
+  const legalBody = $('legalBody');
+  const legalSub = $('legalSub');
+  const openLegal = (title, sub, html) => {
+    if (!legalMask) return;
+    legalTitle.textContent = title;
+    legalSub.textContent = sub || '';
+    legalBody.innerHTML = html;
+    legalBody.scrollTop = 0;
+    legalMask.style.display = 'flex';
+  };
+  const closeLegal = () => { if (legalMask) legalMask.style.display = 'none'; };
+  const AGREEMENT_HTML =
+    '<p><b>《用户协议与免责声明》</b></p>' +
+    '<p>欢迎使用「有点困 · Sleepy Space」。在使用本站任何功能前，请仔细阅读以下条款。<b>使用本站即代表你已阅读、理解并同意本协议的全部内容。</b></p>' +
+    '<p><b>一、服务性质</b><br>本站所有内容（包括但不限于塔罗占卜、星座运势、易经问卦、AI 解读等）均由人工智能生成，仅供娱乐与参考，不构成任何专业建议。</p>' +
+    '<p><b>二、不作保证</b><br>所有解读结果仅供参考，不构成医疗、法律、金融、心理、投资或其他专业领域的建议。据此作出的任何决策或行动，均由你自行承担后果，与本站无关。</p>' +
+    '<p><b>三、责任豁免</b><br>因使用本站内容导致的任何直接或间接损失、精神损害或误解，本站及开发者均不承担任何责任。</p>' +
+    '<p><b>四、内容版权</b><br>页面设计、代码与原创内容版权归开发者所有，未经书面许可，不得复制、转载、修改或用于商业用途。</p>' +
+    '<p><b>五、数据说明</b><br>你的占卜记录等数据保存在设备本地（localStorage），开发者不收集、不存储你的个人信息。请妥善保管设备，清除浏览器数据将导致记录丢失。</p>' +
+    '<p><b>六、账号与登录</b><br>登录功能用于云端同步记忆。请妥善保管账号密码，因账号保管不当造成的损失由用户自行承担。</p>' +
+    '<p><b>七、协议更新</b><br>本站有权随时修改本协议。修改后的协议公布即生效，继续使用本站即视为同意更新后的协议。</p>' +
+    '<p><b>八、争议解决</b><br>如发生争议，双方应友好协商解决；协商不成的，提交开发者所在地有管辖权的人民法院处理。</p>' +
+    '<p><b>九、其他</b><br>凡使用本站即视为同意上述全部条款。如对本协议有任何疑问，可联系开发者咨询。</p>';
+  const CONTACT_HTML =
+    '<div class="legal-contact">' +
+    '<div class="lc-tip">遇到问题？欢迎加我聊聊<br>反馈建议、报 bug、闲聊都行 ✦</div>' +
+    '<img src="assets/qr-contact.png" alt="联系方式二维码">' +
+    '<div class="lc-sub">长按识别二维码 · 添加好友</div>' +
+    '</div>';
+
+  const btnAgree = $('btnAgreement');
+  if (btnAgree) btnAgree.addEventListener('click', e => {
+    e.preventDefault();
+    openLegal('用户协议与免责声明', '使用即代表同意', AGREEMENT_HTML);
+  });
+  const btnContact = $('btnContact');
+  if (btnContact) btnContact.addEventListener('click', e => {
+    e.preventDefault();
+    openLegal('有问题加我', '长按识别二维码', CONTACT_HTML);
+  });
+  const legalCloseBtn = $('legalClose');
+  if (legalCloseBtn) legalCloseBtn.addEventListener('click', closeLegal);
+  if (legalMask) legalMask.addEventListener('click', e => { if (e.target === legalMask) closeLegal(); });
 
   // ===== ① 密码登录 =====
   $('btnLogin').addEventListener('click', async () => {
@@ -417,6 +514,11 @@ function initAuth() {
     const m = document.getElementById('authMask');
     if (m) m.style.display = 'flex';
   };
+  window.openLegal = openLegal;
+  window.closeLegal = closeLegal;
+  window.CONTACT_HTML = CONTACT_HTML;
+  window.agreementTitle = '用户协议与免责声明';
+  window.agreementSub = '使用即代表同意';
 
   // ===== 启动：登录保护（云端同步由 supabase-config.js 的 bootCloudSync 统一处理） =====
   (async () => {
