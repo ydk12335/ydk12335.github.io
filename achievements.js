@@ -648,8 +648,8 @@
   50%{background-position:100% 50%, 0% 50%, 100% 50%, 0% 50%, 0% 0%}
   100%{background-position:0% 50%, 100% 50%, 0% 50%, 100% 50%, 0% 0%}}
 .ag-card[data-rarity="gold"] .ag-inner-back{color:#ecd9ff}
-.ag-card[data-rarity="gold"] .ag-bk-rar{border-color:rgba(190,150,255,.55);color:#d9b8ff;
-  box-shadow:0 0 14px rgba(190,150,255,.22)}
+.ag-card[data-rarity="gold"] .ag-bk-rar{border-color:rgba(240,207,130,.6);color:#ffd98a;
+  box-shadow:0 0 14px rgba(240,207,130,.28)}
 .ag-card[data-rarity="gold"] .ag-bk-name{
   background:linear-gradient(100deg,#ffd7f2,#d9b8ff,#e6dcff,#b79bff,#ffd7f2);
   background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
@@ -679,8 +679,8 @@
   background:linear-gradient(100deg,#ff9ad8,#c39bff,#9be7ff,#8ef0e0,#7fd4ff,#c39bff,#ff9ad8);
   background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:agFlow 5s linear infinite;font-weight:700;letter-spacing:.2em}
-.ag-card[data-rarity="gold"] .ag-rar{color:#d9b8ff;border-color:rgba(190,150,255,.55);
-  box-shadow:0 0 14px rgba(190,150,255,.22)}
+.ag-card[data-rarity="gold"] .ag-rar{color:#ffd98a;border-color:rgba(240,207,130,.6);
+  box-shadow:0 0 14px rgba(240,207,130,.28);text-shadow:0 0 8px rgba(240,207,130,.4)}
 .ag-card[data-rarity="gold"] .ag-desc{color:rgba(238,230,255,.85)}
 .ag-card[data-rarity="gold"] .ag-quote{color:#f0c9ff;text-shadow:0 0 16px rgba(190,150,255,.4);font-size:.78rem}
 .ag-card[data-rarity="gold"] .ag-edge{
