@@ -114,6 +114,24 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .reading p{margin-bottom:8px}
 .reading strong{color:var(--gold)}
 
+/* ===== 追问区（对齐塔罗） ===== */
+.followup{width:100%;background:rgba(var(--glass-rgb),.03);border:1px solid rgba(var(--gold-rgb),.15);
+  border-radius:14px;padding:14px 16px;margin-top:4px}
+.followup .fu-head{font-size:.78rem;color:var(--gold);letter-spacing:.08em;margin-bottom:10px}
+.followup .fu-head b{color:var(--ivory)}
+.fu-row{display:flex;gap:10px;align-items:center}
+.fu-row input{flex:1;min-width:0;background:rgba(var(--glass-rgb),.05);border:1px solid rgba(var(--gold-rgb),.2);
+  border-radius:12px;padding:11px 13px;color:var(--ivory);font-family:inherit;font-size:.85rem;outline:none;
+  user-select:text;letter-spacing:.05em}
+.fu-row input:focus{border-color:rgba(var(--gold-rgb),.5)}
+.fu-note{font-size:.72rem;color:rgba(var(--purple-rgb),.8);margin-top:8px;letter-spacing:.05em}
+#fuBoxes{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:12px}
+#fuBoxes .fu-item{background:rgba(var(--glass-rgb),.03);border:1px solid rgba(var(--gold-rgb),.1);
+  border-radius:12px;padding:12px 14px;font-size:.8rem;line-height:1.85;color:rgba(242,237,224,.88);user-select:text}
+#fuBoxes .fu-item .fq{color:var(--gold);letter-spacing:.06em;margin-bottom:6px;font-size:.76rem}
+#fuBoxes .fu-item .fa{white-space:pre-wrap}
+.share-row{width:100%;text-align:center}
+
 /* ===== 遮罩 / 弹窗 ===== */
 .mask{position:fixed;inset:0;z-index:40;background:rgba(3,2,10,.68);backdrop-filter:blur(4px);
   display:none;align-items:flex-end;justify-content:center}
@@ -277,6 +295,31 @@ body[data-phase="day"]::after,body[data-phase="dusk"]::after{
     <button class="aiBtn" id="btnAI">✦ 请 AI 解卦</button>
     <button class="aiBtn" id="btnHole" style="display:none">🕳️ 去树洞聊聊</button>
     <div class="reading" id="reading"></div>
+    <div id="fuBoxes"></div>
+    <div class="followup" id="followup" style="display:none">
+      <div class="fu-head">✦ 意犹未尽？可基于这次卦象追问 <b id="fuLeft">3</b> 次</div>
+      <div class="fu-row">
+        <input id="fuInput" maxlength="80" placeholder="就这次的卦问问点什么…">
+        <button class="aiBtn fu-send" id="fuSend" style="width:auto;padding:10px 22px;letter-spacing:.1em">问</button>
+      </div>
+      <div class="fu-note" id="fuNote"></div>
+    </div>
+    <div class="share-row" style="margin-top:10px">
+      <button class="aiBtn" id="btnShareAll" style="display:none">📤 分享本次解卦</button>
+    </div>
+  </div>
+</div>
+
+<!-- 分享弹窗 -->
+<div class="mask" id="shotMask" style="z-index:99;align-items:center;justify-content:center">
+  <div class="sheet" style="border-radius:20px;max-height:86vh;display:flex;flex-direction:column;gap:12px;align-items:center">
+    <div class="sheet-h" style="width:100%"><div class="t">📤 分享这次解卦</div><button class="x" id="shotClose">✕</button></div>
+    <img id="shotImg" alt="分享图" style="max-width:92%;max-height:52vh;border-radius:12px;box-shadow:0 14px 46px rgba(0,0,0,.5)">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+      <button class="btn btn-primary" id="btnShotImg" style="flex:0 0 auto;padding:11px 24px">🖼 图片分享</button>
+      <button class="btn btn-ghost" id="btnShotTxt" style="flex:0 0 auto;padding:11px 24px">📋 文字分享</button>
+    </div>
+    <div style="font-size:.72rem;color:rgba(var(--gold-rgb),.5);letter-spacing:.08em">也可以长按图片直接保存</div>
   </div>
 </div>
 
@@ -301,7 +344,7 @@ body[data-phase="day"]::after,body[data-phase="dusk"]::after{
 
 <script src="../memory.js"></script>
 <script src="../ai-relay.js?v=6"></script>
-<script src="../treehole.js?v=2"></script>
+<script src="../treehole.js?v=3"></script>
 <script src="../personalize.js?v=3"></script>
 <script src="../supabase-config.js?v=6"></script>
 <script src="../achievements.js?v=27"></script>
@@ -748,6 +791,24 @@ async function aiRead(){
   setTimeout(()=>{
     try{ if(typeof window.TreeHole!=='undefined'&&window.TreeHole.extractProfileSilent) window.TreeHole.extractProfileSilent(cur.question||'（未提供具体问题）', txt); }catch(e){}
   }, 400);
+  /* 记录本次解卦上下文供追问/分享使用（对齐塔罗） */
+  lastReading={time:new Date().toLocaleString('zh-CN',{hour12:false}),q:cur.question||'',
+    ben:cur.benName,bian:(cur.bianName&&cur.bianName!==cur.benName)?cur.bianName:'',moving:(cur.moving||[]).join('、'),
+    text:txt};
+  /* 追问上下文：完整卦象+解卦全文（对齐塔罗 fuCtx） */
+  fuCtx='问题：'+(cur.question||'')+'；起卦方式：'+(cur.methodText||'铜钱摇卦')+'；本卦：'+cur.benName
+    +(cur.moving&&cur.moving.length?('；动爻：'+cur.moving.join('、')+(cur.movingText?('　'+cur.movingText):'')):'；六爻皆静')
+    +((cur.bianName&&cur.bianName!==cur.benName)?('；变卦：'+cur.bianName):'')
+    +'；解卦全文：'+txt;
+  fuLeft=3;fuHistory=[];
+  const fup=$('followup');if(fup){fup.style.display='block';}
+  const fl=$('fuLeft');if(fl)fl.textContent=fuLeft;
+  const fn=$('fuNote');if(fn)fn.textContent='';
+  const fi=$('fuInput');if(fi)fi.value='';
+  const fbx=$('fuBoxes');if(fbx)fbx.innerHTML='';
+  /* 解卦完成即出现「分享本次解卦」按钮（对齐塔罗） */
+  const sb=document.getElementById('btnShareAll');
+  if(sb)sb.style.display='inline-block';
   /* 解读完成即显示「去树洞聊聊」入口（双鱼座树洞人设开场） */
   const th=document.getElementById('btnHole');
   if(th)th.style.display='inline-block';
@@ -767,6 +828,133 @@ function mdToHtml(md){
     closeList();html+='<p>'+inline(line)+'</p>';
   }
   closeList();return html;
+}
+
+/* ================= 添加对新引入元素的兜底样式 ================= */
+(function(){
+  const st=document.createElement('style');
+  st.textContent='.followup input{user-select:text;-webkit-user-select:text}';
+  document.head.appendChild(st);
+})();
+
+/* ================= 分享本次解卦（对齐塔罗：图片/文字分享） ================= */
+let lastReading=null;/* 本次解卦快照 {time,q,ben,bian,moving,text} */
+let shareCtx=null;
+function openYiShare(rec){
+  shareCtx={time:rec.time,q:rec.q||'',ben:rec.ben||'',bian:rec.bian||'',moving:rec.moving||'',text:rec.text||'',fu:rec.fu||[]};
+  const cv=drawYiCard(shareCtx);
+  try{cv.toBlob(b=>{
+    if(b)document.getElementById('shotImg').src=URL.createObjectURL(b);
+    const m=document.getElementById('shotMask');if(m)m.classList.add('open');
+  },'image/png');}catch(e){}
+}
+/* 分享图：宣纸风长卡（卦名+动爻+解读+追问合并） */
+function drawYiCard(r){
+  if(!r)return document.createElement('canvas');
+  const W=720,c=document.createElement('canvas');
+  const bodyLines=[];
+  const push=(s)=>{for(let i=0;i<s.length;i+=20)bodyLines.push(s.slice(i,i+20));};
+  push('【解卦】');
+  String(r.text||'').replace(/^#+\s*/gm,'').replace(/\*\*/g,'').split('\n').map(s=>s.trim()).filter(Boolean).forEach(push);
+  for(const f of (r.fu||[])){push('');push('✧ 问：'+f.q);push('');push(f.a.replace(/^#+\s*/gm,'').replace(/\*\*/g,''));}
+  const headH=300,H=headH+bodyLines.length*38+150;
+  c.width=W;c.height=H;
+  const g=c.getContext('2d');
+  const bg=g.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#0d0a1e');bg.addColorStop(.6,'#141029');bg.addColorStop(1,'#1c1426');
+  g.fillStyle=bg;g.fillRect(0,0,W,H);
+  /* 漫天星点（雪梅暗香） */
+  for(let i=0;i<130;i++){g.globalAlpha=.18+Math.random()*.5;g.fillStyle='#e8e0f0';
+    g.beginPath();g.arc(Math.random()*W,Math.random()*H,Math.random()*1.3+.3,0,7);g.fill();}
+  g.globalAlpha=1;g.textAlign='center';
+  g.fillStyle='#b09a6a';g.font='22px serif';g.fillText('· 问 卦 ·',W/2,80);
+  let title=r.ben;if(r.bian)title+=' → '+r.bian;
+  g.fillStyle='#f0cf82';g.font='600 40px "Songti SC",serif';g.fillText(title||'周易',W/2,150);
+  g.fillStyle='#8f86b8';g.font='24px serif';
+  let info=r.moving;if(info&&info.length>22)info=info.slice(0,21)+'…';
+  g.fillText(info?('动爻：'+info):'六爻皆静',W/2,200);
+  if(r.q){g.fillStyle='#cfc0a0';g.font='26px serif';
+    let q=r.q;if(q.length>16)q=q.slice(0,15)+'…';
+    g.fillText('问：'+q,W/2,248);}
+  g.textAlign='left';g.font='27px "Songti SC",serif';g.fillStyle='#e6e0f4';
+  let y=headH+30;
+  for(const ln of bodyLines){g.fillText(ln,70,y);y+=38;}
+  g.textAlign='center';g.fillStyle='#6f66a0';g.font='20px serif';
+  g.fillText('‥ 有点困 · AI 即兴解卦 ‥',W/2,H-104);
+  g.fillStyle='#b09a6a';g.font='22px serif';
+  g.fillText('ydk12335.github.io/yijing',W/2,H-70);
+  return c;
+}
+function buildYiShareText(r){
+  r=r||shareCtx;if(!r)return '';
+  let t='☯ 问 卦 ☯\n'+r.time+'\n';
+  if(r.q)t+='问：'+r.q+'\n';
+  t+='卦象：'+r.ben+(r.bian?(' 变 '+r.bian):'');
+  if(r.moving)t+='\n动爻：'+r.moving;
+  t+='\n\n'+String(r.text||'').replace(/^#+\s*/gm,'').replace(/\*\*/g,'');
+  for(const f of (r.fu||[]))t+='\n\n✧ 问：'+f.q+'\n'+f.a.replace(/^#+\s*/gm,'').replace(/\*\*/g,'');
+  return t+'\n\n—— 来自「有点困」\n📜 在线问卦：https://ydk12335.github.io/yijing/';
+}
+async function yiShareImage(){
+  if(!shareCtx)return;
+  const cv=drawYiCard(shareCtx);
+  const shot=await new Promise(r=>cv.toBlob(r,'image/png'));
+  try{
+    if(navigator.canShare&&shot&&navigator.canShare({files:[new File([shot],'yijing.png',{type:'image/png'})]})){
+      await navigator.share({files:[new File([shot],'yijing.png',{type:'image/png'})],title:'周易问卦',text:buildYiShareText().slice(0,120)});
+      return;
+    }
+  }catch(e){}
+  document.getElementById('shotImg').src=URL.createObjectURL(shot);
+}
+async function yiShareText(){
+  const txt=buildYiShareText();if(!txt)return;
+  try{
+    if(navigator.share){await navigator.share({title:'周易问卦',text:txt});return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  try{await navigator.clipboard.writeText(txt);toast('✓ 已复制到剪贴板，去粘贴分享吧');}
+  catch(e){prompt('长按复制以下内容：',txt);}
+}
+
+/* ================= 追问（基于本次卦象，最多 3 次；对齐塔罗） ================= */
+let fuLeft=0,fuHistory=[];
+let fuCtx='';/* 本次卦象完整上下文 */
+async function sendFollowup(){
+  const q=$('fuInput').value.trim();
+  if(!q){$('fuNote').textContent='✦ 想好了再问';return;}
+  if(fuLeft<=0){$('fuNote').textContent='✦ 这次卦已经问满了，换个问题重新起一卦吧';return;}
+  fuLeft--;
+  $('fuLeft').textContent=fuLeft;
+  $('fuNote').textContent='🌙 解卦人正在推演你的追问……';
+  const fuBtn=$('fuSend');if(fuBtn)fuBtn.disabled=true;
+  try{
+    const j=await window.AIRelay.complete({
+      temperature:.8,max_tokens:1200,
+      messages:[
+        {role:'system',content:'你是精通《周易》的解卦人，延续上次解卦的风格与语气。求测者就**这次卦象**继续追问，最多 3 次。\n'+
+          '【本次卦象】'+fuCtx+'\n'+
+          '【规则】1. 回答必须紧扣这次卦象、卦辞、动爻爻辞与已给出的解卦内容，可以展开某个爻、某个卦象、某段结论，也可以结合卦象给出更细的建议；\n'+
+          '2. 如果追问与本次所问和卦象明显无关（例如闲聊、问别的事情、要求重新起卦、问与卦象无关的事实信息等），你必须婉拒：以解卦人的口吻温和说明这一卦的能量只覆盖这一问，建议重新起一卦，输出不超过 3 句话；\n'+
+          '3. 保持中立，牌面/卦象怎么显示的怎么说，不要为了迎合而只说好话；\n'+
+          '4. 延续真人感风格：说人话、短句为主、允许"嗯…""说白了"这类口语，别端着；禁止AI腔（"综上所述""值得注意的是"等）；不要过度煽情。中文，100~300 字，不用 Markdown 标题，可用少量**加粗**。'},
+        {role:'user',content:q}
+      ],
+      onRetry:()=>{$('fuNote').textContent='🔄 信号中断，正在重连…';}
+    });
+    const a=(j&&j.choices&&j.choices[0]&&j.choices[0].message.content||'').trim();
+    if(!a){fuLeft++;$('fuLeft').textContent=fuLeft;$('fuNote').textContent='✦ 解卦人走神了，再试一次';return;}
+    fuHistory.push({q:q,a:a});
+    const box=$('fuBoxes');
+    box.insertAdjacentHTML('beforeend','<div class="fu-item"><div class="fq">✧ 追问：'+esc(q)+'</div><div class="fa">'+mdToHtml(a)+'</div></div>');
+    $('fuInput').value='';
+    $('fuNote').textContent=fuLeft>0?('还可追问 '+fuLeft+' 次'):'这次卦已经问满了 ⚡';
+    if(lastReading)lastReading.fu=fuHistory.slice();
+  }catch(e){
+    fuLeft++;$('fuLeft').textContent=fuLeft;
+    $('fuNote').textContent='✦ 追问失败：'+esc(String(e&&e.message||'未知错误').slice(0,80));
+  }finally{
+    const fuBtn=$('fuSend');if(fuBtn)fuBtn.disabled=false;
+  }
 }
 
 /* ================= 历史弹窗 ================= */
@@ -840,6 +1028,15 @@ document.querySelectorAll('#methods .mbtn').forEach(b=>{
 
 $('btnCast').onclick=doCast;
 $('btnAI').onclick=aiRead;
+/* 追问（基于本次卦象，最多 3 次；对齐塔罗） */
+$('fuSend').onclick=sendFollowup;
+$('fuInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendFollowup();});
+/* 分享本次解卦（对齐塔罗：图片/文字分享） */
+$('btnShareAll').onclick=()=>{if(lastReading)openYiShare(lastReading);};
+$('btnShotImg').onclick=yiShareImage;
+$('btnShotTxt').onclick=yiShareText;
+$('shotClose').onclick=()=>$('shotMask').classList.remove('open');
+$('shotMask').onclick=e=>{if(e.target===$('shotMask'))$('shotMask').classList.remove('open');};
 /* 去树洞聊聊：把本次卦象带入树洞，让它自然开场（双鱼座树洞人设） */
 $('btnHole').onclick=()=>{
   let subject='',summary='';
