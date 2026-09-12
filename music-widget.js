@@ -94,18 +94,15 @@
 
   /* ---------- 歌单 ---------- */
   var TRACKS=[];
-  var FALLBACK=['11.mp3','daylight.mp3','一个人想着一个人.mp3','不值得.mp3','不能说的秘密.mp3',
-    '你还要我怎样.mp3','剩下的盛夏.mp3','半岛铁盒.mp3','唯一.mp3','嗜好.mp3',
-    '嘉宾.mp3','夏天的风.mp3','如果呢.mp3','平庸.mp3','开往春天的列车.mp3',
-    '意外.mp3','我好像在哪见过你.mp3','把回忆拼好给你.mp3','晚安.mp3','暧昧.mp3',
-    '暧昧2.mp3','烟火里的尘埃.mp3','疑心病2025.mp3','碎碎念.mp3','第三人称.mp3',
-    '等你下课.mp3','绅士.mp3','越来越不懂.mp3','轨迹.mp3','陪你去流浪.mp3'];
   var EXT=/\.[a-z0-9]+$/i;
+  var listDown=false; /* 线上音乐已下架（版权原因）：无 music 目录时置 true */
   async function loadTracks(){
     var fs=[];
+    var ok=false;
     try{
       var res=await fetch(pre+'music/',{cache:'no-store'});
       if(res.ok){
+        ok=true;
         var html=await res.text(),re=/href="([^"]+)"/g,m;
         while((m=re.exec(html))){
           var n=m[1];try{n=decodeURIComponent(n);}catch(e){}
@@ -113,7 +110,9 @@
         }
       }
     }catch(e){}
-    TRACKS=(fs.length?fs:FALLBACK).map(f=>({t:f.replace(EXT,'').trim()||f,f:f}));
+    /* 服务器/本地有音乐文件 → 正常加载；否则（线上已下架）→ 显示下架提示，绝不回退到假歌单 */
+    listDown = !ok || !fs.length;
+    TRACKS=fs.map(f=>({t:f.replace(EXT,'').trim()||f,f:f}));
     renderList();
   }
 
@@ -182,7 +181,15 @@
   function validDur(){return isFinite(audio.duration)&&audio.duration>0;}
   function renderList(){
     listEl.innerHTML='';
-    if(!TRACKS.length){listEl.innerHTML='<div style="opacity:.5;text-align:center;padding:14px;font-size:.85rem;color:#d8d0ef">暂无歌曲</div>';return;}
+    if(!TRACKS.length){
+      listEl.innerHTML='<div style="opacity:.6;text-align:center;padding:16px 12px;font-size:.82rem;color:#d8d0ef;line-height:1.8">' +
+        '<div style="font-size:1.4rem;margin-bottom:4px">🚫</div>' +
+        (listDown
+          ? '<div>音乐已下架</div><div style="opacity:.55;font-size:.72rem">为遵守版权，线上不再提供背景音乐<br>本地（离线）使用不受影响</div>'
+          : '<div>暂无歌曲</div>') +
+        '</div>';
+      return;
+    }
     TRACKS.forEach((tr,i)=>{
       var d=document.createElement('div');d.className='mu-item'+(i===cur?' playing':'');
       d.innerHTML='<span><span class="mi-idx">'+String(i+1).padStart(2,'0')+'</span>'+tr.t+'</span>';

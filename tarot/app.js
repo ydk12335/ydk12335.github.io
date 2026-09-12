@@ -986,15 +986,7 @@ $('btnClearHist').onclick=async ()=>{localStorage.removeItem('tarot_hist_v1');if
 
 /* ---------- 公告 / 使用说明 ---------- */
 const openNotice=()=>{$('noticeMask').classList.add('open')};
-const closeNotice=()=>{$('noticeMask').classList.remove('open');
-  /* 公告关闭后：首次弹音乐询问（默认关闭，只问一次） */
-  try{
-    if(!localStorage.getItem('tarot_music_asked')){
-      localStorage.setItem('tarot_music_asked','1');
-      setTimeout(()=>{const m=$('musicAskMask');if(m)m.classList.add('open');},600);
-    }
-  }catch(e){}
-};
+const closeNotice=()=>{$('noticeMask').classList.remove('open');};
 $('btnNotice').onclick=openNotice;
 $('btnNoticeOk').onclick=closeNotice;
 $('noticeMask').onclick=e=>{if(e.target===$('noticeMask'))closeNotice()};
@@ -1011,20 +1003,14 @@ try{
   /* 歌单动态扫描：自动读取 music/ 目录，往里面放歌（mp3/flac/wav等）即可自动加入 */
   let TRACKS=[];
   const AUDIO_EXT=/\.[a-z0-9]+$/i;
-  /* 内置歌单回退：当服务器目录扫描失败（如直接 file:// 打开）时，保证仍有歌可放 */
-  const FALLBACK_TRACKS=[
-    '11.mp3','daylight.mp3','一个人想着一个人.mp3','不值得.mp3','不能说的秘密.mp3',
-    '你还要我怎样.mp3','剩下的盛夏.mp3','半岛铁盒.mp3','唯一.mp3','嗜好.mp3',
-    '嘉宾.mp3','夏天的风.mp3','如果呢.mp3','平庸.mp3','开往春天的列车.mp3',
-    '意外.mp3','我好像在哪见过你.mp3','把回忆拼好给你.mp3','晚安.mp3','暧昧.mp3',
-    '暧昧2.mp3','烟火里的尘埃.mp3','疑心病2025.mp3','碎碎念.mp3','第三人称.mp3',
-    '等你下课.mp3','绅士.mp3','越来越不懂.mp3','轨迹.mp3','陪你去流浪.mp3'
-  ];
+  let musicDown=false; /* 线上音乐已下架（版权原因）：无 music 目录时置 true */
   async function loadTracks(){
     const fs=[];/* 有序文件列表 */
+    let ok=false;
     try{
       const res=await fetch('../music/',{cache:'no-store'});
       if(res.ok){
+        ok=true;
         const html=await res.text();
         const re=/href="([^"]+)"/g;let m;
         while((m=re.exec(html))){
@@ -1034,9 +1020,9 @@ try{
         }
       }
     }catch(e){}
-    /* 扫描成功用服务器列表；失败（file:// 直接打开等）回退到内置歌单 */
-    const names = fs.length ? fs : FALLBACK_TRACKS;
-    TRACKS=names.map(f=>({t:f.replace(AUDIO_EXT,'').trim()||f,a:'',f}));
+    /* 有音乐文件 → 正常加载；否则（线上已下架）→ 显示下架提示，绝不回退到假歌单 */
+    musicDown = !ok || !fs.length;
+    TRACKS=fs.map(f=>({t:f.replace(AUDIO_EXT,'').trim()||f,a:'',f}));
     if($id('musicList'))renderList();
   }
   const audio=new Audio();audio.preload='none';
@@ -1115,7 +1101,7 @@ try{
   function renderList(){
     const box=$id('musicList');if(!box)return;
     box.innerHTML='';
-    if(!TRACKS.length){box.innerHTML='<div style="opacity:.5;text-align:center;padding:14px">暂无歌曲，请把音乐文件放到 music 文件夹</div>';return;}
+    if(!TRACKS.length){box.innerHTML='<div style="text-align:center;padding:16px 10px;line-height:1.9"><div style="font-size:1.35rem;opacity:.85">🚫</div><div style="color:#d8d0ef">音乐已下架</div><div style="font-size:.78rem;color:#8f86b8;opacity:.75">为遵守版权，线上不再提供背景音乐<br>本地（离线）使用不受影响</div></div>';return;}
     TRACKS.forEach((tr,i)=>{
       const d=document.createElement('div');d.className='music-item'+(i===cur?' playing':'');
       d.innerHTML='<span><span class="mi-idx">'+String(i+1).padStart(2,'0')+'</span>'+tr.t+'</span>';
@@ -1189,14 +1175,6 @@ try{
   $id('btnCloseMusic').onclick=()=>$id('musicMask').classList.remove('open');
   loadTracks();/* 启动即扫描一次歌单 */
   $id('musicMask').onclick=e=>{if(e.target===$id('musicMask'))$id('musicMask').classList.remove('open')};
-  /* 询问弹窗的按钮（弹出时机由公告 closeNotice 触发） */
-  $id('btnMusicOn').onclick=()=>{
-    $id('musicAskMask').classList.remove('open');
-    $id('musicMask').classList.add('open');renderList();
-    play(Math.floor(Math.random()*TRACKS.length));/* 用户主动点击，浏览器允许自动播放 */
-  };
-  $id('btnMusicOffStyle').onclick=()=>$id('musicAskMask').classList.remove('open');
-  $id('musicAskMask').onclick=e=>{if(e.target===$id('musicAskMask'))$id('musicAskMask').classList.remove('open')};
   /* 音效选择 */
   document.querySelectorAll('#musicEfx .efx-chip').forEach(c=>{
     c.onclick=()=>setEfx(c.dataset.efx);
