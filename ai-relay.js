@@ -1,11 +1,12 @@
 /**
- * 有点困 · AI 调用中继（自动切换备用 API）
+ * 有点困 · AI 调用中继（经 Supabase Edge Function 转发，密钥不上前端）
  * -----------------------------------------------
  * 规则：
- *  1. 每次请求都从【主线路】开始（不记忆上次备用，避免烧备用额度）；
- *  2. 主线路失败重试 5 次，界面通过 onRetry 显示「正在尝试重连」；
- *  3. 主线路 5 次全败才切【备用线路】（仅本次请求），备用同样重试 5 次；
- *  4. 两条线路都失败则抛错，由调用方给出最终错误提示。
+ *  1. 所有请求统一发往 Supabase Edge Function（sleep-ai-relay）；
+ *  2. Edge Function 内部持有真实 AI 密钥（环境变量），并负责主/备线路自动切换；
+ *  3. 前端只携带 Supabase 公开的 anon key（设计上可公开，供 JWT 校验）；
+ *  4. 请求失败重试 5 次，界面通过 onRetry 显示「正在尝试重连」；
+ *  5. 全部失败则抛错，由调用方给出最终错误提示。
  *
  * 用法：
  *  非流式：const j = await window.AIRelay.complete({ messages, temperature, max_tokens, onRetry });
@@ -17,10 +18,12 @@
 (function () {
   'use strict';
 
+  // 统一走 Supabase Edge Function（密钥在服务端环境变量里，前端不带任何 sk- 密钥）
   const TIERS = [
-    { name: '主线路', base: 'https://apihub.agnes-ai.cn/v1', key: 'sk-bnT8gvJweewxMFO2oOnzNof2qpqazpKYq1spx5EulZ11vfyZ', model: 'agnes-3.0-flash' },
-    { name: '备用线路', base: 'https://token.sensenova.cn/v1', key: 'sk-q7arlLmUCx1r1gyuK9dyrGgZ987iuyNI', model: 'deepseek-v4-flash' }
+    { name: '主线路', base: 'https://ooewxcqksrvixnslzhkw.supabase.co/functions/v1/sleep-ai-relay' }
   ];
+  // Supabase 公开 anon key（设计上可公开，仅用于 Edge Function 的 JWT 校验门槛）
+  const SB_ANON_KEY = 'sb_publishable_VdjiBIABpFj0RHgoXFC2wQ_NxpPt7df';
   const RETRY = 5;            // 每条线路内重试次数
   const TIMEOUT = 120000;     // 单次请求超时（与 tarot 原 120s 一致）
 
@@ -32,8 +35,12 @@
       const res = await fetch(tier.base + '/chat/completions', {
         method: 'POST',
         signal: ctrl.signal,
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tier.key },
-        body: JSON.stringify(Object.assign({ model: tier.model }, body))
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + SB_ANON_KEY,
+          'apikey': SB_ANON_KEY
+        },
+        body: JSON.stringify(body)
       });
       if (!res.ok) {
         let msg = 'HTTP ' + res.status;

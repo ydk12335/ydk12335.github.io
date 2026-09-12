@@ -1,7 +1,5 @@
 /* ================= 基础配置 ================= */
-const API_BASE='https://apihub.agnes-ai.cn/v1';
-const API_KEY='sk-bnT8gvJweewxMFO2oOnzNof2qpqazpKYq1spx5EulZ11vfyZ';
-const MODEL='agnes-2.5-flash';
+/* AI 请求统一走 ai-relay.js（Supabase Edge Function 转发），密钥存于服务端环境变量，前端不再硬编码 */
 
 /* ================= 78张真实牌数据 =================
    img 与 cards/*.jpg 一一对应（1909年韦特塔罗扫描件） */

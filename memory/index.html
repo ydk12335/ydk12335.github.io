@@ -185,9 +185,7 @@ select.form-input{cursor:pointer;-webkit-appearance:none;appearance:none}
 <script>
 'use strict';
 /* ================= AI 配置 ================= */
-const API_BASE='https://apihub.agnes-ai.cn/v1';
-const API_KEY='sk-bnT8gvJweewxMFO2oOnzNof2qpqazpKYq1spx5EulZ11vfyZ';
-const MODEL='agnes-2.5-flash';
+/* AI 请求统一走 ai-relay.js（Supabase Edge Function 转发），密钥存于服务端环境变量，前端不再硬编码 */
 
 /* ================= 数据层（自包含，不依赖 memory.js） ================= */
 const STORE_KEY='sleepy_space_memory_v2';

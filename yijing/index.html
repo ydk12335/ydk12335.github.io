@@ -309,9 +309,8 @@ body[data-phase="day"]::after,body[data-phase="dusk"]::after{
 <script src="../user-widget.js?v=15"></script>
 <script>
 'use strict';
-const API_BASE='https://apihub.agnes-ai.cn/v1';
-const API_KEY='sk-bnT8gvJweewxMFO2oOnzNof2qpqazpKYq1spx5EulZ11vfyZ';
-const MODEL='agnes-2.5-flash';
+/* ================= AI 配置 ================= */
+/* AI 请求统一走 ai-relay.js（Supabase Edge Function 转发），密钥存于服务端环境变量，前端不再硬编码 */
 const HKEY='yijing_hist_v1';
 /* 求测人性别（用户#7：易经新增男女选择） */
 let userGender='男';

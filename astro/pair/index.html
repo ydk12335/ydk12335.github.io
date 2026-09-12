@@ -271,9 +271,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 
 <script>
 /* ================= 基础配置 ================= */
-const API_BASE='https://apihub.agnes-ai.cn/v1';
-const API_KEY='sk-bnT8gvJweewxMFO2oOnzNof2qpqazpKYq1spx5EulZ11vfyZ';
-const MODEL='agnes-2.5-flash';
+/* AI 请求统一走 ai-relay.js（Supabase Edge Function 转发），密钥存于服务端环境变量，前端不再硬编码 */
 const SIGNS=[
   ['白羊座','♈','火象 · 守护火星','行动力强、热情直率、敢于争先'],
   ['金牛座','♉','土象 · 守护金星','踏实稳健、重质感、审美与耐心俱佳'],
