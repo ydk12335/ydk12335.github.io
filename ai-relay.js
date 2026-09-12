@@ -108,36 +108,24 @@
   }
 
   /** 流式补全：返回完整文本；onDelta/onReason 为增量回调 */
+  /* 注意：agnes 主线路不支持真实 SSE 流式（stream:true 直连超时无输出）。
+     因此 stream() 内部改走非流式补全拿到完整文本，再按字符分片模拟 onDelta 增量回调。
+     对调用方透明（返回完整文本 + onDelta 逐段回调），同时规避主线路流式必挂的问题。 */
   async function stream(opts) {
-    const { messages, temperature, max_tokens, onDelta, onReason, onRetry } = opts || {};
-    return relay(async (tier) => {
-      const res = await tryFetch(tier, { messages, temperature, max_tokens, stream: true });
-      const rd = res.body.getReader(), dec = new TextDecoder();
-      let full = '', buf = '';
-      for (;;) {
-        const r = await rd.read(); if (r.done) break;
-        buf += dec.decode(r.value, { stream: true });
-        const parts = buf.split('\n'); buf = parts.pop() || '';
-        for (const line of parts) {
-          const l = line.trim();
-          if (!l.startsWith('data:')) continue;
-          const p = l.slice(5).trim();
-          if (p === '[DONE]') break;
-          try {
-            const j = JSON.parse(p);
-            const d = (j.choices && j.choices[0] && j.choices[0].delta) || {};
-            if (d.reasoning_content && onReason) onReason(d.reasoning_content);
-            if (typeof d.content === 'string' && d.content) {
-              full += d.content;
-              if (onDelta) onDelta(d.content, full);
-            }
-          } catch (e) {}
-        }
+    const { messages, temperature, max_tokens, onDelta, onRetry } = opts || {};
+    // 非流式拿完整结果（progress 模式返回 chat.completion JSON）
+    const j = await complete({ messages, temperature, max_tokens, onRetry });
+    let txt = '';
+    try { txt = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').trim(); } catch (e) {}
+    if (!txt) throw new Error('空响应');
+    // 按小片分发，模拟打字机增量
+    if (onDelta) {
+      const step = Math.max(8, Math.round(txt.length / 120));
+      for (let i = 0; i < txt.length; i += step) {
+        onDelta(txt.slice(i, i + step), txt.slice(0, i + step));
       }
-      full = full.trim();
-      if (!full) throw new Error('空响应');
-      return full;
-    }, onRetry);
+    }
+    return txt;
   }
 
   window.AIRelay = { complete, stream, TIERS, RETRY, relay };
