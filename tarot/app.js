@@ -349,10 +349,18 @@ let pickSeq=0;
 let lastPickQ=null,lastPickR=null;
 async function aiPickSpread(q){
   const my=++pickSeq;
+  /* 显示实时进度：线路切换过程（主线路→备用线路）不再干等 */
+  const note=$('autoNote');
+  const showStep=(tier,state,err)=>{
+    if(!note)return;
+    if(state==='connecting') note.innerHTML='<span style="color:#a79ade">✦ 正在连接「'+tier+'」推演牌阵…</span>';
+    else if(state==='fail') note.innerHTML='<span style="color:#a79ade">↻ 「'+tier+'」'+ (err?('（'+(String(err).slice(0,60))+'）'):'') +'，切换备用线路…</span>';
+  };
   const j=await window.AIRelay.complete({
     messages:[{role:'system',content:PICK_SYS},{role:'user',content:q||'（用户没有写问题，想要一个当日的整体指引）'}],
     temperature:.3,max_tokens:512,
-    onRetry:(tier,n)=>{ const note=$('autoNote'); if(note) note.innerHTML='<span style="color:#a79ade">🔄 '+tier+'重连中（'+n+'/'+window.AIRelay.RETRY+'）…</span>'; }
+    onRetry:(tier,n)=>{ if(note) note.innerHTML='<span style="color:#a79ade">🔄 '+tier+'重连中（'+n+'/'+window.AIRelay.RETRY+'）…</span>'; },
+    onProgress:showStep
   });
   if(my!==pickSeq)return null;/* 已有更新的请求 */
   let txt='';

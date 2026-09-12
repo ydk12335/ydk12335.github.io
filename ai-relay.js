@@ -24,8 +24,8 @@
   ];
   // Supabase 公开 anon key（设计上可公开，仅用于 Edge Function 的 JWT 校验门槛）
   const SB_ANON_KEY = 'sb_publishable_VdjiBIABpFj0RHgoXFC2wQ_NxpPt7df';
-  const RETRY = 5;            // 每条线路内重试次数
-  const TIMEOUT = 120000;     // 单次请求超时（与 tarot 原 120s 一致）
+  const RETRY = 2;            // 外层对 Edge 的整体重试次数（Edge 内部已做主备切换+超时，外层 1-2 次兜底即可，避免 5 次叠加成几分钟死等）
+  const TIMEOUT = 90000;      // 单次请求超时（Edge 内部已管上游超时，这里只需兜底网络层）
 
   /** 单次 fetch 尝试（自带超时，超时即抛错触发重试） */
   async function tryFetch(tier, body) {
@@ -72,11 +72,37 @@
     throw lastErr || new Error('AI 连接失败');
   }
 
-  /** 非流式补全 */
+  /** 非流式补全（支持 progress SSE 进度事件解析） */
   async function complete(opts) {
-    const { messages, temperature, max_tokens, onRetry } = opts || {};
+    const { messages, temperature, max_tokens, onRetry, onProgress } = opts || {};
     return relay(async (tier) => {
-      const res = await tryFetch(tier, { messages, temperature, max_tokens });
+      const body = { messages, temperature, max_tokens };
+      // progress 模式：带进度事件（Edge Function 返回 SSE，逐条上报线路切换过程）
+      if (onProgress) body.progress = true;
+      const res = await tryFetch(tier, body);
+      const ct = (res.headers.get('content-type') || '');
+      // progress SSE：解析 data: {...} 事件流，遇 result 返回其 data，遇 error 抛错
+      if (ct.includes('text/event-stream')) {
+        const rd = res.body.getReader(), dec = new TextDecoder();
+        let buf = '';
+        for (;;) {
+          const r = await rd.read(); if (r.done) break;
+          buf += dec.decode(r.value, { stream: true });
+          const parts = buf.split('\n\n'); buf = parts.pop() || '';
+          for (const chunk of parts) {
+            const line = chunk.trim().replace(/^data:\s*/, '');
+            if (!line) continue;
+            try {
+              const ev = JSON.parse(line);
+              if (ev.type === 'tier_start' && onProgress) onProgress(ev.tier, 'connecting');
+              else if (ev.type === 'tier_fail' && onProgress) onProgress(ev.tier, 'fail', ev.err);
+              else if (ev.type === 'result') return ev.data;
+              else if (ev.type === 'error') { const e = new Error(ev.err || 'AI 失败'); e.status = 502; throw e; }
+            } catch (e) { if (e && e.status) throw e; }
+          }
+        }
+        throw new Error('progress 流未收到 result');
+      }
       return await res.json();
     }, onRetry);
   }
