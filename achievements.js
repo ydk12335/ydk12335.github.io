@@ -109,7 +109,13 @@
     return '<svg class="zglyph" viewBox="0 0 100 100" fill="none" stroke="currentColor" ' +
       'stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' + z.art + '</svg>';
   }
-
+  /** 六十四卦全图 · 经典黑白太极图（与开场背景 gua-taiji 同一版本：黑鱼头朝上 · 白鱼头朝下，鱼眼各落对方色区中心） */
+  const TAIJI_SVG = '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">' +
+    '<circle cx="100" cy="100" r="92" fill="#fff" stroke="#141414" stroke-width="3"/>' +
+    '<path d="M100 8a92 92 0 0 1 0 184 46 46 0 0 1 0 -92 46 46 0 0 0 0 -92z" fill="#141414"/>' +
+    '<circle cx="100" cy="54" r="21" fill="#fff"/>' +
+    '<circle cx="100" cy="146" r="21" fill="#141414"/>' +
+    '</svg>';
 
   /* =========================================================
    * 2. 成就数据（含稀有度字段 + 判定函数）
@@ -202,9 +208,10 @@
       desc: '集齐全部 64 卦',
       quote: '天地万象，已在你指尖合拢成环。',
       art: '<svg class="ach-art" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
-        '<circle cx="32" cy="32" r="17" fill="none" stroke="currentColor" stroke-opacity=".7" stroke-width="1.8"/>' +
-        '<circle cx="32" cy="32" r="8.5" fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="1.2" stroke-dasharray="2 3"/>' +
-        '<text x="32" y="38" text-anchor="middle" font-size="17" fill="currentColor" stroke="none" font-family="serif">☯</text>' +
+        '<circle cx="32" cy="32" r="27" fill="#fff" stroke="#111" stroke-width="1.6"/>' +
+        '<path d="M32 5a27 27 0 0 1 0 54 13.5 13.5 0 0 1 0 -27 13.5 13.5 0 0 0 0 -27z" fill="#111"/>' +
+        '<circle cx="32" cy="18.5" r="4" fill="#fff"/>' +
+        '<circle cx="32" cy="45.5" r="4" fill="#111"/>' +
         '</svg>',
       check: s => s.guaKinds >= 64 },
 
@@ -312,8 +319,8 @@
       '<!-- 经典黑白太极：左白右黑 · 白鱼黑眼在下 · 黑鱼白眼在上 -->' +
       '<circle cx="100" cy="100" r="92" fill="#fff" stroke="#141414" stroke-width="3"/>' +
       '<path d="M100 8a92 92 0 0 1 0 184 46 46 0 0 1 0 -92 46 46 0 0 0 0 -92z" fill="#141414"/>' +
-      '<circle cx="100" cy="54" r="13" fill="#fff"/>' +
-      '<circle cx="100" cy="146" r="13" fill="#141414"/>' +
+      '<circle cx="100" cy="54" r="21" fill="#fff"/>' +
+      '<circle cx="100" cy="146" r="21" fill="#141414"/>' +
       '</svg></div>';
     GUA64.forEach((g, i) => {
       /* 内环 24 个、外环 40 个，各自均匀铺满整圆 */
@@ -570,6 +577,24 @@
   background-image:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
     rgba(180,205,255,.35) 5%, rgba(150,180,240,.1) 30%, transparent 74%) !important}
 .ag-card[data-motion="rain"] .ag-dyn{display:none !important}
+
+/* 动态水墨场景层（与易经问卦同款：星空 + 飘雪 + 远山雾霭） */
+.ag-scene{position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;display:none}
+.ag-card[data-motion="trigram"] .ag-scene{display:block}
+/* 古风卡面：半透明深绿，让场景层透出来 */
+.ag-card[data-motion="trigram"] .ag-face{
+  background:linear-gradient(158deg,rgba(22,34,27,.82) 0%,rgba(12,20,15,.9) 52%,rgba(8,13,9,.96) 100%)}
+.ag-card[data-motion="trigram"] .ag-dyn{display:none !important}
+/* 牌面大图：黑白阴阳鱼 zmark（与星座卡同款 58% 居中，缓慢自转；小图标隐藏） */
+.ag-card[data-motion="trigram"] .ag-zmark{display:block;color:#fff;opacity:.96;
+  filter:drop-shadow(0 0 18px rgba(0,0,0,.55)) drop-shadow(0 0 10px rgba(240,207,130,.18));
+  animation:agZspin 52s linear infinite, agFade .9s ease-out calc(var(--skyDur,3s) + .4s) both}
+.ag-card[data-motion="trigram"] .ag-icon{display:none}
+/* 文字浮在太极图之上（zmark z-index:2，inner z-index:6 已有，仅需给文字加投影保证可读） */
+.ag-card[data-motion="trigram"] .ag-name,.ag-card[data-motion="trigram"] .ag-desc,
+.ag-card[data-motion="trigram"] .ag-quote{position:relative;z-index:7;
+  text-shadow:0 1px 8px rgba(0,0,0,.7), 0 0 18px rgba(0,0,0,.45)}
+.ag-card[data-motion="trigram"] .ag-rar{position:relative;z-index:7}
 
 /* 极光：两道柔光带缓缓漂移 */
 .ag-card[data-motion="aurora"] .ag-dyn{display:block;
@@ -883,8 +908,7 @@
 
 /* ============ 六十四卦全图：古风墨金 · 旋转八卦环 + 64 卦开场 ============ */
 /* 古风配色：墨绿卡面 + 暗金文字（区别于其他传说的紫/蓝金） */
-.ag-card[data-motion="trigram"] .ag-face{
-  background:linear-gradient(158deg,#1d2b23 0%,#101b15 52%,#0a110c 100%)}
+/* 卡面背景由 .ag-scene 动态场景层承载（见上方场景层规则） */
 .ag-card[data-motion="trigram"] .ag-inner{color:#e8d9a8}
 .ag-card[data-motion="trigram"] .ag-inner-back{color:#e8d9a8}
 .ag-card[data-motion="trigram"] .ag-name{color:#f0d98a;text-shadow:0 2px 18px rgba(240,207,130,.35)}
@@ -900,12 +924,8 @@
 .ag-card[data-motion="trigram"] .ag-shine::after{display:none}
 .ag-card[data-motion="trigram"] .ag-glare{background-image:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
   rgba(255,236,180,.4) 5%, rgba(240,207,130,.12) 28%, transparent 76%)}
-/* 专属动效：旋转八卦环（两道墨金弧光 + 中心辉光） */
-.ag-card[data-motion="trigram"] .ag-dyn{display:block;
-  background:
-    repeating-conic-gradient(from 0deg, rgba(240,207,130,.16) 0deg 5deg, transparent 5deg 30deg),
-    radial-gradient(circle at 50% 50%, rgba(240,207,130,.18), transparent 62%);
-  animation:agTrigramRing 24s linear infinite}
+/* 专属动效：旋转八卦环（两道墨金弧光 + 中心辉光）→ 已由 .ag-scene 动态场景取代，关闭线条环 */
+.ag-card[data-motion="trigram"] .ag-dyn{display:none !important}
 @keyframes agTrigramRing{
   from{transform:rotate(0deg) scale(1.04)}
   to{transform:rotate(360deg) scale(1.04)}}
@@ -1087,6 +1107,7 @@
         <div class="ag-zsand"></div>
         <div class="ag-zmark" id="agZmark"></div>
         <div class="ag-dyn"></div>
+        <canvas class="ag-scene" id="agScene"></canvas>
         <canvas class="ag-city" id="agCity"></canvas>
         <canvas class="ag-rain" id="agRain"></canvas>
         <div class="ag-shine"></div>
@@ -1294,9 +1315,94 @@
   }
   function startLoop() { if (!rafId) rafId = requestAnimationFrame(loop); }
   function stopLoop() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
-
   /* ===== 卡面雨（复用主页雨滴思路：逐滴下落 + 圆头 + 随机疏密，非条纹） ===== */
   let rainCtx = null, rainDrops = [], rainSplashes = [], rainW = 0, rainH = 0, rainActive = false;
+
+  /* ===== 动态水墨场景（六十四卦卡面：与易经问卦同款 · 星空 + 飘雪 + 远山） ===== */
+  let sceneCtx = null, sceneRaf = null, sceneSnow = [], sceneStars = [], sceneW = 0, sceneH = 0;
+  function drawSceneStatic() {
+    if (!sceneCtx) return;
+    /* 远山雾霭：两道柔淡的山影（静态绘制一次） */
+    const g = sceneCtx.createLinearGradient(0, sceneH * .55, 0, sceneH);
+    g.addColorStop(0, 'rgba(60,80,66,.0)');
+    g.addColorStop(1, 'rgba(40,58,48,.5)');
+    sceneCtx.fillStyle = g;
+    sceneCtx.beginPath();
+    sceneCtx.moveTo(0, sceneH);
+    sceneCtx.lineTo(0, sceneH * .62);
+    for (let i = 0; i <= 8; i++) {
+      const x = i * sceneW / 8;
+      const y = sceneH * .62 + Math.sin(i * 1.6) * sceneH * .09 + Math.cos(i * .8) * sceneH * .05;
+      sceneCtx.lineTo(x, y);
+    }
+    sceneCtx.lineTo(sceneW, sceneH);
+    sceneCtx.closePath();
+    sceneCtx.fill();
+    /* 星点（静态绘制） */
+    sceneStars.forEach(s => {
+      sceneCtx.globalAlpha = s.a;
+      sceneCtx.fillStyle = s.c;
+      sceneCtx.beginPath();
+      sceneCtx.arc(s.x, s.y, s.r, 0, 7);
+      sceneCtx.fill();
+    });
+    sceneCtx.globalAlpha = 1;
+  }
+  function drawSceneFrame() {
+    if (!sceneCtx) return;
+    /* 清空后重绘星点 + 飘雪 */
+    sceneCtx.clearRect(0, 0, sceneW, sceneH);
+    drawSceneStatic();
+    const wind = Math.sin(performance.now() / 4200) * .55;
+    sceneSnow.forEach(s => {
+      s.y += s.vy; s.x += s.vx + wind + Math.sin(performance.now() / 1800 + s.ph) * .3;
+      if (s.x < -6) s.x = sceneW + 6; if (s.x > sceneW + 6) s.x = -6;
+      if (s.y > sceneH + 6) { s.y = -6; s.x = Math.random() * sceneW; }
+      sceneCtx.globalAlpha = s.a;
+      sceneCtx.fillStyle = 'rgba(240,244,235,1)';
+      sceneCtx.beginPath();
+      sceneCtx.arc(s.x, s.y, s.r, 0, 7);
+      sceneCtx.fill();
+    });
+    sceneCtx.globalAlpha = 1;
+    sceneRaf = requestAnimationFrame(drawSceneFrame);
+  }
+  function setupScene(on) {
+    const cv = $('agScene'), card = $('agCard');
+    if (!cv || !card) return;
+    if (!on) {
+      if (sceneRaf) { cancelAnimationFrame(sceneRaf); sceneRaf = null; }
+      sceneCtx = null;
+      return;
+    }
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    sceneW = card.offsetWidth || 260; sceneH = card.offsetHeight || 364;
+    cv.width = Math.max(1, Math.round(sceneW * dpr));
+    cv.height = Math.max(1, Math.round(sceneH * dpr));
+    cv.style.width = sceneW + 'px'; cv.style.height = sceneH + 'px';
+    sceneCtx = cv.getContext('2d');
+    sceneCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    /* 星点 */
+    sceneStars = [];
+    const ns = Math.max(14, Math.round(sceneW * sceneH / 9000));
+    for (let i = 0; i < ns; i++) {
+      sceneStars.push({ x: Math.random() * sceneW, y: Math.random() * sceneH * .7,
+        r: Math.random() * 1.2 + .4, a: Math.random() * .5 + .15,
+        c: ['#fff', '#f5e6c4', '#e8f2ff'][Math.floor(Math.random() * 3)] });
+    }
+    /* 落雪 */
+    sceneSnow = [];
+    const nf = Math.max(16, Math.round(sceneW / 22));
+    for (let i = 0; i < nf; i++) {
+      sceneSnow.push({ x: Math.random() * sceneW, y: Math.random() * sceneH,
+        r: Math.random() * 1.8 + .6, vy: Math.random() * .55 + .3,
+        vx: (Math.random() - .5) * .4, a: Math.random() * .5 + .3, ph: Math.random() * 7 });
+    }
+    drawSceneStatic();
+    if (sceneRaf) cancelAnimationFrame(sceneRaf);
+    sceneRaf = requestAnimationFrame(drawSceneFrame);
+  }
+
   function newDrop(spread) {
     return { x: Math.random() * rainW,
       y: spread ? Math.random() * rainH : -12,
@@ -1532,14 +1638,17 @@
 
     /* 星座主题：配色变量 + 缓转图腾 SVG + 卡外专属星图 */
     const zdef = applyTheme(card, ach);
-    card.querySelectorAll('.ag-zmark').forEach(el => { el.innerHTML = zdef ? emblemSvg(zdef) : ''; });
+    /* 六十四卦全图：牌面直接用开场背景同款经典黑白太极图（与星座卡同款 zmark 大图形式，58% 居中缓慢自转） */
+    const isGua64 = ach.id === 'gua_64';
+    card.querySelectorAll('.ag-zmark').forEach(el => {
+      el.innerHTML = isGua64 ? TAIJI_SVG : (zdef ? emblemSvg(zdef) : '');
+    });
     const sky = $('agSky');
     if (sky) {
       sky.innerHTML = zdef ? skySvg(zdef) : '';
       sky.classList.toggle('on', !!zdef);
     }
     /* 六十四卦全图：卦名环开场（64 卦旋转浮现 → 再浮出卡片） */
-    const isGua64 = ach.id === 'gua_64';
     let guaDur = 0;
     if (isGua64 && sky) {
       guaDur = fillGuaRing();
@@ -1576,6 +1685,9 @@
     /* 卡面雨：需要卡片已展开，等一帧量好尺寸再建画布 */
     if (motion === 'rain') requestAnimationFrame(() => setupRain(true));
     else setupRain(false);
+    /* 六十四卦：动态水墨场景（星空 + 飘雪，lite 降级为静态） */
+    if (motion === 'trigram' && !LITE) requestAnimationFrame(() => setupScene(true));
+    else setupScene(false);
     $('agHint').textContent = /Mobi|Android|iPhone/i.test(navigator.userAgent)
       ? '倾斜手机 · 光影流动' : '移动鼠标 · 光影流动';
     startLoop();
@@ -1598,6 +1710,7 @@
   function closeCard() {
     const m = $('agMask'); if (m) m.classList.remove('open');
     setupRain(false);
+    setupScene(false);
     stopLoop();
     if (window.Achievements && window.Achievements.onClose) window.Achievements.onClose();
   }
