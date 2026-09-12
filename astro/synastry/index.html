@@ -259,6 +259,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
       <button class="soon-pill" id="btnPairCopy">📋 文字分享</button>
       <button class="soon-pill" id="btnMemCopy">☁️ 存入记忆库</button>
       <button class="soon-pill" id="btnPairShot">📸 生成分享图</button>
+      <button class="soon-pill" id="btnHole">🕳️ 去树洞聊聊</button>
     </div>
     <div class="privacy-bar" id="privacyBar">
       <span class="pv-chip" id="pvName">🙈 隐藏姓名</span>
@@ -500,11 +501,31 @@ lastSyn={a:a[0],as:a[1],b:b[0],bs:b[1],na:nameA,nb:nameB,rel:relType,text:raw};
          date: d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'
        });
      }
+     /* 画像提取（用户#7）：合盘解读完成后后台静默提取，不阻塞主流程 */
+     setTimeout(()=>{
+       try{ if(typeof window.TreeHole!=='undefined'&&window.TreeHole.extractProfileSilent) window.TreeHole.extractProfileSilent('想看「'+a[0]+'」与「'+b[0]+'」的「'+relType+'」合盘（'+((nameA||a[0])+'与'+(nameB||b[0]))+'）', raw); }catch(e){}
+     }, 400);
   }catch(e){
     $('pText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再试一次</span>';
     $('pairNote').textContent='';
   }
   synBusy=false;$('btnGo').disabled=false;
+};
+
+/* 去树洞聊聊：把本次合盘带入树洞，让它自然开场（双鱼座树洞人设） */
+$('btnHole').onclick=()=>{
+  let subject='',summary='';
+  try{
+    if(lastSyn){
+      const na=lastSyn.na||lastSyn.a,nb=lastSyn.nb||lastSyn.b;
+      subject=(na||'')+' 与 '+(nb||'')+' 的「'+(lastSyn.rel||'关系')+'」合盘';
+      summary=(lastSyn.text||'');
+    }
+  }catch(e){}
+  try{
+    if(window.TreeHole&&window.TreeHole.setOpening)window.TreeHole.setOpening({scene:'星座合盘',subject:subject,summary:summary.slice(0,300)});
+  }catch(e){}
+  location.href='../../treehole/';
 };
 
 /* ================= 分享 ================= */
@@ -573,6 +594,7 @@ $('btnBack').onclick=()=>{if(history.length>1)history.back();else location.href=
 <script src="../../memory.js"></script>
 <script src="../../ai-relay.js?v=1"></script>
 <script src="../../music-widget.js?v=1"></script>
+<script src="../../treehole.js?v=2"></script>
 <script src="../../personalize.js?v=3"></script>
 <script src="../../supabase-config.js?v=6"></script>
 <script src="../../achievements.js?v=27"></script>

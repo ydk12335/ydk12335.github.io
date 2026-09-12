@@ -297,11 +297,13 @@ function orient(){
 orient();addEventListener('resize',orient);addEventListener('orientationchange',()=>setTimeout(orient,80));
 
 /* ================= 界面初始化 ================= */
-// 用户性别选择
+// 用户性别选择 → 同时写入显式档案（用户测自己时可作为权威性别数据）
+function saveUserGender(g){ try{ if(typeof UserManager!=='undefined'&&UserManager.saveUser) UserManager.saveUser({gender:g}); }catch(e){} }
 $('genderSel').onclick=e=>{
   const btn=e.target.closest('.gender-btn');if(!btn)return;
   document.querySelectorAll('#genderSel .gender-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');userGender=btn.dataset.g;
+  saveUserGender(btn.dataset.g==='男'?'男':'女');
 };
 document.querySelector('#genderSel .gender-btn[data-g="男"]').classList.add('on');
 // 问的对象性别选择
@@ -309,6 +311,8 @@ $('targetSel').onclick=e=>{
   const btn=e.target.closest('.gender-btn');if(!btn)return;
   document.querySelectorAll('#targetSel .gender-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');targetGender=btn.dataset.g;
+  /* 选「我自己」时用户的性别即本次所选（测别人时性别属于对方，不写入档案） */
+  if(btn.dataset.g==='自己')saveUserGender(userGender);
 };
 // 根据问题内容自动显示/隐藏目标选择器
 $('question').addEventListener('input',()=>{
@@ -693,6 +697,10 @@ async function askTarot(){
   $('readingText').innerHTML=miniMD(full);
   addToHistory({time:new Date().toLocaleString('zh-CN',{hour12:false}),q:$('question').value.trim(),
     spread:curSpread.name,cards:drawn.map(d=>(d.rev?'逆位「':'正位「')+d.card.zh+'」').join(' '),text:full});
+  /* 画像提取（用户#7）：占卜完成后后台静默提取，不阻塞主流程 */
+  setTimeout(()=>{
+    try{ if(typeof window.TreeHole!=='undefined'&&window.TreeHole.extractProfileSilent) window.TreeHole.extractProfileSilent($('question').value.trim()||'（未提供具体问题，围绕当下整体状态）', full); }catch(e){}
+  }, 400);
   /* 记录本次占卜上下文供追问使用 */
   fuCtx='问题：'+($('question').value.trim()||'（未提供具体问题，围绕当下整体状态）')+'；牌阵：'+curSpread.name+
     '（'+curSpread.slots.join('/')+'）；抽牌：'+drawn.map((dd,i)=>curSpread.slots[i]+'「'+dd.card.zh+'」'+(dd.rev?'逆位':'正位')).join('，');
@@ -709,6 +717,9 @@ async function askTarot(){
   /* 解读完成即出现「分享本次占卜」按钮（解读+追问一起分享） */
   const sb=document.getElementById('btnShareAll');
   if(sb)sb.style.display='inline-block';
+  /* 解读完成即出现「去树洞聊聊」入口：把本次占卜带给树洞，让它自然开场 */
+  const th=document.getElementById('btnToHole');
+  if(th)th.style.display='inline-block';
 }
 let lastReading=null;/* 本次占卜全文快照：{time,q,spread,cards,text} */
 function buildShareText(){
@@ -911,6 +922,19 @@ function miniMD(md){
 }
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 $('btnRead').onclick=askTarot;
+/* 去树洞聊聊：把本次占卜信息带给树洞，让它自然开场（双鱼座树洞人设） */
+$('btnToHole').onclick=function(){
+  let subject='',summary='';
+  try{
+    const qEl=document.getElementById('question');
+    if(qEl&&qEl.value)subject=qEl.value.trim().slice(0,120);
+    if(lastReading&&lastReading.text)summary=lastReading.text.slice(0,300);
+  }catch(e){}
+  try{
+    if(window.TreeHole&&window.TreeHole.setOpening)window.TreeHole.setOpening({scene:'塔罗占卜',subject:subject,summary:summary});
+  }catch(e){}
+  location.href='../treehole/';
+};
 $('btnSave').onclick=function(){
   /* 收藏本次解读：把刚存下的最新一条标记为 ⭐，与自动保存分开，收藏的记录会在 📜 里置顶显示 */
   const h=loadHist();

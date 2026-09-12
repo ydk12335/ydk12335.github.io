@@ -311,6 +311,14 @@
     const mem = getMem();
     const user = mem.user || {};
 
+    /* 【聊天树洞 · 三层画像注入】显式 → 聊天提取 → 行为统计（存在才注入） */
+    if (typeof window.TreeHole !== 'undefined' && window.TreeHole) {
+      try {
+        const hole = window.TreeHole.buildProfilePrompt();
+        if (hole) parts.push('【聊天树洞 · 你的画像（自然融入，可引用但不要生硬罗列）】\n' + hole);
+      } catch (e) {}
+    }
+
     const userLines = [];
     if (user.name) userLines.push('称呼：' + user.name);
     if (user.zodiac) userLines.push('星座：' + user.zodiac);

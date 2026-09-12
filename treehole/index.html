@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>聊天树洞 · Tree Hole</title>
+<link rel="preconnect" href="https://fonts.loli.net">
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&display=swap">
+<style>
+  :root{--gold:#f0cf82;--gold-dim:#c2a25e;--ivory:#f4ecdd}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
+  body{
+    font-family:"Ma Shan Zheng","Xingkai SC","STXingkai","Kaiti SC","STKaiti","KaiTi","楷体",serif;
+    color:var(--ivory);background:#04020e}
+  /* ===== 背景：夜晚海边（无月 · 海浪 · 星空倒影） ===== */
+  #holeSky{position:fixed;inset:0;z-index:0;
+    background:linear-gradient(180deg,#0b0f2e 0%,#0a1035 34%,#0a1238 52%,#0d1430 64%,#0b1026 78%,#080c1e 100%)}
+  #holeStars{position:fixed;top:0;left:0;right:0;z-index:0;pointer-events:none;opacity:.9;
+    height:68%}
+  #holeSea{position:fixed;left:0;right:0;bottom:0;z-index:1;pointer-events:none;
+    height:36%}
+  /* ===== 液态玻璃 ===== */
+  .glass{
+    background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));
+    border:1px solid rgba(240,207,130,.20);
+    backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 12px 40px rgba(0,0,0,.35)}
+  /* ===== 顶栏 ===== */
+  .th-head{position:fixed;top:0;left:0;right:0;z-index:20;
+    display:flex;align-items:center;gap:10px;padding:max(14px,env(safe-area-inset-top)) 16px 12px}
+  .th-back{width:38px;height:38px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-size:1.05rem;color:var(--gold);cursor:pointer;transition:.2s}
+  .th-back:active{transform:scale(.94)}
+  .th-title{flex:1;text-align:center;font-size:1rem;letter-spacing:.34em;text-indent:.34em;color:var(--gold);
+    padding:8px 14px;border-radius:16px;text-shadow:0 0 16px rgba(240,207,130,.3)}
+  .th-clear{width:38px;height:38px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-size:.92rem;color:rgba(240,207,130,.7);cursor:pointer;transition:.2s}
+  .th-clear:active{transform:scale(.94)}
+  /* ===== 消息区 ===== */
+  #holeMsgs{position:fixed;inset:0;z-index:5;padding:calc(72px + env(safe-area-inset-top)) 14px calc(94px + env(safe-area-inset-bottom));
+    overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  #holeMsgs::-webkit-scrollbar{display:none}
+  .msg{display:flex;margin:14px 0;animation:msgIn .38s cubic-bezier(.16,1,.3,1)}
+  @keyframes msgIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+  .msg.user{justify-content:flex-end}
+  .msg.ai{justify-content:flex-start}
+  .msg .bub{max-width:76%;padding:12px 16px;border-radius:20px;font-size:.9rem;line-height:1.75;
+    white-space:pre-wrap;word-break:break-word}
+  .msg.user .bub{
+    background:linear-gradient(160deg,rgba(240,207,130,.32),rgba(240,207,130,.14));
+    border:1px solid rgba(240,207,130,.40);
+    backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 8px 24px rgba(0,0,0,.25);
+    color:#fff7e2;border-radius:20px 20px 6px 20px}
+  .msg.ai .bub{
+    background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.04));
+    border:1px solid rgba(240,207,130,.18);
+    backdrop-filter:blur(20px) saturate(170%);-webkit-backdrop-filter:blur(20px) saturate(170%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16), 0 8px 24px rgba(0,0,0,.22);
+    color:#ebe3cf;border-radius:20px 20px 20px 6px}
+  .msg .who{font-size:.58rem;color:rgba(240,207,130,.45);letter-spacing:.16em;margin-bottom:4px;padding:0 4px}
+  .msg.ai .who{text-align:left}
+  .msg.user .who{text-align:right}
+  /* 欢迎卡 */
+  .welcome{max-width:86%;margin:26px auto 8px;padding:22px 20px;border-radius:24px;text-align:center}
+  .welcome .wic{font-size:2rem;margin-bottom:10px;text-shadow:0 0 24px rgba(240,207,130,.35)}
+  .welcome .wtitle{font-size:1.05rem;color:var(--gold);letter-spacing:.2em;margin-bottom:8px}
+  .welcome .wdesc{font-size:.78rem;color:rgba(240,207,130,.6);line-height:1.8}
+  .welcome .whint{margin-top:14px;font-size:.66rem;color:rgba(240,207,130,.4);letter-spacing:.1em}
+  /* 正在输入 */
+  .typing{display:inline-flex;gap:5px;align-items:center;padding:4px 2px}
+  .typing i{width:6px;height:6px;border-radius:50%;background:var(--gold);opacity:.5;
+    animation:tp 1.2s ease-in-out infinite}
+  .typing i:nth-child(2){animation-delay:.18s}
+  .typing i:nth-child(3){animation-delay:.36s}
+  @keyframes tp{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-5px);opacity:.9}}
+  .th-status{font-size:.7rem;color:rgba(240,207,130,.5);text-align:center;padding:6px 0;letter-spacing:.08em}
+  .th-status.changing{color:#e8b48f;animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
+  /* ===== 输入区（液态玻璃悬浮） ===== */
+  .th-input{position:fixed;left:0;right:0;bottom:0;z-index:20;
+    padding:10px 14px calc(12px + env(safe-area-inset-bottom));
+    display:flex;gap:10px;align-items:flex-end;
+    background:linear-gradient(180deg,rgba(4,2,14,0),rgba(4,2,14,.55) 40%,rgba(4,2,14,.8))}
+  .th-input .glassbox{flex:1;display:flex;align-items:flex-end;gap:8px;padding:6px 6px 6px 16px;border-radius:24px}
+  #holeIn{flex:1;background:transparent;border:none;outline:none;resize:none;color:var(--ivory);
+    font-family:inherit;font-size:.92rem;line-height:1.6;max-height:96px;min-height:34px;padding:7px 0}
+  #holeIn::placeholder{color:rgba(240,207,130,.35)}
+  #holeSend{flex:none;width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(160deg,rgba(255,238,196,.45),rgba(240,207,130,.22));
+    color:#0a0815;font-size:1.02rem;display:flex;align-items:center;justify-content:center;
+    transition:.2s;box-shadow:0 4px 16px rgba(240,207,130,.22)}
+  #holeSend:active{transform:scale(.9)}
+  #holeSend:disabled{opacity:.4;pointer-events:none}
+  .th-tip{font-size:.58rem;color:rgba(240,207,130,.32);text-align:center;padding:6px 0 2px;letter-spacing:.14em}
+  /* 清空确认 */
+  .th-clear-mask{position:fixed;inset:0;z-index:50;background:rgba(5,3,16,.6);
+    backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:24px}
+  .th-clear-mask.show{display:flex}
+  .th-clear-box{width:min(310px,92%);padding:22px 20px;border-radius:22px;text-align:center;animation:msgIn .35s cubic-bezier(.16,1,.3,1)}
+  .th-clear-box h4{font-size:.9rem;color:var(--gold);letter-spacing:.1em;margin-bottom:8px}
+  .th-clear-box p{font-size:.72rem;color:rgba(240,207,130,.6);line-height:1.7;margin-bottom:16px}
+  .th-clear-btns{display:flex;gap:10px}
+  .th-clear-btns button{flex:1;padding:11px;border-radius:14px;font-family:inherit;font-size:.76rem;cursor:pointer;border:none;letter-spacing:.06em}
+  .th-cancel{background:rgba(255,255,255,.08);color:rgba(240,207,130,.65)}
+  .th-ok{background:linear-gradient(165deg,rgba(255,238,196,.4),rgba(240,207,130,.18));color:#fffbef;font-weight:600}
+</style>
+</head>
+<body>
+<canvas id="holeSky"></canvas>
+<canvas id="holeStars"></canvas>
+<canvas id="holeSea"></canvas>
+
+<!-- 顶栏 -->
+<div class="th-head">
+  <div class="th-back glass" id="thBack">←</div>
+  <div class="th-title glass">聊天树洞</div>
+  <div class="th-clear glass" id="thClear" title="清空记忆">⌫</div>
+</div>
+
+<!-- 消息区 -->
+<div id="holeMsgs"></div>
+
+<!-- 输入区 -->
+<div class="th-input">
+  <div class="glassbox glass">
+    <textarea id="holeIn" rows="1" placeholder="把想说的，丢进树洞…"></textarea>
+    <button id="holeSend">➤</button>
+  </div>
+</div>
+
+<!-- 清空确认 -->
+<div class="th-clear-mask" id="thClearMask">
+  <div class="th-clear-box glass">
+    <h4>清空树洞记忆？</h4>
+    <p>聊天记录和悄悄记住的你，都会被清空。<br>清空后树洞将从零开始认识你。</p>
+    <div class="th-clear-btns">
+      <button class="th-cancel" id="thClearNo">再想想</button>
+      <button class="th-ok" id="thClearYes">清空</button>
+    </div>
+  </div>
+</div>
+
+<script src="../memory.js"></script>
+<script src="../supabase-config.js?v=6"></script>
+<script src="../ai-relay.js?v=1"></script>
+<script src="../treehole.js?v=2"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const sky = $('holeSky'), stars = $('holeStars'), sea = $('holeSea');
+  let W, H, DPR;
+
+  /* ============ 夜晚海边背景（无月 · 海浪 · 星空倒影） ============ */
+  const STARS_POOL = [];
+  function resize() {
+    DPR = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    [sky, stars, sea].forEach(c => { c.width = W * DPR; c.height = H * DPR; });
+    buildStars();
+  }
+  function buildStars() {
+    /* 天幕上半区随机生成星星（不含月亮） */
+    STARS_POOL.length = 0;
+    const n = Math.floor(W * (H * .62) / 5200);
+    for (let i = 0; i < n; i++) {
+      STARS_POOL.push({
+        x: Math.random() * W,
+        y: Math.random() * H * .62,
+        r: Math.random() * 1.4 + .3,
+        a: Math.random() * .6 + .25,
+        tw: Math.random() * .025 + .005,   /* 闪烁速度 */
+        ph: Math.random() * 7
+      });
+    }
+  }
+  function drawStars() {
+    const ctx = stars.getContext('2d');
+    const t = performance.now() / 1000;
+    ctx.clearRect(0, 0, stars.width, stars.height);
+    STARS_POOL.forEach(s => {
+      ctx.globalAlpha = s.a + Math.sin(t * s.tw * 6 + s.ph) * .18;
+      ctx.fillStyle = 'rgba(226,224,255,1)';
+      ctx.beginPath();
+      ctx.arc(s.x * DPR, s.y * DPR, s.r * DPR, 0, 6.283);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+  /* 海面：波浪 + 星星倒影（竖直拖影在波峰间浮动） */
+  function drawSea() {
+    const ctx = sea.getContext('2d');
+    const t = performance.now() / 1000;
+    const w = sea.width, h = sea.height;
+    ctx.clearRect(0, 0, w, h);
+    const seaY = H * .74;                 /* 海平面位置（相对页面高度） */
+    /* 1) 海面底色渐变 */
+    const g = ctx.createLinearGradient(0, seaY * DPR, 0, h);
+    g.addColorStop(0, 'rgba(8,14,38,.96)');
+    g.addColorStop(.55, 'rgba(7,11,30,.98)');
+    g.addColorStop(1, 'rgba(5,8,22,1)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, seaY * DPR, w, h - seaY * DPR);
+    /* 2) 波浪线（两条叠加，左右微流动） */
+    for (let layer = 0; layer < 2; layer++) {
+      ctx.beginPath();
+      ctx.strokeStyle = layer === 0
+        ? 'rgba(148,180,255,.16)' : 'rgba(110,140,220,.09)';
+      ctx.lineWidth = layer === 0 ? 1.4 : 2.2;
+      const amp = (layer === 0 ? 7 : 13) * DPR;
+      const speed = layer === 0 ? 1.1 : .8;
+      const yBase = seaY * DPR + (layer === 0 ? 10 : 26) * DPR;
+      ctx.moveTo(0, yBase);
+      for (let x = 0; x <= w; x += 12) {
+        const waveY = yBase + Math.sin(x / (layer === 0 ? 60 : 110) + t * speed) * amp;
+        ctx.lineTo(x, waveY);
+      }
+      ctx.stroke();
+    }
+    /* 3) 星星倒影：竖条光柱，随波浪起伏+明暗呼吸 */
+    const pool = STARS_POOL;
+    const count = Math.min(26, Math.floor(pool.length * .4));
+    for (let i = 0; i < count; i++) {
+      const s = pool[(i * 7 + 3) % pool.length];
+      const x = s.x * DPR;
+      const ph = s.ph + t * .9;
+      const sway = Math.sin(ph * 1.7) * 6 * DPR;      /* 横向漂移 */
+      const stretch = 1 + Math.sin(ph * 2.1) * .5;      /* 拉伸起伏 */
+      const alpha = .10 + Math.abs(Math.sin(ph)) * .14;
+      const grad = ctx.createLinearGradient(x + sway, seaY * DPR, x + sway, h);
+      grad.addColorStop(0, 'rgba(214,220,255,' + alpha + ')');
+      grad.addColorStop(1, 'rgba(120,140,220,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x + sway - 1.1 * DPR, seaY * DPR, 2.2 * DPR, (34 + 26 * stretch) * DPR);
+    }
+    /* 4) 海面底部轻微波光 */
+    ctx.globalAlpha = .5;
+    ctx.fillStyle = 'rgba(190,205,255,.05)';
+    ctx.beginPath();
+    const y0 = (H - 30) * DPR;
+    for (let x = 0; x <= w; x += 20) {
+      const y = y0 + Math.sin(x / 90 + t * 1.4) * 8 * DPR;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  function animate() {
+    drawStars();
+    drawSea();
+    requestAnimationFrame(animate);
+  }
+  addEventListener('resize', resize);
+  resize();
+  animate();
+
+  /* ============ 消息渲染 ============ */
+  const msgs = $('holeMsgs');
+  let busy = false;
+
+  function esc(t) { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+  function scrollToBottom(smooth) {
+    requestAnimationFrame(() => msgs.scrollTo({ top: msgs.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }));
+  }
+  function openMsg(role, text) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.innerHTML = '<div class="who">' + (role === 'user' ? '你' : '树洞') + '</div><div class="bub">' + esc(text) + '</div>';
+    msgs.appendChild(div);
+    scrollToBottom(true);
+    return div;
+  }
+  function showWelcome() {
+    const chats = window.TreeHole.readChats();
+    if (chats.length) return;
+    const div = document.createElement('div');
+    div.className = 'welcome glass';
+    div.innerHTML = '<div class="wic">🕳️</div>' +
+      '<div class="wtitle">把秘密说给树洞听</div>' +
+      '<div class="wdesc">这里住着一只双鱼座的树洞。<br>它是一片深海，什么都能装下，从不评判。<br>你说过的话，它会安静地沉进海底，替你记着。</div>' +
+      '<div class="whint">— 树洞会记得，但不会到处说 —</div>';
+    msgs.appendChild(div);
+    scrollToBottom(false);
+  }
+
+  /* 渲染全部历史消息 */
+  function renderHistory() {
+    const chats = window.TreeHole.readChats();
+    if (!chats.length) {
+      /* 从占卜页带信息进来：树洞自然开场（不欢迎卡）；否则照常显示欢迎卡 */
+      let hasPending = false;
+      try { hasPending = !!localStorage.getItem('treehole_pending_opening'); } catch (e) {}
+      if (!hasPending) { showWelcome(); return; }
+      const aiDiv = document.createElement('div');
+      aiDiv.className = 'msg ai';
+      aiDiv.innerHTML = '<div class="who">树洞</div><div class="bub"><span class="typing"><i></i><i></i><i></i></span></div>';
+      msgs.appendChild(aiDiv);
+      scrollToBottom(true);
+      window.TreeHole.peekOpening().then(opening => {
+        aiDiv.remove();
+        if (!opening) { showWelcome(); return; }
+        /* 开场白写入聊天记录：让后续回复上下文连贯 */
+        try { window.TreeHole.appendChat('assistant', opening); } catch (e) {}
+        const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(opening, 4)) || [opening];
+        bubbles.forEach((b, i) => {
+          setTimeout(() => {
+            const d = document.createElement('div');
+            d.className = 'msg ai';
+            d.innerHTML = '<div class="who">' + (i === 0 ? '树洞' : '') + '</div><div class="bub">' + esc(b) + '</div>';
+            msgs.appendChild(d);
+            scrollToBottom(true);
+          }, i * 420);
+        });
+      }).catch(() => { aiDiv.remove(); showWelcome(); });
+      return;
+    }
+    chats.forEach(m => openMsg(m.role, m.content));
+    /* 底部提示最近一次时间 */
+    const last = chats[chats.length - 1];
+    if (last && last.at) {
+      const d = new Date(last.at);
+      const tip = document.createElement('div');
+      tip.className = 'th-status';
+      tip.textContent = '— 上次 ' + [d.getMonth() + 1, d.getDate()].join('月') + '日 ' +
+        String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' —';
+      msgs.appendChild(tip);
+    }
+    scrollToBottom(false);
+  }
+  renderHistory();
+
+  /* ============ 发送 ============ */
+  const inp = $('holeIn'), sendBtn = $('holeSend');
+  function autoResize() {
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 96) + 'px';
+  }
+  inp.addEventListener('input', autoResize);
+
+  async function send() {
+    const text = inp.value.trim();
+    if (!text || busy) return;
+    inp.value = ''; autoResize();
+    busy = true; sendBtn.disabled = true;
+
+    /* 用户气泡 */
+    openMsg('user', text);
+    /* AI 占位 + 打字动画 */
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'msg ai';
+    aiDiv.innerHTML = '<div class="who">树洞</div><div class="bub"><span class="typing"><i></i><i></i><i></i></span></div>';
+    msgs.appendChild(aiDiv);
+    const bub = aiDiv.querySelector('.bub');
+    scrollToBottom(true);
+
+    const status = document.createElement('div');
+    status.className = 'th-status changing';
+    status.textContent = '🔄 正在尝试重连…';
+    msgs.appendChild(status);
+    scrollToBottom(true);
+
+    let full = '';
+    const statusTimer = setInterval(() => { status.remove(); clearInterval(statusTimer); }, 50);
+    try {
+      await window.TreeHole.sendMessage(text, (d) => {
+        full += d;
+        bub.innerHTML = esc(full) + '<span class="typing" style="display:inline-flex;vertical-align:bottom"><i></i><i></i><i></i></span>';
+        scrollToBottom(true);
+      }, (tier, n) => {
+        status.textContent = '🔄 ' + tier + ' 连接中断，重连中（' + n + '/' + window.AIRelay.RETRY + '）…';
+      });
+      /* 多气泡：把整段回复拆成短句，一条一条发（像真人连发微信） */
+      const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(full)) || [full];
+      aiDiv.remove();
+      if (bubbles.length) {
+        bubbles.forEach((b, i) => {
+          setTimeout(() => {
+            const d = document.createElement('div');
+            d.className = 'msg ai';
+            d.innerHTML = '<div class="who">' + (i === 0 ? '树洞' : '') + '</div><div class="bub">' + esc(b) + '</div>';
+            msgs.appendChild(d);
+            scrollToBottom(true);
+          }, i * 420);
+        });
+      } else {
+        const d = document.createElement('div');
+        d.className = 'msg ai';
+        d.innerHTML = '<div class="who">树洞</div><div class="bub">' + esc(full || '…') + '</div>';
+        msgs.appendChild(d);
+        scrollToBottom(true);
+      }
+    } catch (e) {
+      bub.innerHTML = '🌫️ 树洞暂时听不到你说话，稍后再试试吧。';
+      /* 失败回滚：移除刚才追加的 user 消息，避免一条消息变两条 */
+      try {
+        const chats = window.TreeHole.readChats();
+        if (chats.length && chats[chats.length - 1].role === 'user' && !chats.some(c => c.content === text && c.role === 'assistant')) {
+          chats.pop(); window.TreeHole.saveChats(chats);
+        }
+      } catch (e2) {}
+    } finally {
+      status.remove();
+      busy = false; sendBtn.disabled = false;
+      scrollToBottom(true);
+    }
+  }
+  sendBtn.addEventListener('click', send);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  /* ============ 清空 ============ */
+  $('thClear').addEventListener('click', () => $('thClearMask').classList.add('show'));
+  $('thClearNo').addEventListener('click', () => $('thClearMask').classList.remove('show'));
+  $('thClearYes').addEventListener('click', () => {
+    window.TreeHole.clearChats();
+    $('thClearMask').classList.remove('show');
+    msgs.innerHTML = '';
+    showWelcome();
+    toast && toast('树洞已清空 🍃');
+  });
+  /* ============ 返回 ============ */
+  $('thBack').addEventListener('click', () => { if (history.length > 1) history.back(); else location.href = '../'; });
+
+  function toast(t) {
+    let el = document.querySelector('.th-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'th-toast';
+      el.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99;' +
+        'background:linear-gradient(160deg,rgba(30,24,50,.92),rgba(30,24,50,.85));backdrop-filter:blur(12px);' +
+        'border:1px solid rgba(240,207,130,.25);border-radius:16px;padding:12px 22px;font-size:.78rem;' +
+        'color:#f0cf82;letter-spacing:.1em;box-shadow:0 16px 48px rgba(0,0,0,.45);transition:opacity .3s';
+      document.body.appendChild(el);
+    }
+    el.textContent = t;
+    el.style.opacity = '1';
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.style.opacity = '0'; }, 1600);
+  }
+})();
+</script>
+</body>
+</html>
