@@ -383,7 +383,7 @@ function tryAutoPick(delay){
     /* 问题没变且有上次结果 → 直接沿用，快速高亮，不再调 AI */
     if(q===lastPickQ && lastPickR){
       note.classList.add('show');
-      note.innerHTML='✦ 塔罗师为你选择了「'+lastPickR.spread.name+'」 — '+escapeHtml(lastPickR.reason);
+      note.innerHTML='✦ 这个问题和刚才一样，已为你选好「'+lastPickR.spread.name+'」 — '+escapeHtml(lastPickR.reason);
       applySpread(lastPickR.spread);
       return;
     }

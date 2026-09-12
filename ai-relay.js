@@ -25,7 +25,7 @@
   // Supabase 公开 anon key（设计上可公开，仅用于 Edge Function 的 JWT 校验门槛）
   const SB_ANON_KEY = 'sb_publishable_VdjiBIABpFj0RHgoXFC2wQ_NxpPt7df';
   const RETRY = 2;            // 外层对 Edge 的整体重试次数（Edge 内部已做主备切换+超时，外层 1-2 次兜底即可，避免 5 次叠加成几分钟死等）
-  const TIMEOUT = 130000;     // 单次请求超时（覆盖 Edge 最坏链路：主 40s + 备 4 次重试约 65s ≈ 105s，留余量）
+  const TIMEOUT = 148000;     // 单次请求超时（覆盖 Edge 最坏链路：主 50s×2 + 备 8s×4+间隔 ≈ 137s，留余量且不超平台 150s）
 
   /** 单次 fetch 尝试（自带超时，超时即抛错触发重试） */
   async function tryFetch(tier, body) {
