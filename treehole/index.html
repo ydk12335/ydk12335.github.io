@@ -32,6 +32,16 @@
   .th-clear{width:38px;height:38px;border-radius:14px;display:flex;align-items:center;justify-content:center;
     font-size:.92rem;color:rgba(240,207,130,.7);cursor:pointer;transition:.2s}
   .th-clear:active{transform:scale(.94)}
+  /* ===== 海浪白噪音开关（WebAudio 现场合成，非音乐） ===== */
+  .th-wave{width:38px;height:38px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-size:.95rem;color:rgba(240,207,130,.55);cursor:pointer;transition:.25s;position:relative}
+  .th-wave:active{transform:scale(.94)}
+  .th-wave.on{color:var(--gold);background:rgba(240,207,130,.14);
+    box-shadow:inset 0 0 0 1px rgba(240,207,130,.45),0 0 16px rgba(240,207,130,.22)}
+  .th-wave .tw-badge{position:absolute;top:-4px;right:-4px;width:9px;height:9px;border-radius:50%;
+    background:#6fb1e2;box-shadow:0 0 6px rgba(111,177,226,.8);display:none}
+  .th-wave.on .tw-badge{display:block;animation:twPulse 1.6s ease-in-out infinite}
+  @keyframes twPulse{0%,100%{opacity:.4;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
   /* ===== 消息区 ===== */
   #holeMsgs{position:fixed;inset:0;z-index:5;padding:calc(72px + env(safe-area-inset-top)) 14px calc(94px + env(safe-area-inset-bottom));
     overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
@@ -110,6 +120,7 @@
   <div class="th-back glass" id="thBack">←</div>
   <div class="th-title glass">聊天树洞</div>
   <div class="th-clear glass" id="thClear" title="清空记忆">⌫</div>
+  <div class="th-wave" id="thWave" title="海浪白噪音（现场合成）">🌊<span class="tw-badge"></span></div>
 </div>
 
 <!-- 消息区 -->
@@ -174,6 +185,57 @@
   }
   if (window.particlesJS) initParticles();
   else { window.addEventListener('load', initParticles); }
+
+  /* ============ 海浪白噪音（WebAudio 现场合成 · 非音乐 · 零版权） ============ */
+  /* 树洞住在深夜的海边：用合成海浪声做氛围白噪音，不依赖任何音频文件 */
+  let waveCtx = null, waveNodes = null, waveOn = false;
+  const waveBtn = $('thWave');
+  function startWave() {
+    try {
+      if (!waveCtx) waveCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (waveCtx.state === 'suspended') waveCtx.resume();
+      stopWaveNodes();
+      const sr = waveCtx.sampleRate;
+      /* 一波海浪 ≈ 9 秒：缓起 → 涌上 → 退落，循环播放 */
+      const cycle = 9, len = sr * cycle;
+      const buf = waveCtx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        const ph = (i / sr % cycle) / cycle;
+        const env = Math.pow(Math.sin(ph * Math.PI), 1.6);   /* 海浪包络：缓起缓落 */
+        d[i] = (Math.random() * 2 - 1) * (0.55 + 0.45 * Math.random()) * env * 0.9;
+      }
+      const src = waveCtx.createBufferSource(); src.buffer = buf; src.loop = true;
+      /* 低通滤波：海浪是低频"哗—"声，滤掉尖锐高频 */
+      const lp = waveCtx.createBiquadFilter(); lp.type = 'lowpass';
+      lp.frequency.value = 520; lp.Q.value = .4;
+      const gain = waveCtx.createGain(); gain.gain.value = .16;
+      src.connect(lp); lp.connect(gain); gain.connect(waveCtx.destination);
+      /* 第二层 LFO：缓慢呼吸感，让每波之间有点起伏 */
+      const lfo = waveCtx.createOscillator(); lfo.frequency.value = .05;
+      const lfoG = waveCtx.createGain(); lfoG.gain.value = .045;
+      lfo.connect(lfoG); lfoG.connect(gain.gain); lfo.start();
+      src.start();
+      waveNodes = { src, lp, gain, lfo, lfoG };
+      waveOn = true;
+      waveBtn.classList.add('on');
+      waveBtn.title = '海浪白噪音（播放中，点击关闭）';
+    } catch (e) {}
+  }
+  function stopWaveNodes() {
+    if (!waveNodes) return;
+    try { waveNodes.src.stop(); } catch (e) {}
+    try { waveNodes.lfo.stop(); } catch (e) {}
+    waveNodes = null;
+  }
+  function stopWave() {
+    stopWaveNodes();
+    waveOn = false;
+    waveBtn.classList.remove('on');
+    waveBtn.title = '海浪白噪音（现场合成）';
+  }
+  if (waveBtn) waveBtn.addEventListener('click', () => { waveOn ? stopWave() : startWave(); });
+  /* 页面隐藏时自动停（省电，回来需重新开） */
+  document.addEventListener('visibilitychange', () => { if (document.hidden && waveOn) stopWave(); });
 
 
   /* ============ 消息渲染 ============ */
