@@ -339,19 +339,25 @@
 
     const status = document.createElement('div');
     status.className = 'th-status changing';
-    status.textContent = '🔄 正在尝试重连…';
+    status.style.display = 'none';   /* 默认隐藏：仅在真正重连时显示，避免首次请求误显示 */
     msgs.appendChild(status);
     scrollToBottom(true);
 
     let full = '';
-    const statusTimer = setInterval(() => { status.remove(); clearInterval(statusTimer); }, 50);
+    /* 重连提示条：只有 onRetry 触发时才显示/更新（此前 50ms 定时器把元素删了导致提示永远不显示） */
+    const showStatus = (tier, n) => {
+      if (!status.isConnected) { msgs.appendChild(status); scrollToBottom(true); }
+      status.style.display = '';
+      status.textContent = '🔄 ' + tier + ' 连接中断，重连中（' + n + '/' + window.AIRelay.RETRY + '）…';
+      scrollToBottom(true);
+    };
     try {
       await window.TreeHole.sendMessage(text, (d) => {
         full += d;
         bub.innerHTML = esc(full) + '<span class="typing" style="display:inline-flex;vertical-align:bottom"><i></i><i></i><i></i></span>';
         scrollToBottom(true);
       }, (tier, n) => {
-        status.textContent = '🔄 ' + tier + ' 连接中断，重连中（' + n + '/' + window.AIRelay.RETRY + '）…';
+        showStatus(tier, n);
       });
       /* 多气泡：把整段回复拆成短句，一条一条发（像真人连发微信） */
       const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(full)) || [full];

@@ -345,6 +345,8 @@ const PICK_SYS='你是资深塔罗占卜师助手。用户会给出一个占卜�
   '。判断标准：问题简短、只需一个明确答案或当日指引→选 one；涉及事情发展经过、时间线、因果关系→选 three；局面复杂、多方因素、关系纠缠、需要全面剖析→选 five。'+
   '只输出一行JSON：{"spread":"one或three或five","reason":"不超过20字的中文理由"}，不要输出任何其他内容。';
 let pickSeq=0;
+/* 上次选阵的问题与结果：问题没变直接复用，不再调 AI（避免每次都干等 20-40s） */
+let lastPickQ=null,lastPickR=null;
 async function aiPickSpread(q){
   const my=++pickSeq;
   const j=await window.AIRelay.complete({
@@ -368,12 +370,20 @@ function tryAutoPick(delay){
   const note=$('autoNote');
   if(curSpread.id!=='auto'){note.classList.remove('show');return;}
   const q=$('question').value.trim();
-  if(!delay){/* 立即（点击芯片时） */}
   pickTimer=setTimeout(async()=>{
+    /* 问题没变且有上次结果 → 直接沿用，快速高亮，不再调 AI */
+    if(q===lastPickQ && lastPickR){
+      note.classList.add('show');
+      note.innerHTML='✦ 塔罗师为你选择了「'+lastPickR.spread.name+'」 — '+escapeHtml(lastPickR.reason);
+      applySpread(lastPickR.spread);
+      return;
+    }
     note.classList.add('show');
     note.innerHTML='<span style="color:#a79ade">✦ 塔罗师正凝视你的问题，推演最合适的牌阵……</span>';
     try{
       const r=await aiPickSpread(q);
+      if(!r)return;/* 已有更新的请求，忽略本次结果 */
+      lastPickQ=q;lastPickR=r;/* 记录本次结果，问题不变则复用 */
       note.innerHTML='✦ 塔罗师为你选择了「'+r.spread.name+'」 — '+escapeHtml(r.reason);
       applySpread(r.spread);
     }catch(e){
