@@ -1808,7 +1808,8 @@
       box._bound = true;
       box.addEventListener('click', e => {
         const b = e.target.closest('.pf-badge'); if (!b) return;
-        const a = items.find(x => x.id === b.dataset.id); if (!a) return;
+        /* 实时查询最新解锁状态（勿用闭包捕获的旧 items —— 设置生日/观星后状态会变） */
+        const a = list().find(x => x.id === b.dataset.id); if (!a) return;
         if (!a.unlocked) { toast('「' + a.name + '」 尚未解锁'); return; }
         openCard(a);
       });

@@ -501,9 +501,6 @@
 
   /** 调 AI 生成情绪报告星语（带降级） */
   async function generateMoodText(mood) {
-    const API_BASE = 'https://apihub.agnes-ai.cn/v1';
-    const API_KEY = 'sk-bnT8gvJweewxMFO2oOnzNof2qpqazpKYq1spx5EulZ11vfyZ';
-    const MODEL = 'agnes-2.5-flash';
     const sys = '你是「有点困」的星语师。用户刚生成一份本月情绪报告，请你写一段不超过120字的温柔星语解读：' +
       '点出本月情绪主线、反复出现的牌意味着什么，并给一句克制的建议。说人话、不煽情、不写"愿星光指引你"这类话。直接输出正文。';
     const userData = '本月情绪指数：' + mood.avg + '（-1~1，越高越明亮），趋势：' + mood.trend +
@@ -512,13 +509,11 @@
       '\n逆位占比：' + mood.reversed.count + '/' + mood.reversed.total +
       '\n本月共占卜：' + mood.count + ' 次';
     try {
-      const res = await fetch(API_BASE + '/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY },
-        body: JSON.stringify({ model: MODEL, temperature: .85, max_tokens: 400,
-          messages: [{ role: 'system', content: sys }, { role: 'user', content: userData }] })
+      const j = await window.AIRelay.complete({
+        temperature: .85, max_tokens: 400,
+        messages: [{ role: 'system', content: sys }, { role: 'user', content: userData }],
+        onRetry: () => {}
       });
-      const j = await res.json();
       if (j.choices && j.choices[0]) return (j.choices[0].message.content || '').trim();
       return '';
     } catch (e) { return ''; }

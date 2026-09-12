@@ -345,10 +345,11 @@ const PICK_SYS='你是资深塔罗占卜师助手。用户会给出一个占卜�
 let pickSeq=0;
 async function aiPickSpread(q){
   const my=++pickSeq;
-  const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
-    body:JSON.stringify({model:MODEL,messages:[{role:'system',content:PICK_SYS},{role:'user',content:q||'（用户没有写问题，想要一个当日的整体指引）'}],temperature:.3,max_tokens:512})});
-  const j=await res.json();
+  const j=await window.AIRelay.complete({
+    messages:[{role:'system',content:PICK_SYS},{role:'user',content:q||'（用户没有写问题，想要一个当日的整体指引）'}],
+    temperature:.3,max_tokens:512,
+    onRetry:(tier,n)=>{ const note=$('autoNote'); if(note) note.innerHTML='<span style="color:#a79ade">🔄 '+tier+'重连中（'+n+'/'+window.AIRelay.RETRY+'）…</span>'; }
+  });
   if(my!==pickSeq)return null;/* 已有更新的请求 */
   let txt='';
   try{txt=(j.choices[0].message.content||'').trim();}catch(e){}
@@ -651,63 +652,32 @@ async function askTarot(){
   let doneFlag=false;
 
   try{
-    const ctrl=new AbortController();const abortT=setTimeout(()=>ctrl.abort(),120000);
-    const res=await fetch(API_BASE+'/chat/completions',{method:'POST',signal:ctrl.signal,
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
-      body:JSON.stringify({model:MODEL,messages:[{role:'system',content:SYS_PROMPT},{role:'user',content:buildPrompt()}],temperature:.85,max_tokens:6000,stream:true})});
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
     let reasonLen=0,reasonShown=false;
-    while(true){
-      const r=await rd.read();if(r.done)break;
-      buf+=dec.decode(r.value,{stream:true});
-      const parts=buf.split('\n');buf=parts.pop()||'';
-      for(const line of parts){
-        const l=line.trim();
-        if(!l.startsWith('data:'))continue;
-        const p=l.slice(5).trim();
-        if(p==='[DONE]'){buf='';break;}
-        try{const j=JSON.parse(p);const d=(j.choices&&j.choices[0]&&j.choices[0].delta)||{};
-          /* 模型思考阶段：reasoning_content 有内容但 content 还没来 */
-          if(d.reasoning_content){
-            reasonLen+=d.reasoning_content.length;
-            if(!reasonShown){
-              reasonShown=true;
-              const w=st.querySelector('.status-word');
-              if(w)w.textContent='🫧 塔罗师正凝神推演牌面深意……';
-            }
-            if(reasonLen%40<4){
-              const w=st.querySelector('.status-word');
-              if(w)w.textContent='🫧 塔罗师正凝神推演牌面深意……（已推演 '+Math.round(reasonLen/300)+'00 余字）';
-            }
-          }
-          if(typeof d.content==='string'&&d.content){full+=d.content;
-            shown=full;$('readingText').innerHTML=miniMD(shown)+renderEnd;}
-        }catch(e){}
-      }
-    }
-    clearTimeout(abortT);
-    full=full.trim();
-    if(!full)throw new Error('空响应');
+    full=await window.AIRelay.stream({
+      messages:[{role:'system',content:SYS_PROMPT},{role:'user',content:buildPrompt()}],
+      temperature:.85,max_tokens:6000,
+      onDelta:(_c,total)=>{ shown=total;$('readingText').innerHTML=miniMD(shown)+renderEnd; },
+      onReason:(r)=>{
+        reasonLen+=r.length;
+        if(!reasonShown){
+          reasonShown=true;
+          const w=st.querySelector('.status-word');
+          if(w)w.textContent='🫧 塔罗师正凝神推演牌面深意……';
+        }
+        if(reasonLen%40<4){
+          const w=st.querySelector('.status-word');
+          if(w)w.textContent='🫧 塔罗师正凝神推演牌面深意……（已推演 '+Math.round(reasonLen/300)+'00 余字）';
+        }
+      },
+      onRetry:(tier,n)=>{ const w=st.querySelector('.status-word'); if(w)w.textContent='🔄 '+tier+'连接中断，正在尝试重连（'+n+'/'+window.AIRelay.RETRY+'）…'; }
+    });
   }catch(err){
-    console.warn('流式失败，降级：',err);
-    st.classList.add('thinking');
-    try{
-      st.textContent='🌀 更换一种方式凝神细语……';
-      const res2=await fetch(API_BASE+'/chat/completions',{method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
-        body:JSON.stringify({model:MODEL,messages:[{role:'system',content:SYS_PROMPT},{role:'user',content:buildPrompt()}],temperature:.85,max_tokens:6000})});
-      const j2=await res2.json();
-      if(!res2.ok||!j2.choices)throw new Error((j2.error&&j2.error.message)||('HTTP '+res2.status));
-      full=(j2.choices[0].message.content||'').trim();
-      if(!full)throw new Error('空响应');
-    }catch(e2){
-      clearInterval(statusTimer);st.classList.remove('thinking');st.textContent='';
-      $('readingText').innerHTML='<strong style="color:#ff9d9d">✕ 连接月亮的信号中断了…</strong>'+
-        '<p style="color:#cbc0ea;margin-top:8px">原因：'+escapeHtml(String(e2&&e2.message||'未知错误').slice(0,160))+'</p>'+
-        '<p style="color:#8a81b8;margin-top:8px">请检查网络后点击下方「换一问再来」重新占卜。</p>';
-      readingBusy=false;$('btnRead').disabled=false;return;
-    }
+    console.warn('AI 调用最终失败：',err);
+    clearInterval(statusTimer);st.classList.remove('thinking');st.textContent='';
+    $('readingText').innerHTML='<strong style="color:#ff9d9d">✕ 连接月亮的信号中断了…</strong>'+
+      '<p style="color:#cbc0ea;margin-top:8px">原因：'+escapeHtml(String(err&&err.message||'未知错误').slice(0,160))+'</p>'+
+      '<p style="color:#8a81b8;margin-top:8px">请检查网络后点击下方「换一问再来」重新占卜。</p>';
+    readingBusy=false;$('btnRead').disabled=false;return;
   }
   clearInterval(statusTimer);st.classList.remove('thinking');st.textContent='';
   /* 打字机呈现完整文本 */
@@ -877,20 +847,20 @@ async function sendFollowup(){
   note.innerHTML='<span style="color:#a79ade">🌙 塔罗师正凝视牌面，思考你的追问……</span>';
   const lastAns=fuHistory.length?fuHistory[fuHistory.length-1].a:'';
   try{
-    const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
-      body:JSON.stringify({model:MODEL,temperature:.8,max_tokens:1200,
-        messages:[
-           {role:'system',content:'你是「月下塔罗师」。求问者刚完成一次塔罗占卜并已收到完整解读，现在可以就**这次牌面**继续追问，最多 3 次。\n'+
-             '【本次占卜】'+fuCtx+'\n'+
-             '【规则】1. 回答必须紧扣本次抽到的牌与已给出的解读，可以展开某张牌、某个位置、某段结论，也可以结合牌面给出更细的建议；\n'+
-             '2. 如果追问与本次占卜的问题和牌面明显无关（例如问别的占卜、闲聊、要求重新占卜、问与牌面无关的事实信息等），你必须婉拒：以塔罗师的口吻温和说明牌面能量只覆盖这一次占问，建议重新洗牌开一局，输出不超过 3 句话；\n'+
-             '3. 保持公正中立，不要为了迎合用户而只说好话。如果牌面显示的是警示或负面信息，如实告知；\n'+
-             '4. 【语气风格】延续月下塔罗师的真人感风格——像朋友聊天一样自然，允许口语化停顿（"嗯…"、"哦"、"嘛"），多用短句，融入真实情绪；禁止AI腔（"综上所述"、"值得注意的是"等）；不要过度煽情，真诚比漂亮话重要。中文，100~300 字，不用 Markdown 标题，可用少量**加粗**。'},
-          {role:'user',content:'（占卜解读已完成，以下是解读全文）\n'+lastAns+'\n\n（求问者的追问）'+q}
-        ]})});
-    const j=await res.json();
-    if(!j.choices)throw new Error((j.error&&j.error.message)||'HTTP '+res.status);
+    const j=await window.AIRelay.complete({
+      temperature:.8,max_tokens:1200,
+      messages:[
+        {role:'system',content:'你是「月下塔罗师」。求问者刚完成一次塔罗占卜并已收到完整解读，现在可以就**这次牌面**继续追问，最多 3 次。\n'+
+          '【本次占卜】'+fuCtx+'\n'+
+          '【规则】1. 回答必须紧扣本次抽到的牌与已给出的解读，可以展开某张牌、某个位置、某段结论，也可以结合牌面给出更细的建议；\n'+
+          '2. 如果追问与本次占卜的问题和牌面明显无关（例如问别的占卜、闲聊、要求重新占卜、问与牌面无关的事实信息等），你必须婉拒：以塔罗师的口吻温和说明牌面能量只覆盖这一次占问，建议重新洗牌开一局，输出不超过 3 句话；\n'+
+          '3. 保持公正中立，不要为了迎合用户而只说好话。如果牌面显示的是警示或负面信息，如实告知；\n'+
+          '4. 【语气风格】延续月下塔罗师的真人感风格——像朋友聊天一样自然，允许口语化停顿（"嗯…"、"哦"、"嘛"），多用短句，融入真实情绪；禁止AI腔（"综上所述"、"值得注意的是"等）；不要过度煽情，真诚比漂亮话重要。中文，100~300 字，不用 Markdown 标题，可用少量**加粗**。'},
+        {role:'user',content:'（占卜解读已完成，以下是解读全文）\n'+lastAns+'\n\n（求问者的追问）'+q}
+      ],
+      onRetry:(tier,n)=>{ note.innerHTML='<span style="color:#a79ade">🔄 '+tier+'重连中（'+n+'/'+window.AIRelay.RETRY+'）…</span>'; }
+    });
+    if(!j.choices)throw new Error((j.error&&j.error.message)||'AI 无响应');
     const ans=(j.choices[0].message.content||'').trim();
     fuHistory.push({q,a:ans});
     fuLeft--;
@@ -1388,12 +1358,11 @@ try{
     if(aiMoodBusy||Math.random()>.5)return;
     aiMoodBusy=true;
     try{
-      const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
-        body:JSON.stringify({model:MODEL,max_tokens:2000,temperature:1.0,messages:[
+      const j=await window.AIRelay.complete({
+        max_tokens:2000,temperature:1.0,messages:[
           {role:'system',content:'你是一位安静的夜色诗人。输出一句中文的、简短（不超过35字）、忧郁而克制的句子。主题随机：孤独的星球、学生时代的遗憾、错过的爱情、分手后的沉默、深夜的氛围。只输出句子本身，不要引号和任何多余内容。'},
-          {role:'user',content:'写一句新的，与以下这些不要重复：'+moodPool.slice(-5).join(' / ')}]})});
-      const j=await res.json();
+          {role:'user',content:'写一句新的，与以下这些不要重复：'+moodPool.slice(-5).join(' / ')}],
+        onRetry:()=>{}});
       const line=((j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'').trim().replace(/^["“”'']+|["“”'']+$/g,'');
       if(line&&line.length<=60&&!moodPool.includes(line)){
         moodPool.push(line);
@@ -1718,12 +1687,11 @@ try{
   }
   async function aiLine(used){
     try{
-      const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
-        body:JSON.stringify({model:MODEL,max_tokens:2000,temperature:1.0,messages:[
+      const j=await window.AIRelay.complete({
+        max_tokens:2000,temperature:1.0,messages:[
           {role:'system',content:'你是一位安静的夜色诗人。输出一句中文的、简短（不超过35字）、忧郁而克制的句子。主题随机：学生时代的遗憾、错过的爱情、分手后的沉默、孤独、深夜的氛围。只输出句子本身，不要引号和任何多余内容。'},
-          {role:'user',content:'写一句新的，与以下不要重复：'+moodPool.slice(-6).join(' / ')}]})});
-      const j=await res.json();
+          {role:'user',content:'写一句新的，与以下不要重复：'+moodPool.slice(-6).join(' / ')}],
+        onRetry:()=>{}});
       const line=((j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'').trim().replace(/^["“”'']+|["“”'']+$/g,'');
       if(line&&line.length<=60&&!moodPool.includes(line)){
         moodPool.push(line);

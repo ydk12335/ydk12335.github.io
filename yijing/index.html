@@ -281,6 +281,7 @@ body[data-phase="day"]::after,body[data-phase="dusk"]::after{
 <div id="toast"></div>
 
 <script src="../memory.js"></script>
+<script src="../ai-relay.js?v=1"></script>
 <script>
 'use strict';
 const API_BASE='https://apihub.agnes-ai.cn/v1';
@@ -701,11 +702,11 @@ async function aiRead(){
     (typeof window.Personalize !== 'undefined' ? window.Personalize.buildPersonalizedPrompt('yijing') : '');
   let txt='';
   try{
-    const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
-      body:JSON.stringify({model:MODEL,temperature:.85,max_tokens:3000,
-        messages:[{role:'system',content:sys},{role:'user',content:user}]})});
-    const j=await res.json();
+    const j=await window.AIRelay.complete({
+      temperature:.85,max_tokens:3000,
+      messages:[{role:'system',content:sys},{role:'user',content:user}],
+      onRetry:(tier,n)=>{ const ld=$('loading'); if(ld){ld.classList.add('show'); if(ld.querySelector){} const i=ld.querySelector('.loading-content, .spin, p, span')||ld; i.textContent='🔄 '+tier+'重连中（'+n+'/'+window.AIRelay.RETRY+'）…'; } }
+    });
     if(j.choices&&j.choices[0])txt=j.choices[0].message.content.trim();
   }catch(e){}
   $('loading').classList.remove('show');
@@ -809,9 +810,9 @@ fetch('gua.json').then(r=>r.json()).then(d=>{
   toast('卦象数据加载失败，请刷新重试');
 });
 </script>
-<script src="../personalize.js?v=2"></script>
+<script src="../personalize.js?v=3"></script>
 <script src="../supabase-config.js?v=6"></script>
-<script src="../achievements.js?v=26"></script>
+<script src="../achievements.js?v=27"></script>
 <script src="../profile.js?v=6"></script>
 <script src="../user-widget.js?v=15"></script>
 </body>

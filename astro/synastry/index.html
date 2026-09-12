@@ -481,13 +481,11 @@ $('btnGo').onclick=async()=>{
   try{
     const d=new Date();
     const infoA=readInfo('A'),infoB=readInfo('B');
-    const res=await fetch(API_BASE+'/chat/completions',{method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
-      body:JSON.stringify({model:MODEL,messages:[{role:'system',content:SYN_SYS},
+    const j=await window.AIRelay.complete({
+      messages:[{role:'system',content:SYN_SYS},
         {role:'user',content:'请为「'+a[0]+'」（'+a[2]+'，核心性格特质：'+a[3]+'）与「'+b[0]+'」（'+b[2]+'，核心性格特质：'+b[3]+'）做一张「'+relType+'」关系的星座合盘。请严格贴合两个星座各自的元素、守护星与特质，内容侧重'+relType+'关系。避免通用套话。'
-        +(infoA||infoB?'\n补充信息（选填，如有请自然融入解读，用称呼指代两人，并适当结合两人的年龄段/人生阶段给出更贴合的建议；若生日与所选星座不符，以生日推算的太阳星座为准并自然修正）：'+infoA+'；'+infoB:'')}],temperature:.8,max_tokens:1800})});
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const j=await res.json();
+        +(infoA||infoB?'\n补充信息（选填，如有请自然融入解读，用称呼指代两人，并适当结合两人的年龄段/人生阶段给出更贴合的建议；若生日与所选星座不符，以生日推算的太阳星座为准并自然修正）：'+infoA+'；'+infoB:'')}],temperature:.8,max_tokens:1800,
+      onRetry:(tier,n)=>{ $('pText').innerHTML='<div class="a-loading"><span class="orb-ring"></span><span>🔄 '+tier+'重连中（'+n+'/'+window.AIRelay.RETRY+'）…</span></div>'; }});
     const raw=(j.choices[0].message.content||'').trim();
     $('pText').innerHTML=miniMD(raw);
 lastSyn={a:a[0],as:a[1],b:b[0],bs:b[1],na:nameA,nb:nameB,rel:relType,text:raw};
@@ -573,10 +571,11 @@ $('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList
 $('btnBack').onclick=()=>{if(history.length>1)history.back();else location.href='../';};
 </script>
 <script src="../../memory.js"></script>
+<script src="../../ai-relay.js?v=1"></script>
 <script src="../../music-widget.js?v=1"></script>
-<script src="../../personalize.js?v=2"></script>
+<script src="../../personalize.js?v=3"></script>
 <script src="../../supabase-config.js?v=6"></script>
-<script src="../../achievements.js?v=26"></script>
+<script src="../../achievements.js?v=27"></script>
 <script src="../../profile.js?v=6"></script>
 <script src="../../user-widget.js?v=15"></script>
 </body>
