@@ -5,7 +5,7 @@
  *  1. 所有请求统一发往 Supabase Edge Function（sleep-ai-relay）；
  *  2. Edge Function 内部持有真实 AI 密钥（环境变量），并负责主/备线路自动切换；
  *  3. 前端只携带 Supabase 公开的 anon key（设计上可公开，供 JWT 校验）；
- *  4. 请求失败重试 5 次，界面通过 onRetry 显示「正在尝试重连」；
+ *  4. 请求失败重试 2 次，界面通过 onRetry 显示「正在尝试重连」；
  *  5. 全部失败则抛错，由调用方给出最终错误提示。
  *
  * 用法：
@@ -25,7 +25,7 @@
   // Supabase 公开 anon key（设计上可公开，仅用于 Edge Function 的 JWT 校验门槛）
   const SB_ANON_KEY = 'sb_publishable_VdjiBIABpFj0RHgoXFC2wQ_NxpPt7df';
   const RETRY = 2;            // 外层对 Edge 的整体重试次数（Edge 内部已做主备切换+超时，外层 1-2 次兜底即可，避免 5 次叠加成几分钟死等）
-  const TIMEOUT = 90000;      // 单次请求超时（Edge 内部已管上游超时，这里只需兜底网络层）
+  const TIMEOUT = 130000;     // 单次请求超时（覆盖 Edge 最坏链路：主 40s + 备 4 次重试约 65s ≈ 105s，留余量）
 
   /** 单次 fetch 尝试（自带超时，超时即抛错触发重试） */
   async function tryFetch(tier, body) {
