@@ -187,25 +187,45 @@
       quote: '三十张面孔，都是你的一部分。',
       check: s => s.cardKinds >= 30 },
 
-    /* ---------- 金 · 传说 ---------- */
+    /* ---------- 金 · 传说（每张专属卡面 & 动效） ---------- */
     { id: 'all_major', name: '愚者之旅', icon: '🃏', rarity: 'gold', motion: 'aurora',
       desc: '集齐全部 22 张大阿尔卡纳',
       quote: '从愚者到世界，你走完了整段旅程。',
+      art: '<svg class="ach-art" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+        '<circle cx="32" cy="32" r="20" fill="none" stroke="currentColor" stroke-opacity=".5" stroke-width="1.6" stroke-dasharray="3 4"/>' +
+        '<text x="32" y="36" text-anchor="middle" font-size="20" fill="currentColor" stroke="none" font-family="serif">🃏</text>' +
+        '<circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="1"/>' +
+        '</svg>',
       check: s => s.majCount >= 22 },
 
-    { id: 'gua_64', name: '六十四卦全图', icon: '☯', rarity: 'gold', motion: 'pulse',
+    { id: 'gua_64', name: '六十四卦全图', icon: '☯', rarity: 'gold', motion: 'trigram',
       desc: '集齐全部 64 卦',
       quote: '天地万象，已在你指尖合拢成环。',
+      art: '<svg class="ach-art" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+        '<circle cx="32" cy="32" r="17" fill="none" stroke="currentColor" stroke-opacity=".7" stroke-width="1.8"/>' +
+        '<circle cx="32" cy="32" r="8.5" fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="1.2" stroke-dasharray="2 3"/>' +
+        '<text x="32" y="38" text-anchor="middle" font-size="17" fill="currentColor" stroke="none" font-family="serif">☯</text>' +
+        '</svg>',
       check: s => s.guaKinds >= 64 },
 
     { id: 'three_hundred', name: '三百次占卜', icon: '👑', rarity: 'gold', motion: 'spark',
       desc: '累计占卜满 300 次',
       quote: '三百次叩问之后，答案已不必外求。',
+      art: '<svg class="ach-art" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M14 44l8-22 10 15 6-26 6 26 10-15 8 22z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>' +
+        '<path d="M14 48h36v6H14z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '</svg>',
       check: s => s.total >= 300 },
 
     { id: 'thirty_days', name: '一月不辍', icon: '🏆', rarity: 'gold', motion: 'flame',
       desc: '连续 30 天留下占卜足迹',
       quote: '三十个夜晚，你把自己点成了一盏灯。',
+      art: '<svg class="ach-art" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+        '<circle cx="32" cy="40" r="14" fill="none" stroke="currentColor" stroke-width="2.4"/>' +
+        '<path d="M32 20c-4-4-6-7-6-10 4 1 8 4 10 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<path d="M32 20c4-4 6-7 6-10-4 1-8 4-10 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<text x="32" y="45" text-anchor="middle" font-size="14" fill="currentColor" stroke="none">🔥</text>' +
+        '</svg>',
       check: s => s.streak >= 30 },
 
     /* ---------- 隐藏 · 兑换码 ---------- */
@@ -269,12 +289,53 @@
     return z;
   }
   /** 生成该星座的专属星图 SVG（卡外背景用） */
-  /* 星图绘制节奏：先一颗颗点出星星，再一条条连起来 */
+  /** 星图绘制节奏：先一颗颗点出星星，再一条条连起来 */
   const SKY_START = 0.1, SKY_STAR_STEP = 0.1, SKY_LINE_STEP = 0.07;
   /** 整段星图绘制完成所需时间（秒，含最后一条线画完） */
   function skyTotal(z) {
     return SKY_START + z.stars.length * SKY_STAR_STEP +
       Math.max(0, z.lines.length - 1) * SKY_LINE_STEP + 0.45;
+  }
+  /* ===== 六十四卦全图 · 专属开场（卦名从中心旋转散开浮现） ===== */
+  /* 伏羲六十四卦名（按卦序） */
+  const GUA64 = ['乾','坤','屯','蒙','需','讼','师','比','小畜','履','泰','否','同人','大有','谦','豫',
+    '随','蛊','临','观','噬嗑','贲','剥','复','无妄','大畜','颐','大过','坎','离','咸','恒',
+    '遯','大壮','晋','明夷','家人','睽','蹇','解','损','益','夬','姤','萃','升','困','井',
+    '革','鼎','震','艮','渐','归妹','丰','旅','巽','兑','涣','节','中孚','小过','既济','未济'];
+  /** 把 64 卦名铺成环（双环错位：内 24 外 40，避免拥挤），生成到 agSky */
+  function fillGuaRing() {
+    const sky = $('agSky'); if (!sky) return;
+    const n = GUA64.length;
+    /* 旋转阴阳太极图（古风墨金 · 作为卦名环的底衬） */
+    let html = '<div class="gua-taiji">' +
+      '<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+      '<radialGradient id="taijiBg" cx="50%" cy="38%" r="75%">' +
+      '<stop offset="0" stop-color="#26382c"/><stop offset="1" stop-color="#0d150f"/></radialGradient>' +
+      '<linearGradient id="taijiGold" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#f5dfa0"/><stop offset=".5" stop-color="#d9b268"/><stop offset="1" stop-color="#b98a3a"/></linearGradient>' +
+      '</defs>' +
+      '<circle cx="100" cy="100" r="88" fill="url(#taijiBg)" stroke="url(#taijiGold)" stroke-width="1.6"/>' +
+      '<circle cx="100" cy="100" r="78" fill="none" stroke="url(#taijiGold)" stroke-opacity=".35" stroke-width=".8"/>' +
+      '<!-- 阴阳双鱼（墨金线稿，避免填色抢卦名） -->' +
+      '<path d="M100 100m0 -62a62 62 0 0 1 0 124 31 31 0 0 1 0 -62 31 31 0 0 0 0 -62z" fill="none" stroke="url(#taijiGold)" stroke-opacity=".75" stroke-width="1.3"/>' +
+      '<circle cx="100" cy="55" r="7" fill="url(#taijiGold)" fill-opacity=".8"/>' +
+      '<circle cx="100" cy="145" r="7" fill="none" stroke="url(#taijiGold)" stroke-opacity=".8" stroke-width="1.4"/>' +
+      '</svg></div>';
+    GUA64.forEach((g, i) => {
+      /* 内环 24 个、外环 40 个，各自均匀铺满整圆 */
+      const inner = i < 24;
+      const cnt = inner ? 24 : 40;
+      const idx = inner ? i : i - 24;
+      const a = (idx / cnt) * Math.PI * 2;
+      const r = inner ? 31 : 45;
+      const tx = Math.cos(a) * r, ty = Math.sin(a) * r;
+      const d = (0.1 + i * 0.045).toFixed(2) + 's';
+      html += '<span class="gua-tile" style="--tx:' + tx + '%;--ty:' + ty + '%;animation-delay:' + d + '">' + g + '</span>';
+    });
+    sky.innerHTML = html;
+    /* 全部卦名散开需要：最后一片的 delay + 动画时长 0.9s */
+    return 0.1 + (n - 1) * 0.045 + 0.9;
   }
   function skySvg(z) {
     let g = '';
@@ -827,6 +888,75 @@
 .ag-lite .ag-zmark{animation:none}
 .ag-lite .ag-zmark svg{filter:none}
 
+/* ============ 六十四卦全图：古风墨金 · 旋转八卦环 + 64 卦开场 ============ */
+/* 古风配色：墨绿卡面 + 暗金文字（区别于其他传说的紫/蓝金） */
+.ag-card[data-motion="trigram"] .ag-face{
+  background:linear-gradient(158deg,#1d2b23 0%,#101b15 52%,#0a110c 100%)}
+.ag-card[data-motion="trigram"] .ag-inner{color:#e8d9a8}
+.ag-card[data-motion="trigram"] .ag-inner-back{color:#e8d9a8}
+.ag-card[data-motion="trigram"] .ag-name{color:#f0d98a;text-shadow:0 2px 18px rgba(240,207,130,.35)}
+.ag-card[data-motion="trigram"] .ag-desc{color:rgba(232,217,168,.74)}
+.ag-card[data-motion="trigram"] .ag-quote{color:rgba(232,217,168,.92);text-shadow:0 0 14px rgba(240,207,130,.25)}
+.ag-card[data-motion="trigram"] .ag-bk-name{color:#f0d98a}
+.ag-card[data-motion="trigram"] .ag-bk-quote{color:rgba(232,217,168,.92)}
+.ag-card[data-motion="trigram"] .ag-bk-rar{color:#ffd98a;border-color:rgba(240,207,130,.5);box-shadow:0 0 12px rgba(240,207,130,.25)}
+/* 压掉全息彩虹，换成墨金微光（古风不要花哨彩虹） */
+.ag-card[data-motion="trigram"] .ag-shine{opacity:.22;
+  background-image:linear-gradient(115deg,rgba(240,207,130,.05),rgba(240,207,130,.2),rgba(255,255,255,.08),rgba(240,207,130,.16),rgba(240,207,130,.05));
+  background-size:220% 220%}
+.ag-card[data-motion="trigram"] .ag-shine::after{display:none}
+.ag-card[data-motion="trigram"] .ag-glare{background-image:radial-gradient(farthest-corner circle at var(--mx,50%) var(--my,50%),
+  rgba(255,236,180,.4) 5%, rgba(240,207,130,.12) 28%, transparent 76%)}
+/* 专属动效：旋转八卦环（两道墨金弧光 + 中心辉光） */
+.ag-card[data-motion="trigram"] .ag-dyn{display:block;
+  background:
+    repeating-conic-gradient(from 0deg, rgba(240,207,130,.16) 0deg 5deg, transparent 5deg 30deg),
+    radial-gradient(circle at 50% 50%, rgba(240,207,130,.18), transparent 62%);
+  animation:agTrigramRing 24s linear infinite}
+@keyframes agTrigramRing{
+  from{transform:rotate(0deg) scale(1.04)}
+  to{transform:rotate(360deg) scale(1.04)}}
+/* 牌面八卦图：缓慢自转（太极生万象） */
+.ag-card[data-motion="trigram"] .ag-icon .ach-art{animation:agTrigramArt 46s linear infinite;
+  filter:drop-shadow(0 0 10px rgba(240,207,130,.4))}
+@keyframes agTrigramArt{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+/* 64 卦开场：卦名从中心旋转散开浮现，停在环上作背景（卡四周可见） */
+.ag-stage.trigram .ag-sky{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(calc(100vw - 28px), 640px);aspect-ratio:1/1;opacity:1;z-index:0;pointer-events:none}
+.ag-stage.trigram .ag-sky span.gua-tile{
+  position:absolute;left:calc(50% + var(--tx,0%));top:calc(50% + var(--ty,0%));
+  transform:translate(-50%,-50%);
+  font-family:'STKaiti','KaiTi','Songti SC',serif;
+  font-size:clamp(.58rem,2.4vmin,.92rem);color:#f0d98a;letter-spacing:0;
+  text-shadow:0 0 10px rgba(240,207,130,.55);
+  opacity:0;animation:agGuaOut .9s cubic-bezier(.18,1.2,.3,1) forwards}
+/* 旋转阴阳太极图：居中，作为卦名环的底衬（缓慢自转） */
+.ag-stage.trigram .ag-sky .gua-taiji{position:absolute;left:50%;top:50%;
+  width:78%;height:78%;transform:translate(-50%,-50%);
+  opacity:.92;animation:agTaijiSpin 70s linear infinite;
+  filter:drop-shadow(0 0 30px rgba(240,207,130,.12))}
+.ag-stage.trigram .ag-sky .gua-taiji svg{width:100%;height:100%;overflow:visible}
+@keyframes agTaijiSpin{from{transform:translate(-50%,-50%) rotate(0deg)}
+  to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes agGuaOut{
+  0%{opacity:0;transform:translate(-50%,-50%) rotate(-180deg) scale(.2)}
+  62%{opacity:1;transform:translate(-50%,-50%) rotate(10deg) scale(1.1)}
+  100%{opacity:.88;transform:translate(-50%,-50%) rotate(0deg) scale(1)}}
+/* 卦名全部散开后，卡片再浮现（--skyDur 由 JS 算出） */
+.ag-stage.trigram .ag-card.enter{animation-delay:calc(var(--skyDur,3s) + .06s)}
+.ag-stage.trigram .ag-front .ag-inner > *{opacity:0;animation:agTextIn .55s ease-out forwards}
+.ag-stage.trigram .ag-front .ag-inner > *:nth-child(1){animation-delay:calc(var(--skyDur,3s) + .6s)}
+.ag-stage.trigram .ag-front .ag-inner > *:nth-child(2){animation-delay:calc(var(--skyDur,3s) + .67s)}
+.ag-stage.trigram .ag-front .ag-inner > *:nth-child(3){animation-delay:calc(var(--skyDur,3s) + .73s)}
+.ag-stage.trigram .ag-front .ag-inner > *:nth-child(4){animation-delay:calc(var(--skyDur,3s) + .8s)}
+.ag-stage.trigram .ag-front .ag-inner > *:nth-child(5){animation-delay:calc(var(--skyDur,3s) + .87s)}
+/* lite 降级：停转、静态墨金 */
+.ag-lite .ag-card[data-motion="trigram"] .ag-dyn{animation:none;
+  background:radial-gradient(circle at 50% 50%, rgba(240,207,130,.16), transparent 62%)}
+.ag-lite .ag-card[data-motion="trigram"] .ag-icon .ach-art{animation:none}
+.ag-lite .ag-stage.trigram .ag-sky span.gua-tile{animation:none;opacity:.6}
+.ag-lite .ag-stage.trigram .ag-sky .gua-taiji{animation:none;opacity:.7}
+
 /* ============ 关闭 & 提示 ============ */
 .ag-close{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
   z-index:530;background:rgba(16,13,26,.92);border:1px solid rgba(240,207,130,.28);
@@ -924,10 +1054,11 @@
 .pf-badge.r-purple.on{border-color:rgba(190,150,255,.45);
   background:linear-gradient(165deg,rgba(200,160,255,.18),rgba(120,80,200,.07));
   box-shadow:0 4px 16px rgba(150,100,255,.16)}
-.pf-badge.r-gold.on{border-color:rgba(180,160,255,.42);
-  background:linear-gradient(140deg,rgba(120,110,255,.22),rgba(90,70,200,.10) 55%,rgba(255,200,120,.14));
-  box-shadow:0 4px 18px rgba(140,120,255,.28)}
-.pf-badge.r-gold.on .tx{color:#d9b8ff}
+.pf-badge.r-gold.on{border-color:rgba(240,207,130,.6);
+  background:linear-gradient(140deg,rgba(255,214,130,.20),rgba(180,130,40,.08) 55%,rgba(255,240,200,.14));
+  box-shadow:0 4px 18px rgba(240,207,130,.30)}
+.pf-badge.r-gold.on .ic{filter:drop-shadow(0 0 8px rgba(240,207,130,.55))}
+.pf-badge.r-gold.on .tx{color:#ffd98a}
 .pf-badge.r-zodiac.on{border-color:rgba(150,200,255,.45);
   background:linear-gradient(150deg,rgba(90,150,255,.2),rgba(20,30,60,.1));
   box-shadow:0 4px 16px rgba(90,150,255,.24)}
@@ -1402,12 +1533,8 @@
     dEl.style.display = ach.desc ? '' : 'none';
     $('agQuote').textContent = ach.quote || '';
     card.setAttribute('data-rarity', ach.rarity);
-    /* 专属动态：有点困固定下雨；其余传说随机一个动效；其他卡若定义了 motion 则用它 */
-    const MOTION_POOL = ['aurora', 'pulse', 'spark', 'flame', 'rain'];
-    let motion = ach.motion || '';
-    if (ach.rarity === 'gold' && ach.id !== 'youdiankun') {
-      motion = MOTION_POOL[Math.floor(Math.random() * MOTION_POOL.length)];
-    }
+    /* 专属动态：每张传说卡固定自己的专属动效（不再随机），其他卡若定义了 motion 则用它 */
+    const motion = ach.motion || '';
     card.setAttribute('data-motion', motion);
 
     /* 星座主题：配色变量 + 缓转图腾 SVG + 卡外专属星图 */
@@ -1418,11 +1545,20 @@
       sky.innerHTML = zdef ? skySvg(zdef) : '';
       sky.classList.toggle('on', !!zdef);
     }
+    /* 六十四卦全图：卦名环开场（64 卦旋转浮现 → 再浮出卡片） */
+    const isGua64 = ach.id === 'gua_64';
+    let guaDur = 0;
+    if (isGua64 && sky) {
+      guaDur = fillGuaRing();
+      sky.classList.add('on');
+    }
     /* 星座卡专属开场序列：依次点星 → 连线 → 浮出卡 → 出文字（非星座卡关闭） */
     const stageEl = $('agStage');
     if (stageEl) {
       stageEl.classList.toggle('seq', !!zdef);
+      stageEl.classList.toggle('trigram', !!isGua64);
       if (zdef) stageEl.style.setProperty('--skyDur', skyTotal(zdef).toFixed(2) + 's');
+      else if (isGua64) stageEl.style.setProperty('--skyDur', guaDur.toFixed(2) + 's');
       else stageEl.style.removeProperty('--skyDur');
     }
 
