@@ -306,21 +306,14 @@
   function fillGuaRing() {
     const sky = $('agSky'); if (!sky) return;
     const n = GUA64.length;
-    /* 旋转阴阳太极图（古风墨金 · 作为卦名环的底衬） */
+    /* 旋转阴阳太极图（经典黑白 · 作为卦名环的底衬） */
     let html = '<div class="gua-taiji">' +
-      '<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-      '<defs>' +
-      '<radialGradient id="taijiBg" cx="50%" cy="38%" r="75%">' +
-      '<stop offset="0" stop-color="#26382c"/><stop offset="1" stop-color="#0d150f"/></radialGradient>' +
-      '<linearGradient id="taijiGold" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="#f5dfa0"/><stop offset=".5" stop-color="#d9b268"/><stop offset="1" stop-color="#b98a3a"/></linearGradient>' +
-      '</defs>' +
-      '<circle cx="100" cy="100" r="88" fill="url(#taijiBg)" stroke="url(#taijiGold)" stroke-width="1.6"/>' +
-      '<circle cx="100" cy="100" r="78" fill="none" stroke="url(#taijiGold)" stroke-opacity=".35" stroke-width=".8"/>' +
-      '<!-- 阴阳双鱼（墨金线稿，避免填色抢卦名） -->' +
-      '<path d="M100 100m0 -62a62 62 0 0 1 0 124 31 31 0 0 1 0 -62 31 31 0 0 0 0 -62z" fill="none" stroke="url(#taijiGold)" stroke-opacity=".75" stroke-width="1.3"/>' +
-      '<circle cx="100" cy="55" r="7" fill="url(#taijiGold)" fill-opacity=".8"/>' +
-      '<circle cx="100" cy="145" r="7" fill="none" stroke="url(#taijiGold)" stroke-opacity=".8" stroke-width="1.4"/>' +
+      '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">' +
+      '<!-- 经典黑白太极：左白右黑 · 白鱼黑眼在下 · 黑鱼白眼在上 -->' +
+      '<circle cx="100" cy="100" r="92" fill="#fff" stroke="#141414" stroke-width="3"/>' +
+      '<path d="M100 8a92 92 0 0 1 0 184 46 46 0 0 1 0 -92 46 46 0 0 0 0 -92z" fill="#141414"/>' +
+      '<circle cx="100" cy="54" r="13" fill="#fff"/>' +
+      '<circle cx="100" cy="146" r="13" fill="#141414"/>' +
       '</svg></div>';
     GUA64.forEach((g, i) => {
       /* 内环 24 个、外环 40 个，各自均匀铺满整圆 */
@@ -933,8 +926,8 @@
 /* 旋转阴阳太极图：居中，作为卦名环的底衬（缓慢自转） */
 .ag-stage.trigram .ag-sky .gua-taiji{position:absolute;left:50%;top:50%;
   width:78%;height:78%;transform:translate(-50%,-50%);
-  opacity:.92;animation:agTaijiSpin 70s linear infinite;
-  filter:drop-shadow(0 0 30px rgba(240,207,130,.12))}
+  opacity:.9;animation:agTaijiSpin 70s linear infinite;
+  filter:drop-shadow(0 0 26px rgba(0,0,0,.5))}
 .ag-stage.trigram .ag-sky .gua-taiji svg{width:100%;height:100%;overflow:visible}
 @keyframes agTaijiSpin{from{transform:translate(-50%,-50%) rotate(0deg)}
   to{transform:translate(-50%,-50%) rotate(360deg)}}
