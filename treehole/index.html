@@ -16,10 +16,8 @@
   /* ===== 背景：夜晚海边（无月 · 海浪 · 星空倒影） ===== */
   #holeSky{position:fixed;inset:0;z-index:0;
     background:linear-gradient(180deg,#0b0f2e 0%,#0a1035 34%,#0a1238 52%,#0d1430 64%,#0b1026 78%,#080c1e 100%)}
-  #holeStars{position:fixed;top:0;left:0;right:0;z-index:0;pointer-events:none;opacity:.9;
-    height:68%}
-  #holeSea{position:fixed;left:0;right:0;bottom:0;z-index:1;pointer-events:none;
-    height:36%}
+  #holeStars{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.9}
+  #holeSea{position:fixed;inset:0;z-index:1;pointer-events:none}
   /* ===== 液态玻璃 ===== */
   .glass{
     background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));
@@ -155,6 +153,12 @@
 
   /* ============ 夜晚海边背景（无月 · 海浪 · 星空倒影） ============ */
   const STARS_POOL = [];
+  const SPARKLES = [];
+  for (let i = 0; i < 70; i++) SPARKLES.push({
+    x: Math.random(), dy: Math.random(),
+    r: Math.random() * 1.6 + .6,
+    ph: Math.random() * 7, sp: Math.random() * 2 + .6
+  });
   function resize() {
     DPR = Math.min(devicePixelRatio || 1, 2);
     W = innerWidth; H = innerHeight;
@@ -162,17 +166,18 @@
     buildStars();
   }
   function buildStars() {
-    /* 天幕上半区随机生成星星（不含月亮） */
+    /* 天幕上半区随机生成星星（不含月亮），18% 是带光晕+十字芒的亮星 */
     STARS_POOL.length = 0;
-    const n = Math.floor(W * (H * .62) / 5200);
+    const n = Math.floor(W * H / 3600);
     for (let i = 0; i < n; i++) {
       STARS_POOL.push({
         x: Math.random() * W,
-        y: Math.random() * H * .62,
-        r: Math.random() * 1.4 + .3,
-        a: Math.random() * .6 + .25,
-        tw: Math.random() * .025 + .005,   /* 闪烁速度 */
-        ph: Math.random() * 7
+        y: Math.random() * H * .68,
+        r: Math.random() * 1.8 + .35,
+        a: Math.random() * .55 + .35,
+        tw: Math.random() * .03 + .006,   /* 闪烁速度 */
+        ph: Math.random() * 7,
+        big: Math.random() < .18
       });
     }
   }
@@ -181,71 +186,102 @@
     const t = performance.now() / 1000;
     ctx.clearRect(0, 0, stars.width, stars.height);
     STARS_POOL.forEach(s => {
-      ctx.globalAlpha = s.a + Math.sin(t * s.tw * 6 + s.ph) * .18;
-      ctx.fillStyle = 'rgba(226,224,255,1)';
-      ctx.beginPath();
-      ctx.arc(s.x * DPR, s.y * DPR, s.r * DPR, 0, 6.283);
-      ctx.fill();
+      const a = Math.max(.05, Math.min(1, s.a + Math.sin(t * s.tw * 6 + s.ph) * .18));
+      const X = s.x * DPR, Y = s.y * DPR, R = s.r * DPR;
+      if (s.big) {
+        /* 亮星：光晕 + 十字光芒 */
+        const hg = ctx.createRadialGradient(X, Y, 0, X, Y, R * 5);
+        hg.addColorStop(0, 'rgba(220,226,255,' + (a * .4).toFixed(3) + ')');
+        hg.addColorStop(1, 'rgba(220,226,255,0)');
+        ctx.fillStyle = hg;
+        ctx.beginPath(); ctx.arc(X, Y, R * 5, 0, 6.283); ctx.fill();
+        ctx.strokeStyle = 'rgba(230,235,255,' + (a * .5).toFixed(3) + ')';
+        ctx.lineWidth = Math.max(.6, R * .3);
+        const L = R * 3.6;
+        ctx.beginPath();
+        ctx.moveTo(X - L, Y); ctx.lineTo(X + L, Y);
+        ctx.moveTo(X, Y - L); ctx.lineTo(X, Y + L);
+        ctx.stroke();
+      } else {
+        /* 普通星：一点微光 */
+        const hg = ctx.createRadialGradient(X, Y, 0, X, Y, R * 2.6);
+        hg.addColorStop(0, 'rgba(226,228,255,' + (a * .3).toFixed(3) + ')');
+        hg.addColorStop(1, 'rgba(226,228,255,0)');
+        ctx.fillStyle = hg;
+        ctx.beginPath(); ctx.arc(X, Y, R * 2.6, 0, 6.283); ctx.fill();
+      }
+      /* 星核 */
+      ctx.fillStyle = 'rgba(240,242,255,' + a.toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(X, Y, R, 0, 6.283); ctx.fill();
     });
     ctx.globalAlpha = 1;
   }
-  /* 海面：波浪 + 星星倒影（竖直拖影在波峰间浮动） */
+  /* 海面：波浪 + 星星倒影 + 碎光闪烁 */
   function drawSea() {
     const ctx = sea.getContext('2d');
     const t = performance.now() / 1000;
     const w = sea.width, h = sea.height;
     ctx.clearRect(0, 0, w, h);
-    const seaY = H * .74;                 /* 海平面位置（相对页面高度） */
+    const seaY = H * .70;                 /* 海平面位置 */
+    const sY = seaY * DPR;
     /* 1) 海面底色渐变 */
-    const g = ctx.createLinearGradient(0, seaY * DPR, 0, h);
-    g.addColorStop(0, 'rgba(8,14,38,.96)');
-    g.addColorStop(.55, 'rgba(7,11,30,.98)');
-    g.addColorStop(1, 'rgba(5,8,22,1)');
+    const g = ctx.createLinearGradient(0, sY, 0, h);
+    g.addColorStop(0, 'rgba(10,18,46,.97)');
+    g.addColorStop(.35, 'rgba(7,12,34,.99)');
+    g.addColorStop(1, 'rgba(4,7,20,1)');
     ctx.fillStyle = g;
-    ctx.fillRect(0, seaY * DPR, w, h - seaY * DPR);
-    /* 2) 波浪线（两条叠加，左右微流动） */
-    for (let layer = 0; layer < 2; layer++) {
+    ctx.fillRect(0, sY, w, h - sY);
+    /* 海平线微光带 */
+    const hg2 = ctx.createLinearGradient(0, sY - 6 * DPR, 0, sY + 10 * DPR);
+    hg2.addColorStop(0, 'rgba(150,180,255,0)');
+    hg2.addColorStop(.5, 'rgba(150,190,255,.28)');
+    hg2.addColorStop(1, 'rgba(150,180,255,0)');
+    ctx.fillStyle = hg2;
+    ctx.fillRect(0, sY - 6 * DPR, w, 16 * DPR);
+    /* 2) 三层波浪（远细/中/近粗，横向流动） */
+    const layers = [
+      { y: 8,  amp: 5,  wl: 46,  sp: 1.3, color: 'rgba(170,200,255,.30)', lw: 1.2 },
+      { y: 20, amp: 10, wl: 78,  sp: .95, color: 'rgba(140,175,255,.22)', lw: 1.8 },
+      { y: 40, amp: 15, wl: 120, sp: .7,  color: 'rgba(110,150,235,.16)', lw: 2.4 }
+    ];
+    layers.forEach(L => {
       ctx.beginPath();
-      ctx.strokeStyle = layer === 0
-        ? 'rgba(148,180,255,.16)' : 'rgba(110,140,220,.09)';
-      ctx.lineWidth = layer === 0 ? 1.4 : 2.2;
-      const amp = (layer === 0 ? 7 : 13) * DPR;
-      const speed = layer === 0 ? 1.1 : .8;
-      const yBase = seaY * DPR + (layer === 0 ? 10 : 26) * DPR;
-      ctx.moveTo(0, yBase);
-      for (let x = 0; x <= w; x += 12) {
-        const waveY = yBase + Math.sin(x / (layer === 0 ? 60 : 110) + t * speed) * amp;
-        ctx.lineTo(x, waveY);
+      ctx.strokeStyle = L.color;
+      ctx.lineWidth = L.lw * DPR;
+      const yB = sY + L.y * DPR;
+      ctx.moveTo(0, yB);
+      for (let x = 0; x <= w; x += 10 * DPR) {
+        const yy = yB + Math.sin(x / (L.wl * DPR) + t * L.sp) * L.amp * DPR;
+        ctx.lineTo(x, yy);
       }
       ctx.stroke();
-    }
-    /* 3) 星星倒影：竖条光柱，随波浪起伏+明暗呼吸 */
+    });
+    /* 3) 星星倒影：竖条渐变光柱，随波浪摇摆+呼吸 */
     const pool = STARS_POOL;
-    const count = Math.min(26, Math.floor(pool.length * .4));
+    const count = Math.min(40, Math.floor(pool.length * .45));
     for (let i = 0; i < count; i++) {
-      const s = pool[(i * 7 + 3) % pool.length];
-      const x = s.x * DPR;
-      const ph = s.ph + t * .9;
-      const sway = Math.sin(ph * 1.7) * 6 * DPR;      /* 横向漂移 */
-      const stretch = 1 + Math.sin(ph * 2.1) * .5;      /* 拉伸起伏 */
-      const alpha = .10 + Math.abs(Math.sin(ph)) * .14;
-      const grad = ctx.createLinearGradient(x + sway, seaY * DPR, x + sway, h);
-      grad.addColorStop(0, 'rgba(214,220,255,' + alpha + ')');
-      grad.addColorStop(1, 'rgba(120,140,220,0)');
+      const s = pool[(i * 5 + 2) % pool.length];
+      const X = s.x * DPR;
+      const ph = s.ph + t * .8;
+      const sway = Math.sin(ph * 1.6) * 10 * DPR;
+      const stretch = 1 + Math.sin(ph * 2.1) * .55;
+      const alpha = .14 + Math.abs(Math.sin(ph)) * .26;
+      const len = (36 + 44 * stretch) * DPR;
+      const grad = ctx.createLinearGradient(X + sway, sY, X + sway, sY + len);
+      grad.addColorStop(0, 'rgba(215,225,255,' + alpha.toFixed(3) + ')');
+      grad.addColorStop(1, 'rgba(120,145,225,0)');
       ctx.fillStyle = grad;
-      ctx.fillRect(x + sway - 1.1 * DPR, seaY * DPR, 2.2 * DPR, (34 + 26 * stretch) * DPR);
+      ctx.fillRect(X + sway - 1.3 * DPR, sY, 2.6 * DPR, len);
     }
-    /* 4) 海面底部轻微波光 */
-    ctx.globalAlpha = .5;
-    ctx.fillStyle = 'rgba(190,205,255,.05)';
-    ctx.beginPath();
-    const y0 = (H - 30) * DPR;
-    for (let x = 0; x <= w; x += 20) {
-      const y = y0 + Math.sin(x / 90 + t * 1.4) * 8 * DPR;
-      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
-    ctx.globalAlpha = 1;
+    /* 4) 海面碎光：细小白点随波浪闪烁 */
+    SPARKLES.forEach((sp, i) => {
+      const X = sp.x * w;
+      const yy = sY + (8 + sp.dy * (h - sY - 20 * DPR));
+      const a = .05 + Math.abs(Math.sin(t * sp.sp + sp.ph)) * .15;
+      ctx.fillStyle = 'rgba(190,205,255,' + a.toFixed(3) + ')';
+      const rr = sp.r * DPR;
+      ctx.fillRect(X, yy, rr, rr);
+    });
   }
   function animate() {
     drawStars();
@@ -279,7 +315,7 @@
     div.className = 'welcome glass';
     div.innerHTML = '<div class="wic">🕳️</div>' +
       '<div class="wtitle">把秘密说给树洞听</div>' +
-      '<div class="wdesc">这里住着一只双鱼座的树洞。<br>它是一片深海，什么都能装下，从不评判。<br>你说过的话，它会安静地沉进海底，替你记着。</div>' +
+      '<div class="wdesc">这里住着一只树洞，住在深夜的海边。<br>它是一片深海，什么都能装下，从不评判。<br>你说过的话，它都会安静地沉进海底，替你记着。</div>' +
       '<div class="whint">— 树洞会记得，但不会到处说 —</div>';
     msgs.appendChild(div);
     scrollToBottom(false);
