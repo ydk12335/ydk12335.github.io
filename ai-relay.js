@@ -94,8 +94,8 @@
             if (!line) continue;
             try {
               const ev = JSON.parse(line);
-              if (ev.type === 'tier_start' && onProgress) onProgress(ev.tier, 'connecting');
-              else if (ev.type === 'tier_fail' && onProgress) onProgress(ev.tier, 'fail', ev.err);
+              if (ev.type === 'tier_start' && onProgress) onProgress(ev.tier, 'connecting', null, ev.attempt, ev.total);
+              else if (ev.type === 'tier_fail' && onProgress) onProgress(ev.tier, 'fail', ev.err, ev.attempt, ev.total);
               else if (ev.type === 'result') return ev.data;
               else if (ev.type === 'error') { const e = new Error(ev.err || 'AI 失败'); e.status = 502; throw e; }
             } catch (e) { if (e && e.status) throw e; }
