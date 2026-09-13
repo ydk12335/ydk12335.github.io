@@ -369,9 +369,9 @@ function initAuth() {
       }
     } catch (e) {
       const msg = String(e?.message || '');
+      const dupName = msg.includes('duplicate') || msg.includes('unique') || msg.includes('用户名') || msg.includes('Database error saving new user');
       toast(msg.includes('already registered') ? '这个邮箱已经注册过啦，直接登录吧'
-        : (msg.includes('duplicate') || msg.includes('unique') || msg.includes('用户名') ? '这个名字已经有人用啦，换一个吧'
-        : '注册失败：' + (msg || '稍后再试')));
+        : (dupName ? '这个名字已经有人用啦，换一个吧' : '注册失败：' + (msg || '稍后再试')));
       btn.disabled = false; btn.textContent = '注册账号';
     }
   });
