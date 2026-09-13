@@ -95,7 +95,7 @@
   backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
   display:none;align-items:center;justify-content:center;padding:18px;animation:pfFade .28s ease}
 @keyframes pfFade{from{opacity:0}to{opacity:1}}
-.pf-modal{width:min(420px,95%);max-height:min(90vh,780px);overflow-y:auto;overscroll-behavior:contain;
+.pf-modal{position:relative;width:min(420px,95%);max-height:min(90vh,780px);overflow-y:auto;overscroll-behavior:contain;
   border-radius:26px;padding:22px 20px 18px;text-align:center;
   background:rgba(255,255,255,.105);
   backdrop-filter:blur(28px) saturate(190%);-webkit-backdrop-filter:blur(28px) saturate(190%);
@@ -103,6 +103,12 @@
   animation:pfPop .4s cubic-bezier(.16,1,.3,1);color:#f2ede0;font-family:inherit}
 @keyframes pfPop{from{opacity:0;transform:scale(.92) translateY(18px)}to{opacity:1;transform:none}}
 .pf-modal *{box-sizing:border-box}
+/* 顶部关闭按钮（始终可见，解决“找不到关闭”问题） */
+.pf-x{position:sticky;top:8px;margin-left:auto;display:flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:50%;border:1px solid rgba(240,207,130,.3);
+  background:rgba(10,8,21,.72);color:#f2ede0;font-size:.95rem;cursor:pointer;
+  transition:.18s;box-shadow:0 2px 10px rgba(0,0,0,.35);z-index:6}
+.pf-x:active{transform:scale(.9);background:rgba(240,207,130,.2)}
 .pf-avatar{width:72px;height:72px;border-radius:50%;margin:4px auto 10px;position:relative;cursor:pointer;
   background:linear-gradient(135deg,#f0cf82,#c9a04c);color:#0a0815;font-size:1.7rem;font-weight:bold;
   display:flex;align-items:center;justify-content:center;overflow:hidden;background-size:cover;background-position:center;
@@ -196,6 +202,7 @@
   const PF_HTML = `
 <div class="pf-mask" id="pfMask">
   <div class="pf-modal" id="pfModal">
+    <button class="pf-x" id="pfX" aria-label="关闭">✕</button>
     <div class="pf-avatar" id="pfAvatar">?<span class="pf-edit">换</span></div>
     <input type="file" id="pfAvatarInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:.01">
     <div class="pf-name" id="pfName">旅人</div>
@@ -412,6 +419,7 @@
 
   function bind() {
     $('pfClose').addEventListener('click', e => { e.preventDefault(); $('pfMask').style.display = 'none'; });
+    $('pfX').addEventListener('click', () => { $('pfMask').style.display = 'none'; });
     $('pfMask').addEventListener('click', e => { if (e.target === $('pfMask')) $('pfMask').style.display = 'none'; });
 
     /* 头像 */
@@ -474,6 +482,8 @@
     /* 退出登录 */
     $('pfBtnOut').addEventListener('click', async () => {
       try { await (window.flushUpload || uploadSnapshot)(); } catch (e) {}
+      /* 退出即清理本地缓存（云端保留），避免在他人设备上残留记忆 */
+      try { if (typeof window.clearLocalCache === 'function') window.clearLocalCache(); } catch (e) {}
       sessionStorage.removeItem('cloud_restored');
       try { await signOut(); } catch (e) {}
       location.reload();

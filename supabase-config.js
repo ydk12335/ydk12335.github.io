@@ -181,8 +181,11 @@ async function uploadSnapshot() {
       source: 'auto',
       sig: 'v2'
     };
-    const { data: existing } = await sb.from('memories')
-      .select('id').eq('user_id', session.user.id).eq('type', SNAP_TYPE).maybeSingle();
+    /* 同账号可能存在历史冗余快照：只取最新一条作为唯一「当前快照」，不再 maybeSingle 随机取行 */
+    const { data: rows } = await sb.from('memories')
+      .select('id').eq('user_id', session.user.id).eq('type', SNAP_TYPE)
+      .order('updated_at', { ascending: false }).limit(1);
+    const existing = rows && rows[0];
     if (existing?.id) {
       const { data: upd, error } = await sb.from('memories')
         .update({ note: row.note, sig: 'v2', updated_at: new Date().toISOString() })
@@ -232,8 +235,11 @@ async function clearCloudSnapshot(onlyKeys) {
     const sb = await initSupabase();
     const { data: { session } } = await sb.auth.getSession();
     if (!session?.user) return { ok: true, cloud: false };   // 未登录：仅本地
-    const { data: snap } = await sb.from('memories')
-      .select('id,note').eq('user_id', session.user.id).eq('type', SNAP_TYPE).maybeSingle();
+    /* 取最新一条快照（同账号历史冗余行不参与，避免 maybeSingle 随机取值） */
+    const { data: snapRows } = await sb.from('memories')
+      .select('id,note').eq('user_id', session.user.id).eq('type', SNAP_TYPE)
+      .order('updated_at', { ascending: false }).limit(1);
+    const snap = snapRows && snapRows[0];
     if (!snap?.id) return { ok: true, cloud: true };         // 云端本来就无快照
 
     if (isFull) {
@@ -266,8 +272,10 @@ async function clearCloudSnapshot(onlyKeys) {
       if (!session?.user) return { ok: false, cloud: false, error: e };
       const emptyPayload = { v: 2, at: Date.now(), items: {}, meta: readSyncMeta() };
       if (!isFull) { keys.forEach(k => { emptyPayload.meta[k] = { t: Date.now(), s: '' }; }); }
-      const { data: existing } = await sb.from('memories')
-        .select('id').eq('user_id', session.user.id).eq('type', SNAP_TYPE).maybeSingle();
+      const { data: existRows } = await sb.from('memories')
+        .select('id').eq('user_id', session.user.id).eq('type', SNAP_TYPE)
+        .order('updated_at', { ascending: false }).limit(1);
+      const existing = existRows && existRows[0];
       if (existing?.id) {
         await sb.from('memories')
           .update({ note: JSON.stringify(emptyPayload), sig: 'v2', updated_at: new Date().toISOString() })
@@ -286,18 +294,25 @@ async function clearCloudSnapshot(onlyKeys) {
   }
 }
 
-/** ========== 下载（非破坏性 · 逐 key 按时间戳取新） ========== */
+/** ========== 下载（云端权威 · 登录只下载覆盖，绝不回传） ==========
+ * 原则（用户 2026-09-14 明确）：
+ *  - 云端为空（注册后第一次 / 云端被清空）→ 把本地推上去，作为云端基线；
+ *  - 云端有快照 → 云端全量覆盖本地：云端有的 key 覆盖本地，云端没有的 key 从本地清掉；
+ *  - 登录/启动时永不因「本地比云端新」而回传 —— 避免在他人手机上把他人残留数据写进自己的云端。
+ *  - 日常本人设备的新增记录仍由 scheduleUpload（数据变动钩子）正常上传，不受影响。
+ */
 async function downloadSnapshot() {
   window.__ssSyncing = true;   // 抑制写入钩子，避免边下载边触发上传
   try {
     const sb = await initSupabase();
     const { data: { session } } = await sb.auth.getSession();
     if (!session?.user) return false;
-    const { data, error } = await sb.from('memories')
-      .select('note').eq('user_id', session.user.id).eq('type', SNAP_TYPE).maybeSingle();
+    /* 同账号存在历史冗余快照：取「最新一条」为云端权威，不再 maybeSingle 随机取行 */
+    const { data: rows, error } = await sb.from('memories')
+      .select('note').eq('user_id', session.user.id).eq('type', SNAP_TYPE)
+      .order('updated_at', { ascending: false }).limit(1);
     if (error) throw error;
-
-    /* 云端为空：把本地首次推上去 */
+    const data = rows && rows[0];
     if (!data?.note) { await uploadSnapshot(); return false; }
 
     let payload;
@@ -306,48 +321,48 @@ async function downloadSnapshot() {
 
     const localMeta = readSyncMeta();
     let changed = false;      // 本地被云端更新 → 需要刷新页面
-    let needPush = false;     // 本地更新 → 需要回传云端
+    const now = Date.now();
 
-    /* ---------- 旧版快照（v1：扁平结构） → 只在本地缺数据时采纳 ---------- */
+    /* ---------- 旧版快照（v1：扁平结构） → 云端全量覆盖，并顺手清掉云端没有的本地残留 ---------- */
     if (payload.v !== 2 || !payload.items) {
       const legacy = {
         memory: 'sleepy_space_memory', memoryV2: 'sleepy_space_memory_v2',
         astro: 'astro_hist_v1', pair: 'pair_hist_v1',
         syn: 'syn_hist_v1', yj: 'yijing_hist_v1'
       };
+      const inCloudSet = new Set(Object.values(legacy));
       Object.entries(legacy).forEach(([alias, lsKey]) => {
         const val = payload[alias];
-        if (!val) return;
-        const cur = localStorage.getItem(lsKey);
-        if (cur == null || cur === '' || cur === '[]') { localStorage.setItem(lsKey, val); changed = true; }
+        if (val == null || val === '') return;
+        if (localStorage.getItem(lsKey) !== val) { localStorage.setItem(lsKey, val); changed = true; }
+        localMeta[lsKey] = { t: now, s: sigOf(val) };
       });
-      needPush = true;   // 顺便升级为新版快照
-    } else {
-      /* ---------- v2：逐 key 比时间戳 ---------- */
-      const cloudMeta = payload.meta || {};
+      /* 云端 v1 里没有的同步 key → 本地残留，删除（云端权威） */
       SYNC_LS_KEYS.forEach(lsKey => {
-        const ct = metaTime(cloudMeta, lsKey);
-        const lt = metaTime(localMeta, lsKey);
-        const inCloud = Object.prototype.hasOwnProperty.call(payload.items, lsKey);
-
-        if (ct > lt) {
-          if (inCloud) {
-            const val = payload.items[lsKey];
-            if (localStorage.getItem(lsKey) !== val) { localStorage.setItem(lsKey, val); changed = true; }
-            localMeta[lsKey] = { t: ct, s: sigOf(val) };
-          } else {
-            /* 云端比本地新、但没有这个 key → 说明在别的设备被清空了 */
-            if (localStorage.getItem(lsKey) != null) { localStorage.removeItem(lsKey); changed = true; }
-            localMeta[lsKey] = { t: ct, s: '' };
-          }
-        } else if (lt > ct) {
-          needPush = true;   // 本地更新 → 稍后回传
+        if (!inCloudSet.has(lsKey) && localStorage.getItem(lsKey) != null) {
+          localStorage.removeItem(lsKey); changed = true;
         }
       });
       writeSyncMeta(localMeta);
+      return changed;
     }
 
-    if (needPush) { try { await uploadSnapshot(); } catch (e) {} }
+    /* ---------- v2：云端全量覆盖本地（不再按时间戳比较） ---------- */
+    const cloudMeta = payload.meta || {};
+    SYNC_LS_KEYS.forEach(lsKey => {
+      const inCloud = Object.prototype.hasOwnProperty.call(payload.items, lsKey);
+      const ct = metaTime(cloudMeta, lsKey);
+      if (inCloud) {
+        const val = payload.items[lsKey];
+        if (localStorage.getItem(lsKey) !== val) { localStorage.setItem(lsKey, val); changed = true; }
+        localMeta[lsKey] = { t: ct, s: sigOf(val) };
+      } else {
+        /* 云端没有这个 key → 本地残留，删除（云端权威） */
+        if (localStorage.getItem(lsKey) != null) { localStorage.removeItem(lsKey); changed = true; }
+        localMeta[lsKey] = { t: ct || now, s: '' };
+      }
+    });
+    writeSyncMeta(localMeta);
     return changed;
   } catch (e) {
     console.warn('云端下载失败:', e);
@@ -367,6 +382,20 @@ function scheduleUpload() {
 function flushUpload() {
   clearTimeout(_syncTimer);
   return uploadSnapshot();
+}
+
+/**
+ * 退出登录时清理本地缓存（云端保留）。
+ * 配合「登录只下载覆盖」：退出即清空本地同步数据 + 元数据，
+ * 保证在他人设备上登录后不会残留任何记忆，下次登录再从云端拉回。
+ */
+function clearLocalCache() {
+  window.__ssSyncing = true;   // 抑制写入钩子，避免清空过程触发上传
+  try {
+    SYNC_LS_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+    try { localStorage.removeItem(SYNC_META_KEY); } catch (e) {}
+  } catch (e) { console.warn('清理本地缓存失败:', e); }
+  window.__ssSyncing = false;
 }
 
 /**
@@ -396,6 +425,7 @@ window.scheduleUpload = scheduleUpload;
 window.flushUpload = flushUpload;
 window.bootCloudSync = bootCloudSync;
 window.clearCloudSnapshot = clearCloudSnapshot;
+window.clearLocalCache = clearLocalCache;
 
 /**
  * 自动挂钩：任何页面「直接」写同步键（如 tarot/app.js 自己 setItem tarot_hist_v1）

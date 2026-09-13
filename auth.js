@@ -519,6 +519,8 @@ function initAuth() {
   // ===== 退出 =====
   $('btnSignOut').addEventListener('click', async () => {
     try { await (window.flushUpload || uploadSnapshot)(); } catch (e) {}
+    /* 退出即清理本地缓存（云端保留），避免在他人设备上残留记忆 */
+    try { if (typeof window.clearLocalCache === 'function') window.clearLocalCache(); } catch (e) {}
     sessionStorage.removeItem('cloud_restored');
     await signOut();
     close(); location.reload();
