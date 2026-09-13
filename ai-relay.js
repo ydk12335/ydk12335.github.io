@@ -107,25 +107,47 @@
     }, onRetry);
   }
 
-  /** 流式补全：返回完整文本；onDelta/onReason 为增量回调 */
-  /* 注意：agnes 主线路不支持真实 SSE 流式（stream:true 直连超时无输出）。
-     因此 stream() 内部改走非流式补全拿到完整文本，再按字符分片模拟 onDelta 增量回调。
-     对调用方透明（返回完整文本 + onDelta 逐段回调），同时规避主线路流式必挂的问题。 */
+  /** 流式补全：走 Edge Function 的真实 SSE（stream:true），逐 token 回调 */
+  /* 说明：新版 Edge Function 主线路 agnes-2.5-flash 支持真实 SSE 流式，
+     会逐 token 下发 delta.reasoning_content（思考过程）与 delta.content（正文）。
+     onReason(reasonFull)：思考过程累计全文（用于「已推理 X 字」进度提示）
+     onDelta(content, full)：正文增量与累计全文 */
   async function stream(opts) {
-    const { messages, temperature, max_tokens, onDelta, onRetry } = opts || {};
-    // 非流式拿完整结果（progress 模式返回 chat.completion JSON）
-    const j = await complete({ messages, temperature, max_tokens, onRetry });
-    let txt = '';
-    try { txt = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').trim(); } catch (e) {}
-    if (!txt) throw new Error('空响应');
-    // 按小片分发，模拟打字机增量
-    if (onDelta) {
-      const step = Math.max(8, Math.round(txt.length / 120));
-      for (let i = 0; i < txt.length; i += step) {
-        onDelta(txt.slice(i, i + step), txt.slice(0, i + step));
+    const { messages, temperature, max_tokens, onDelta, onReason, onRetry } = opts || {};
+    return relay(async (tier) => {
+      const res = await tryFetch(tier, { messages, temperature, max_tokens, stream: true });
+      const ct = (res.headers.get('content-type') || '');
+      /* 兜底：若上游未按 SSE 返回，则整包 JSON 解析 */
+      if (!ct.includes('text/event-stream')) {
+        const j = await res.json();
+        const msg = (j && j.choices && j.choices[0] && j.choices[0].message) || {};
+        const txt = (msg.content || '').trim();
+        if (msg.reasoning_content && onReason) onReason(msg.reasoning_content);
+        if (!txt) throw new Error('空响应');
+        if (onDelta) onDelta(txt, txt);
+        return txt;
       }
-    }
-    return txt;
+      const rd = res.body.getReader(), dec = new TextDecoder();
+      let buf = '', full = '', reason = '';
+      for (;;) {
+        const r = await rd.read();
+        if (r.done) break;
+        buf += dec.decode(r.value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop() || '';
+        for (const chunk of parts) {
+          const line = chunk.trim().replace(/^data:\s*/, '');
+          if (!line || line === '[DONE]') continue;
+          let ev; try { ev = JSON.parse(line); } catch (e) { continue; }
+          const d = ev.choices && ev.choices[0] && ev.choices[0].delta;
+          if (!d) continue;
+          if (d.reasoning_content) { reason += d.reasoning_content; if (onReason) onReason(reason); }
+          if (d.content) { full += d.content; if (onDelta) onDelta(d.content, full); }
+        }
+      }
+      if (!full.trim()) throw new Error('空响应');
+      return full;
+    }, onRetry);
   }
 
   window.AIRelay = { complete, stream, TIERS, RETRY, relay };

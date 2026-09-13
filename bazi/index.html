@@ -62,6 +62,14 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .b-input:disabled,.b-select:disabled{opacity:.4}
 .b-row{display:flex;gap:10px}
 .b-row .b-field{flex:1}
+.b-pickrow{display:flex;gap:8px;align-items:stretch}
+.b-pickrow .b-input{flex:1}
+.b-pick{flex:0 0 auto;width:46px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);color:var(--ivory);font-size:1.05rem;cursor:pointer;
+  transition:border-color .25s,background .25s;display:flex;align-items:center;justify-content:center}
+.b-pick:active{transform:scale(.94)}
+.b-pick:hover{border-color:rgba(240,207,130,.5)}
+.b-field:has(.b-pick:disabled) .b-pick{opacity:.35;pointer-events:none}
 /* 性别按钮组 */
 .b-gender{display:flex;gap:10px}
 .b-gender button{flex:1;cursor:pointer;padding:12px 0;border-radius:12px;font-family:inherit;font-size:.95rem;
@@ -160,13 +168,19 @@ canvas#stars{position:fixed;inset:0;z-index:0}
     <div class="b-row">
       <div class="b-field">
         <label class="b-label">出生日期</label>
-        <input class="b-input" id="bDate" type="date" value="1998-08-08">
+        <div class="b-pickrow">
+          <input class="b-input" id="bDate" type="text" inputmode="numeric" value="1998-08-08" placeholder="如 1998-08-08 或 1998/8/8" autocomplete="off">
+          <button type="button" class="b-pick" id="btnDatePick" title="用选择器选日期">📅</button>
+        </div>
       </div>
     </div>
     <div class="b-row">
       <div class="b-field">
         <label class="b-label">出生时间</label>
-        <input class="b-input" id="bTime" type="time" value="10:00">
+        <div class="b-pickrow">
+          <input class="b-input" id="bTime" type="text" inputmode="numeric" value="10:00" placeholder="如 10:30 或 1030 或 10点30" autocomplete="off">
+          <button type="button" class="b-pick" id="btnTimePick" title="用选择器选时间">⏰</button>
+        </div>
         <label class="b-unknown"><input type="checkbox" id="bTimeUnknown"> 时间未知</label>
       </div>
       <div class="b-field">
@@ -218,7 +232,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 <script src="../memory.js"></script>
 <script src="../ai-prompt-template.js"></script>
 <script src="../treehole.js?v=5"></script>
-<script src="../ai-relay.js?v=6"></script>
+<script src="../ai-relay.js?v=8"></script>
 <script>
 'use strict';
 /* ================= 基础 ================= */
@@ -414,50 +428,125 @@ function syncUnknown(){
 }
 $('bTimeUnknown').addEventListener('change',syncUnknown);
 $('bCityUnknown').addEventListener('change',syncUnknown);
+/* ---------- 选择器按钮：选完回填文本（保留自由输入能力） ---------- */
+(function(){
+  const hidden=$('bHiddenPicker')||null;
+  const hp=()=>{
+    const p=$('bHiddenPicker');
+    if(p)return p;
+    const d=document.createElement('div');
+    d.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+    d.innerHTML='<input type="date" id="bHiddenDate"><input type="time" id="bHiddenTime">';
+    document.body.appendChild(d);
+    return {date:document.getElementById('bHiddenDate'),time:document.getElementById('bHiddenTime')};
+  };
+  const p=hp();
+  /* 日期选择 */
+  $('btnDatePick').onclick=function(){
+    const d=p.date;
+    const cur=parseDateStr($('bDate').value);
+    d.value=cur?(String(cur.y).padStart(4,'0')+'-'+String(cur.m).padStart(2,'0')+'-'+String(cur.d).padStart(2,'0')):'1998-08-08';
+    d.showPicker?d.showPicker():d.focus();
+    d.onchange=()=>{ if(d.value)$('bDate').value=d.value; d.onchange=null; };
+  };
+  /* 时间选择 */
+  $('btnTimePick').onclick=function(){
+    const t=p.time;
+    const cur=parseTimeStr($('bTime').value);
+    t.value=cur?(String(cur.hh).padStart(2,'0')+':'+String(cur.mm).padStart(2,'0')):'10:00';
+    t.showPicker?t.showPicker():t.focus();
+    t.onchange=()=>{ if(t.value)$('bTime').value=t.value; t.onchange=null; };
+  };
+  /* 时间未知 → 禁用选择按钮 */
+  const syncPicks=()=>{
+    const bt=$('btnTimePick'),bd=$('btnDatePick');
+    if(bt)bt.disabled=bTimeUnknown;
+    if(bd)bd.disabled=false;
+  };
+  document.addEventListener('change',e=>{if(e.target&&e.target.id==='bTimeUnknown')syncPicks();});
+  syncPicks();
+})();
 syncUnknown();
 
+/* ---------- 出生日期/时间：自由输入解析（兼容常见写法） ---------- */
+function parseDateStr(s){
+  s=String(s||'').trim();
+  if(!s)return null;
+  /* 1) 1998-08-08 / 1998/8/8 / 1998.8.8 / 1998年8月8日 */
+  let m=s.match(/^(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})日?$/);
+  /* 2) 19980808 八位连写 */
+  if(!m)m=s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(!m)return null;
+  const y=+m[1],mo=+m[2],d=+m[3];
+  if(y<1895||y>2100||mo<1||mo>12||d<1)return null;
+  const dim=[0,31,29,31,30,31,30,31,31,30,31,30,31];
+  if(d>dim[mo])return null;
+  return {y:y,m:mo,d:d};
+}
+function parseTimeStr(s){
+  s=String(s||'').trim();
+  if(!s)return null;
+  /* 1) 10:30 / 10：30 / 10.30 / 10点30分 / 10时30分 */
+  let m=s.match(/^(\d{1,2})[:：.点时](\d{1,2})(?:分)?$/);
+  /* 2) 1030 四位数连写 → 10:30 */
+  if(!m)m=s.match(/^(\d{2})(\d{2})$/);
+  /* 3) 只有小时：10 / 10点 / 10时 */
+  if(!m)m=s.match(/^(\d{1,2})[点时]?$/);
+  if(!m)return null;
+  const hh=+m[1],mm=m[2]?+m[2]:0;
+  if(hh<0||hh>23||mm<0||mm>59)return null;
+  return {hh:hh,mm:mm};
+}
+
 $('bGo').onclick=async function(){
-  const date=$('bDate').value,time=$('bTime').value,city=$('bCity').value;
-  if(!date){alert('请选择出生日期');return;}
-  const [y,m,d]=date.split('-').map(Number);
+  const date=$('bDate').value,rawTime=$('bTime').value,city=$('bCity').value;
+  const pd=parseDateStr(date);
+  if(!pd){alert('出生日期格式不对，试试如 1998-08-08 或 1998/8/8');return;}
+  const y=pd.y,m=pd.m,d=pd.d;
   let hh=12,mm=0;
-  if(time){const t=time.split(':');hh=+t[0];mm=+t[1];}
+  if(!bTimeUnknown&&String(rawTime||'').trim()){
+    const pt=parseTimeStr(rawTime);
+    if(!pt){alert('出生时间格式不对，试试如 10:30、1030 或 10点半');return;}
+    hh=pt.hh;mm=pt.mm;
+  }
   if(!window.BaziEngine){alert('命盘引擎未加载，请刷新重试');return;}
   const btn=this;btn.disabled=true;btn.textContent='✦ 排盘中… ✦';
   $('bPan').classList.add('show');
-  $('panAI').innerHTML='<div class="b-wait">'
+  /* 塔罗同款：页面内思考状态 + 流式输出容器 */
+  $('panAI').innerHTML='<div class="b-wait" id="panAIStatus">'
     +'<div class="b-loading" style="padding:0"><div class="orb-ring"></div><span>推演四柱 · 斗转星移 …</span></div>'
     +'<div class="bw-tip" id="bwTip">子平先生正在凝神推演命盘…</div>'
-    +'<div class="bw-note">命盘推演极快，但深度解读需要一点时间，<br>大概 <b>半分钟到两分钟</b>，喝口茶稍等呀 ☕</div>'
-    +'</div>';
+    +'</div>'
+    +'<div id="panAIText" style="display:none"></div>';
   /* 动态轮换等待提示：让用户知道 AI 还在工作，不是卡死 */
   const waitTips=['子平先生正在凝神推演命盘…','先生翻着《渊海子平》，逐柱核对…','四柱排定，正在推大运流年…','命主经历对照中，快好了…'];
-  let tipIdx=0,bwTimer=null;
-  try{clearInterval(bwTimer);bwTimer=setInterval(()=>{tipIdx=(tipIdx+1)%waitTips.length;const t=document.getElementById('bwTip');if(t)t.textContent=waitTips[tipIdx];},6000);}catch(e){}
+  clearInterval(bwTimer);bwTimer=null;let tipIdx=0;
+  bwTimer=setInterval(()=>{tipIdx=(tipIdx+1)%waitTips.length;const t=document.getElementById('bwTip');if(t)t.textContent=waitTips[tipIdx];},6000);
   try{
     const E=window.BaziEngine;
     /* 时间未知：传统以午时（正午12:00）作近似；地点未知：不传城市（引擎按东八区默认） */
     const p=E.paipan('命主',gender,y,m,d,bTimeUnknown?12:hh,bTimeUnknown?0:mm,bCityUnknown?'':city,false);
     p.timeUnknown=bTimeUnknown;
     p.cityUnknown=bCityUnknown;
-    p.inputTime=time;
+    p.inputTime=rawTime;
     p.inputCity=city;
     p.gender=gender;
     lastPan=p;
     renderPan(p);
-    /* AI 解读 */
+    /* AI 解读（塔罗同款：思考状态 → 流式逐字输出） */
     const ai=await askAI(p);
     lastAI=ai;
-    $('panAI').innerHTML=ai;
     /* 自动存入记忆库（不用手动复制） */
     autoSaveBazi(p,ai);
     $('bShare').style.display='flex';
   }catch(e){
-    $('panAI').innerHTML='<p style="color:#e87a7a">命盘推演失败：'+esc(String(e&&e.message||e).slice(0,120))+'</p>';
+    const t=$('panAIText');if(t)t.style.display='block';
+    $('panAIText').innerHTML='<p style="color:#e87a7a">命盘推演失败：'+esc(String(e&&e.message||e).slice(0,120))+'</p>';
   }finally{
     btn.disabled=false;btn.textContent='✦ 起 盘 ✦';
   }
 };
+let bwTimer=null;
 /* ---------- 自动存入记忆库（命盘根本信息 + 历史） ---------- */
 function autoSaveBazi(p,aiHtml){
   try{
@@ -618,27 +707,36 @@ async function askAI(p){
       data:panText
     });
   }catch(e){ sys='你是资深命理学家，请基于以下命盘数据做深度解析：\n'+panText; }
-  const j=await window.AIRelay.stream({
-    temperature:.85,max_tokens:2000,
-    messages:[{role:'system',content:sys},{role:'user',content:'请为下面这个命盘做深度解析。'}],
-    onRetry:(tier,n)=>{}
-  });
-  let txt='';
-  try{txt=String(j||'').trim();}catch(e){}
-  if(!txt)throw new Error('AI 无响应');
-  /* 拿到全文，先清掉等待提示的轮换定时器 */
-  try{clearInterval(bwTimer);}catch(e){}
-  /* 慢放打字机：拿到全文后按 45ms/片逐段渲染，形成真实的流式输出感（对齐塔罗页） */
-  await new Promise(fin=>{
-    let shown='';
-    const step=Math.max(6,Math.round(txt.length/200));
-    const iv=setInterval(()=>{
-      shown=txt.slice(0,Math.min(shown.length+step,txt.length));
-      $('panAI').innerHTML=mdToHtml(shown);
-      if(shown.length>=txt.length){clearInterval(iv);fin();}
-    },45);
-  });
-  return mdToHtml(txt);
+  /* 页面内思考状态：清掉轮换提示，改为 orb 思考环 + 状态文字（对齐塔罗） */
+  const st=$('panAIStatus'),tx=$('panAIText');
+  if(st){clearInterval(bwTimer);st.className='b-wait';st.innerHTML=''
+    +'<div class="b-loading" style="padding:0"><div class="orb-ring"></div><span class="status-word">子平先生正在凝神推演命盘…</span></div>';}
+  if(tx)tx.style.display='block';
+  let txt='',shown='';
+  const renderEnd='<span class="caret"></span>';
+  try{
+    txt=await window.AIRelay.stream({
+      temperature:.85,max_tokens:2000,
+      messages:[{role:'system',content:sys},{role:'user',content:'请为下面这个命盘做深度解析。'}],
+      onDelta:(_c,total)=>{ shown=total;if(tx){tx.innerHTML=mdToHtml(shown)+renderEnd;} },
+      onReason:(r)=>{
+        const w=document.querySelector('#panAIStatus .status-word');
+        if(w)w.textContent='子平先生正在凝神推演命盘……（已推理 '+r.length+' 字）';
+      },
+      onRetry:(tier,n)=>{ const w=document.querySelector('#panAIStatus .status-word'); if(w)w.textContent='🔄 '+tier+'连接中断，正在尝试重连（'+n+'/'+window.AIRelay.RETRY+'）…'; }
+    });
+    if(!txt)throw new Error('AI 无响应');
+  }catch(err){
+    if(st){clearInterval(bwTimer);st.style.display='none';}
+    if(tx)tx.innerHTML='<strong style="color:#ff9d9d">✕ 命盘在云间迷路了…</strong>'
+      +'<p style="color:#cbc0ea;margin-top:8px">原因：'+esc(String(err&&err.message||'未知错误').slice(0,160))+'</p>'
+      +'<p style="color:#8a81b8;margin-top:8px">请检查网络后重新点一次「起盘」。</p>';
+    throw err;
+  }
+  /* 完成：清状态、去光标、定型 */
+  if(st){clearInterval(bwTimer);st.style.display='none';}
+  if(tx)tx.innerHTML=mdToHtml(txt);
+  return txt;
 }
 /* 极简 MD→HTML（复用观星思路；ASCII 五行图用代码块保护） */
 function mdToHtml(t){

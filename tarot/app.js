@@ -648,6 +648,7 @@ const SYS_PROMPT=`你是一位经验丰富、口碑极好的华人专业塔罗�
 3. 再做整体解读：分析牌与牌之间的呼应、张力或矛盾，串联成一条清晰的叙事线回答提问者的疑问，点出症结；如果牌面显示的是负面或警示信息，要如实告知，不要避重就轻；
 4. 给出具体可行的建议或注意事项（可分条），语气诚恳务实，不虚伪客套，不危言耸听；若涉及健康、法律、财务等严肃事项，提示寻求专业人士帮助；
 5. 结尾用「### 核心指引」小节收尾，两三句温暖有力的话。
+【开场·铁律】绝对禁止"坐吧""嗯，抽到牌了""让我看看""今天的牌面是…"这类客套开场白或预告，第一句就必须直接讲牌面内容本身，上来就是干货；不要先寒暄、不要先说"你抽到了以下牌"这类过渡句。
  语气风格：
 - **真人感优先**：像一个真实的人说话，不是写文章。用普通人的口吻，偶尔有口语化的停顿、补刀、自我纠正
 - **生活化短句**：多说短句，少说长句。像朋友聊天一样，允许随性断句、话题跳转
@@ -664,40 +665,36 @@ const STATUS_WORDS=['🌙 净手焚香，铺开牌阵……','🔮 牌面星辉�
 let statusTimer=null;
 
 async function askTarot(){
-  readingBusy=true;$('btnRead').disabled=true;
-  $('followup').style.display='none';
-  $('fuBoxes').innerHTML='';/* 清空上一局的追问框 */
-  const sb0=document.getElementById('btnShareAll');if(sb0)sb0.style.display='none';
-  $('readingBox').style.display='block';
-  $('readingText').innerHTML='';
-  try{$('readingBox').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}
-  const st=$('aiStatus');st.classList.add('thinking');
-  st.innerHTML='<span class="orb-ring"></span><span class="status-word">'+STATUS_WORDS[0]+'</span>';
-  clearInterval(statusTimer);let wi=0;
-  statusTimer=setInterval(()=>{const w=st.querySelector('.status-word');if(w)w.textContent=STATUS_WORDS[++wi%STATUS_WORDS.length]},3200);
-
-  let full='',shown='';
-  const renderEnd='<span class="caret"></span>';
-  let doneFlag=false;
-
-  try{
-    let reasonLen=0,reasonShown=false;
-    full=await window.AIRelay.stream({
-      messages:[{role:'system',content:SYS_PROMPT},{role:'user',content:buildPrompt()}],
-      temperature:.85,max_tokens:6000,
-      onDelta:(_c,total)=>{ shown=total;$('readingText').innerHTML=miniMD(shown)+renderEnd; },
-      onReason:(r)=>{
-        reasonLen+=r.length;
-        if(!reasonShown){
-          reasonShown=true;
+   readingBusy=true;$('btnRead').disabled=true;
+   $('followup').style.display='none';
+   $('fuBoxes').innerHTML='';/* 清空上一局的追问框 */
+   const sb0=document.getElementById('btnShareAll');if(sb0)sb0.style.display='none';
+   $('readingBox').style.display='block';
+   $('readingText').innerHTML='';
+   try{$('readingBox').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}
+   const st=$('aiStatus');st.classList.add('thinking');
+   st.innerHTML='<span class="orb-ring"></span><span class="status-word">'+STATUS_WORDS[0]+'</span>';
+   clearInterval(statusTimer);let wi=0;
+   statusTimer=setInterval(()=>{const w=st.querySelector('.status-word');if(w)w.textContent=STATUS_WORDS[++wi%STATUS_WORDS.length]},3200);
+ 
+   let full='',shown='';
+   const renderEnd='<span class="caret"></span>';
+   let doneFlag=false;
+   try{
+     let reasonLen=0,reasonShown=false;
+     full=await window.AIRelay.stream({
+       messages:[{role:'system',content:SYS_PROMPT},{role:'user',content:buildPrompt()}],
+       temperature:.85,max_tokens:6000,
+       onDelta:(_c,total)=>{ shown=total;$('readingText').innerHTML=miniMD(shown)+renderEnd; },
+        onReason:(r)=>{
+          reasonLen=r.length;
+          if(!reasonShown){
+            reasonShown=true;
+            clearInterval(statusTimer); /* 真实思考开始：停掉轮换提示，避免覆盖进度文字 */
+          }
           const w=st.querySelector('.status-word');
-          if(w)w.textContent='🫧 塔罗师正凝神推演牌面深意……';
-        }
-        if(reasonLen%40<4){
-          const w=st.querySelector('.status-word');
-          if(w)w.textContent='🫧 塔罗师正凝神推演牌面深意……（已推演 '+Math.round(reasonLen/300)+'00 余字）';
-        }
-      },
+          if(w)w.textContent='🫧 塔罗师正凝神推演牌面深意……（已推理 '+reasonLen+' 字）';
+       },
       onRetry:(tier,n)=>{ const w=st.querySelector('.status-word'); if(w)w.textContent='🔄 '+tier+'连接中断，正在尝试重连（'+n+'/'+window.AIRelay.RETRY+'）…'; }
     });
   }catch(err){

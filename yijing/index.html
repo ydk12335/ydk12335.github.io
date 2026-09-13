@@ -113,6 +113,21 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .reading li:before{content:'·';position:absolute;left:-12px;color:rgba(var(--gold-rgb),.6)}
 .reading p{margin-bottom:8px}
 .reading strong{color:var(--gold)}
+.reading .ai-status{min-height:22px;text-align:center;margin-bottom:4px}
+.reading .ai-status.thinking{display:flex;align-items:center;justify-content:center;gap:12px;min-height:38px}
+.reading .ai-status.thinking .status-word{animation:yjStatusFade 3.2s ease-in-out infinite;color:rgba(var(--gold-rgb),.85);font-size:.8rem;letter-spacing:.1em}
+@keyframes yjStatusFade{0%{opacity:.35}18%{opacity:1}82%{opacity:1}100%{opacity:.35}}
+.reading .orb-ring{position:relative;width:20px;height:20px;flex:none}
+.reading .orb-ring::before{content:"";position:absolute;inset:0;border-radius:50%;
+  border:1.5px solid rgba(var(--gold-rgb),.25);border-top-color:var(--gold);
+  animation:yjOrbSpin 1.1s linear infinite}
+.reading .orb-ring::after{content:"✦";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:.5rem;color:var(--gold);animation:yjOrbGlow 2.2s ease-in-out infinite}
+@keyframes yjOrbSpin{to{transform:rotate(360deg)}}
+@keyframes yjOrbGlow{0%,100%{opacity:.4;text-shadow:0 0 4px rgba(var(--gold-rgb),.3)}50%{opacity:1;text-shadow:0 0 10px rgba(var(--gold-rgb),.8)}}
+.reading .caret{display:inline-block;width:9px;height:1.05em;background:var(--gold);vertical-align:-2px;margin-left:4px;
+  box-shadow:0 0 10px rgba(var(--gold-rgb),.85);animation:yjBlink 1s steps(1) infinite}
+@keyframes yjBlink{50%{opacity:0}}
 
 /* ===== 追问区（对齐塔罗） ===== */
 .followup{width:100%;background:rgba(var(--glass-rgb),.03);border:1px solid rgba(var(--gold-rgb),.15);
@@ -162,13 +177,15 @@ canvas#stars{position:fixed;inset:0;z-index:0}
   font-size:.74rem;letter-spacing:.08em;opacity:0;transition:all .28s;z-index:60;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-#loading{position:fixed;inset:0;z-index:55;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;
-  background:rgba(3,2,10,.78);backdrop-filter:blur(4px)}
+#loading{position:fixed;top:calc(64px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:55;
+  display:none;align-items:center;justify-content:center;gap:10px;padding:11px 20px;border-radius:999px;
+  background:rgba(10,7,26,.92);border:1px solid rgba(var(--gold-rgb),.28);box-shadow:0 10px 32px rgba(0,0,0,.45);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 #loading.show{display:flex}
-#loading .orb{width:52px;height:52px;border-radius:50%;border:2px solid rgba(var(--gold-rgb),.25);
-  border-top-color:var(--gold);animation:spin 1s linear infinite}
+#loading .orb{width:16px;height:16px;border-radius:50%;border:2px solid rgba(var(--gold-rgb),.25);
+  border-top-color:var(--gold);animation:spin 1s linear infinite;flex:0 0 auto}
 @keyframes spin{to{transform:rotate(360deg)}}
-#loading p{font-size:.76rem;color:rgba(var(--gold-rgb),.7);letter-spacing:.14em}
+#loading p{font-size:.76rem;color:rgba(var(--gold-rgb),.85);letter-spacing:.12em;white-space:nowrap}
 
 /* ===== 古风底纹：宣纸颗粒 + 四角暗晕 ===== */
 body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;
@@ -294,7 +311,10 @@ body[data-phase="day"]::after,body[data-phase="dusk"]::after{
 
     <button class="aiBtn" id="btnAI">✦ 请 AI 解卦</button>
     <button class="aiBtn" id="btnHole" style="display:none">🕳️ 去树洞聊聊</button>
-    <div class="reading" id="reading"></div>
+    <div class="reading" id="reading">
+      <div class="ai-status" id="aiStatus"></div>
+      <div id="readingText"></div>
+    </div>
     <div id="fuBoxes"></div>
     <div class="followup" id="followup" style="display:none">
       <div class="fu-head">✦ 意犹未尽？可基于这次卦象追问 <b id="fuLeft">3</b> 次</div>
@@ -343,7 +363,7 @@ body[data-phase="day"]::after,body[data-phase="dusk"]::after{
 <div id="toast"></div>
 
 <script src="../memory.js"></script>
-<script src="../ai-relay.js?v=6"></script>
+<script src="../ai-relay.js?v=8"></script>
 <script src="../crisis.js"></script>
 <script src="../treehole.js?v=4"></script>
 <script src="../personalize.js?v=3"></script>
@@ -735,7 +755,9 @@ async function doCast(){
   toast('卦已成 · 已记入记忆库 ☯');
 
   $('reading').classList.remove('show');
-  $('reading').innerHTML='';
+  /* 只清内容、保留 aiStatus/readingText 静态节点（删除节点会导致后续 aiRead 拿不到引用） */
+  const _st=$('aiStatus');if(_st){_st.classList.remove('thinking');_st.innerHTML='';}
+  const _rt=$('readingText');if(_rt){_rt.innerHTML='';}
   btn.disabled=false;btn.textContent='再起一卦';
 }
 
@@ -756,15 +778,28 @@ function saveRecord(){
   }
 }
 
-/* ================= AI 解卦 ================= */
+/* ================= AI 解卦（塔罗同款：页面内思考状态 + 流式输出） ================= */
+const YJ_STATUS_WORDS=['☯ 铜钱声落，卦象渐明……','🀄 六爻排定，正在观象……','📜 卦辞爻辞正在与所问相互印证……'];
+let yjStatusTimer=null;
 async function aiRead(){
   if(!cur){toast('先摇一卦吧');return;}
   const btn=$('btnAI');btn.disabled=true;btn.textContent='解卦中…';
-  $('loading').classList.add('show');
+  const rd=$('reading');
+  if(!rd)return;
+  rd.classList.add('show');
+  const st=$('aiStatus');
+  const rt=$('readingText');
+  st.classList.add('thinking');
+  st.innerHTML='<span class="orb-ring"></span><span class="status-word">'+YJ_STATUS_WORDS[0]+'</span>';
+  rt.innerHTML='';
+  try{rd.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}
+  clearInterval(yjStatusTimer);let wi=0;
+  yjStatusTimer=setInterval(()=>{const w=st.querySelector('.status-word');if(w)w.textContent=YJ_STATUS_WORDS[++wi%YJ_STATUS_WORDS.length];},3200);
   const q=cur.question||'（未提供具体问题，请围绕当下整体处境解读）';
   const sys='你是精通《周易》的解卦人，像个懂行的老朋友，深夜陪人坐着聊卦。\n'+
     '【语气风格】说人话，像真人聊天：短句为主，允许口语停顿，可以用"嗯…""其实吧""说白了""这事儿吧"这类词，自然就好，别滥用。\n'+
     '可以有情绪、有态度，能点破就点破，别端着；真诚但不煽情，不写"愿星光指引你"这种话。\n'+
+    '【开场·铁律】绝对禁止"坐吧""来了啊""嗯，让我看看""这个问题有意思"这类客套开场白或预告，第一句就必须直接讲卦象内容本身，上来就是干货；\n'+
     '【禁止】不要AI腔：不写"综上所述""值得注意的是""首先…其次…最后"，不堆排比，不硬凑金句，不套生硬的分点模板，不机械罗列关键词。\n'+
     '【内容】紧扣用户所问，结合卦象、卦辞、动爻爻辞说清依据，把含义自然融进话里；能给建议就给，别含糊其辞。\n'+
     '【排版】用 Markdown，可以有简短小标题和分段，关键结论**加粗**，全程中文，总长500字左右。\n'+
@@ -777,21 +812,35 @@ async function aiRead(){
     (cur.bianName&&cur.bianName!==cur.benName?('变卦：'+cur.bianName+'（'+cur.bianDetail+'）'):'无变卦')+
     /* AI 个性化：注入用户历史问卦记录，让解卦越用越准 */
     (typeof window.Personalize !== 'undefined' ? window.Personalize.buildPersonalizedPrompt('yijing') : '');
-  let txt='';
+  let txt='',shown='';
+  const renderEnd='<span class="caret"></span>';
   try{
-    const j=await window.AIRelay.complete({
+    txt=await window.AIRelay.stream({
       temperature:.85,max_tokens:3000,
       messages:[{role:'system',content:sys},{role:'user',content:user}],
-      onRetry:(tier,n)=>{ const ld=$('loading'); if(ld){ld.classList.add('show'); if(ld.querySelector){} const i=ld.querySelector('.loading-content, .spin, p, span')||ld; i.textContent='🔄 '+tier+'重连中（'+n+'/'+window.AIRelay.RETRY+'）…'; } }
+      onDelta:(_c,total)=>{ shown=total;$('readingText').innerHTML=mdToHtml(shown)+renderEnd; },
+      onReason:(r)=>{
+        clearInterval(yjStatusTimer); /* 真实思考开始：停掉轮换提示，避免覆盖进度文字 */
+        const w=$('aiStatus').querySelector('.status-word');
+        if(w)w.textContent='☯ 解卦人正凝神推演卦象……（已推理 '+r.length+' 字）';
+      },
+      onRetry:(tier,n)=>{ const w=$('aiStatus').querySelector('.status-word'); if(w)w.textContent='🔄 '+tier+'连接中断，正在尝试重连（'+n+'/'+window.AIRelay.RETRY+'）…'; }
     });
-    if(j.choices&&j.choices[0])txt=j.choices[0].message.content.trim();
-  }catch(e){}
-  $('loading').classList.remove('show');
+    if(!txt)throw new Error('空响应');
+  }catch(e){
+    console.warn('AI 解卦失败',e);
+    clearInterval(yjStatusTimer);st.classList.remove('thinking');st.textContent='';
+    rt.innerHTML='<strong style="color:#ff9d9d">✕ 卦象在云间迷路了…</strong>'+
+      '<p style="color:#cbc0ea;margin-top:8px">原因：'+esc(String(e&&e.message||'未知错误').slice(0,160))+'</p>'+
+      '<p style="color:#8a81b8;margin-top:8px">请检查网络后重新点一次「请 AI 解卦」。</p>';
+    btn.disabled=false;btn.textContent='✦ 请 AI 解卦';
+    return;
+  }
+  clearInterval(yjStatusTimer);st.classList.remove('thinking');st.textContent='';
+  /* 结尾平滑：补全最后一段（去掉 caret） */
+  rt.innerHTML=mdToHtml(txt);
   btn.disabled=false;btn.textContent='✦ 请 AI 解卦';
-  if(!txt){toast('卦象未明，稍后再试一次');return;}
   cur.result=txt;
-  $('reading').innerHTML=mdToHtml(txt);
-  $('reading').classList.add('show');
   saveRecord();
   toast('解卦已写入记忆库 ☯');
   /* 画像提取（用户#7）：占卜完成后后台静默提取，不阻塞主流程 */
