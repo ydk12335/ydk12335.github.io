@@ -139,15 +139,45 @@
       });
       const topCards = Object.keys(cardCnt).sort((a, b) => cardCnt[b] - cardCnt[a]).slice(0, 5);
       const topSpreads = Object.keys(spreadCnt).sort((a, b) => spreadCnt[b] - spreadCnt[a]).slice(0, 3);
+
+      /* 最近占卜详情：把最近几次「问题 + 牌/卦 + 结论」抽出来，让树洞聊天能针对性接话 */
+      const recentRecords = [];
+      const pushRec = (r, type) => {
+        if (!r) return;
+        const q = String(r.q || r.question || '').trim();
+        const cards = String(r.cards || r.benName || '').trim();
+        const text = String(r.text || r.result || '').trim();
+        const time = String(r.time || r.date || '').trim();
+        if (!q && !cards && !text) return;
+        recentRecords.push({
+          type: type,
+          time: time,
+          q: q.slice(0, 80),
+          cards: (type === '塔罗' ? cards : (cards + (r.bianName && r.bianName !== cards ? ' → ' + r.bianName : ''))).slice(0, 120),
+          text: text.slice(0, 200)
+        });
+      };
+      /* 塔罗历史：新记录在前，取最近 3 条 */
+      (Array.isArray(tarot) ? tarot : []).slice(0, 3).forEach(r => pushRec(r, '塔罗'));
+      /* 易经历史：新记录在前，取最近 2 条 */
+      (Array.isArray(yijing) ? yijing : []).slice(0, 2).forEach(r => pushRec(r, '问卦'));
+      /* 观星历史：取最近 1 条 */
+      (Array.isArray(astro) ? astro : []).slice(0, 1).forEach(r => {
+        const sign = String(r.sign || '').trim();
+        const result = String(r.result || r.title || '').trim();
+        if (sign || result) recentRecords.push({ type: '观星', time: String(r.date || '').trim(), q: sign, cards: '', text: result.slice(0, 200) });
+      });
+
       return {
         topCards,
         preferredSpreads: topSpreads,
         tarotCount: (Array.isArray(tarot) ? tarot : []).length,
         yijingCount: (Array.isArray(yijing) ? yijing : []).length,
         astroCount: (Array.isArray(astro) ? astro : []).length,
-        divinationCount: (Array.isArray(tarot) ? tarot : []).length + (Array.isArray(yijing) ? yijing : []).length
+        divinationCount: (Array.isArray(tarot) ? tarot : []).length + (Array.isArray(yijing) ? yijing : []).length,
+        recentRecords: recentRecords.slice(0, 5)
       };
-    } catch (e) { return { topCards: [], preferredSpreads: [], tarotCount: 0, yijingCount: 0, astroCount: 0, divinationCount: 0 }; }
+    } catch (e) { return { topCards: [], preferredSpreads: [], tarotCount: 0, yijingCount: 0, astroCount: 0, divinationCount: 0, recentRecords: [] }; }
   }
 
   /* ==================== 拼装完整画像提示词 ==================== */
@@ -179,6 +209,17 @@
     if (b.preferredSpreads && b.preferredSpreads.length) behLines.push('偏好牌阵：' + b.preferredSpreads.join('、'));
     if (b.divinationCount) behLines.push('已占卜 ' + b.divinationCount + ' 次');
     if (behLines.length) parts.push('【占卜行为统计（自动统计）】' + behLines.join('；'));
+    /* 最近占卜详情：让树洞能顺着 TA 最近算过的事接话（针对性，不空洞） */
+    if (b.recentRecords && b.recentRecords.length) {
+      const recLines = b.recentRecords.map(r => {
+        const t = (r.type || '占卜') + (r.time ? '(' + r.time + ')' : '');
+        const q = r.q ? '问题：' + r.q : '';
+        const c = r.cards ? '牌/卦：' + r.cards : '';
+        const x = r.text ? '解读：' + r.text : '';
+        return t + (q ? '；' + q : '') + (c ? '；' + c : '') + (x ? '；' + x : '');
+      });
+      parts.push('【TA 最近几次占卜（对话可自然提及，不要生硬背诵）】\n' + recLines.join('\n'));
+    }
 
     return parts.length ? parts.join('\n') : '';
   }
@@ -246,6 +287,7 @@
       '· 不用任何 AI 腔：不写"我理解你的感受""我会一直陪着你"这类词。',
       '【接话】对方开心就跟着开心一句；难过就少说话，温柔陪着，最多"嗯，我在呢"；生气就别顶嘴，先顺着；迷惘就别急着给建议，陪着想想。',
       '【记住】对方说过的事记着，下次自然提一句，别生硬罗列。',
+      '【结合占卜】如果上面有 TA 最近占卜的记录（问题/牌/卦/解读），聊天时自然顺着 TA 问过的事接话，比如 TA 之前问过工作就问问进展、问过感情就关心下关系——要有针对性，别假装不知道、别回空洞的万金油。',
       '【底线】真诚、自然、说人话，像个温暖的朋友。'
     ].join('\n')];
     const profileTxt = buildProfilePrompt();
