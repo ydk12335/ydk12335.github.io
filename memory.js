@@ -60,6 +60,19 @@ function mirrorToV2(type, data) {
           note += '\n变卦：' + _bian + (data.bianDetail ? '（' + data.bianDetail + '）' : '');
         }
         note += '\n解读：' + (data.result || '');
+      } else if (type === 'bazi') {
+        vtype = 'bazi';
+        title = '☯ 命盘 · ' + (data.pillars ? data.pillars.join(' ') : '');
+        note = '公历：' + (data.y || '') + '年' + (data.m || '') + '月' + (data.d || '') + '日 '
+          + (data.timeUnknown ? '时间未知' : (data.hh + ':' + String(data.mm || 0).padStart(2, '0')))
+          + (data.cityUnknown ? ' 地点未知' : (' ' + (data.city || '')))
+          + '\n四柱：' + (data.pillars || []).join(' ')
+          + '\n十神：' + (data.tens || []).join(' ')
+          + '\n日主：' + (data.dayMasterFull || '') + '（' + (data.strength || '') + '）'
+          + '\n格局：' + (data.pattern || '')
+          + '\n喜用：' + ((data.xiYong || []).join('、') || '—') + ' / 忌：' + ((data.jiYong || []).join('、') || '—')
+          + '\n大运：' + ((data.dy && data.dy.steps) || []).join(' → ')
+          + (data.aiText ? '\n解读：' + data.aiText : '');
       }
       // 去重签名：同类型同标题同日期同时间
       const sig = title + '|' + (data.date || '') + '|' + (data.time || '');
@@ -138,6 +151,7 @@ function createEmptyMemory() {
     pair: [],
     synastry: [],
     yijing: [],
+    bazi: [],
     updatedAt: Date.now()
   };
 }
@@ -325,6 +339,50 @@ const HistoryManager = {
     return item;
   },
   
+  // 保存命盘（八字）
+  saveBazi(record) {
+    const m = getMemory();
+    if (!m.bazi) m.bazi = [];
+    const item = {
+      id: record.id || Date.now(),
+      y: record.y || '',
+      m: record.m || '',
+      d: record.d || '',
+      hh: record.hh != null ? record.hh : '',
+      mm: record.mm != null ? record.mm : '',
+      timeUnknown: !!record.timeUnknown,
+      cityUnknown: !!record.cityUnknown,
+      city: record.city || '',
+      gender: record.gender || '',
+      pillars: record.pillars || [],
+      tens: record.tens || [],
+      dayMasterFull: record.dayMasterFull || '',
+      strength: record.strength || '',
+      pattern: record.pattern || '',
+      five: record.five || {},
+      xiYong: record.xiYong || [],
+      jiYong: record.jiYong || [],
+      dy: record.dy || {},
+      shenSha: record.shenSha || [],
+      aiText: record.aiText || '',
+      date: record.date || this.getNowStr(),
+      time: record.time || this.getNowTime()
+    };
+    const idx = m.bazi.findIndex(r => r.id === item.id);
+    if (idx >= 0) m.bazi[idx] = item; else m.bazi.unshift(item);
+    if (m.bazi.length > 30) m.bazi = m.bazi.slice(0, 30);
+    m.updatedAt = Date.now();
+    saveMemory(m);
+    mirrorToV2('bazi', item);
+    try{
+      const h=JSON.parse(localStorage.getItem('bazi_hist_v1')||'[]');
+      const hi=h.findIndex(r=>r.id===item.id);
+      if(hi>=0)h[hi]=item;else h.unshift(item);
+      localStorage.setItem('bazi_hist_v1',JSON.stringify(h.slice(0,30)));
+    }catch(e){}
+    return item;
+  },
+
   // 删除单条记录
   deleteRecord(type, id) {
     const m = getMemory();
@@ -346,6 +404,7 @@ const HistoryManager = {
       m.pair = [];
       m.synastry = [];
       m.yijing = [];
+      m.bazi = [];
     }
     m.updatedAt = Date.now();
     saveMemory(m);
@@ -360,7 +419,8 @@ const HistoryManager = {
       pair: m.pair.length,
       synastry: m.synastry.length,
       yijing: (m.yijing || []).length,
-      total: m.tarot.length + m.horoscope.length + m.pair.length + m.synastry.length + (m.yijing || []).length
+      bazi: (m.bazi || []).length,
+      total: m.tarot.length + m.horoscope.length + m.pair.length + m.synastry.length + (m.yijing || []).length + (m.bazi || []).length
     };
   },
   

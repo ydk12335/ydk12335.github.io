@@ -335,7 +335,7 @@
     const obs = [];
     const qa = computeTopQuestions(3);
     if (qa && qa.total >= 3 && qa.top.length) {
-      obs.push('你最近常问的方向：' + qa.topTxt + '（共 ' + qa.total + ' 次占卜记录），可以点出他最在意的事');
+      obs.push('你最近常问的方向：' + qa.topTxt + '（共 ' + qa.total + ' 次占卜记录，仅作背景，除非与本次牌面直接相关否则不要主动提及）');
     }
     if (mood && mood.count >= 3) {
       const month = mood.month.replace('-', '年') + '月';
@@ -355,7 +355,7 @@
     }
 
     return parts.length
-      ? '\n\n===== 以下为求问者过往数据，请自然融入解读，不要生硬罗列，除非与本次牌面相关 =====\n' + parts.join('\n\n')
+      ? '\n\n===== 以下为求问者过往数据，仅供背景了解，绝不强行串联进本次解读；除非本次牌面与某条历史存在极其明显的呼应（如再次抽到同一张牌），否则不得提及"你上次/你之前/你反复"；也不得因历史而改变对本次牌面的解读 =====\n' + parts.join('\n\n')
       : '';
   }
 

@@ -130,6 +130,7 @@
       const tarot = lsGet('tarot_hist_v1', []);
       const yijing = lsGet('yijing_hist_v1', []);
       const astro = lsGet('astro_hist_v1', []);
+      const bazi = lsGet('bazi_hist_v1', []);   // 命盘八字历史：让树洞能顺着命盘接话
       const cardCnt = {}, spreadCnt = {};
       (Array.isArray(tarot) ? tarot : []).forEach(r => {
         (String(r.cards || '').match(/[「]([^」]+)[」]/g) || []).forEach(m => {
@@ -166,6 +167,18 @@
         const sign = String(r.sign || '').trim();
         const result = String(r.result || r.title || '').trim();
         if (sign || result) recentRecords.push({ type: '观星', time: String(r.date || '').trim(), q: sign, cards: '', text: result.slice(0, 200) });
+      });
+      /* 命盘八字历史：取最近 1 条（让树洞能顺着命盘接话——日主/格局/喜用/在意的点） */
+      (Array.isArray(bazi) ? bazi : []).slice(0, 1).forEach(r => {
+        const pillars = Array.isArray(r.pillars) ? r.pillars.join(' ') : String(r.pillars || '');
+        const dayMaster = String(r.dayMasterFull || r.dayMaster || '').trim();
+        const pattern = String(r.pattern || '').trim();
+        const strength = String(r.strength || '').trim();
+        const aiText = String(r.aiText || '').trim();
+        const q = pillars ? ('四柱 ' + pillars) : '';
+        const cards = [dayMaster ? ('日主' + dayMaster) : '', pattern ? (pattern + '格局') : '', strength ? strength : ''].filter(Boolean).join('，');
+        const text = aiText ? aiText.slice(0, 200) : '';
+        if (q || cards || text) recentRecords.push({ type: '命盘', time: String(r.date || '').trim(), q, cards, text });
       });
 
       return {
@@ -518,17 +531,30 @@
       info = o;
     } catch (e) { return null; }
     try { localStorage.removeItem(OPENING_KEY); } catch (e) {}
+    /* 用户视角：把从占卜页带过来的内容作为"用户消息"自动写入聊天记录，
+       让用户进树洞就能看到自己发的内容，也让树洞 AI 后续回复有真实上下文 */
+    try {
+      const autoText = '我刚做了' + (info.scene || '占卜')
+        + (info.subject ? '：' + info.subject : '')
+        + (info.summary ? '\n' + info.summary : '');
+      if (autoText.length > 10) appendChat('user', autoText);
+    } catch (e) {}
     if (!window.AIRelay) return null;
-    /* 生成开场白：像老朋友顺口提一句，绝无寒暄和环境描写 */
-    const sys = '你是一个树洞，就是个普通人。有个聊过（或正要认识）的人刚做了' +
+    /* 生成开场白：像老朋友顺口提一句，绝无寒暄和环境描写
+       关键：system 必须走 buildSystemPrompt() —— 它自带完整记忆（用户档案/性格标签/
+       当前状态/情感模式/过往摘要/最近占卜详情），AI 才能自己读取记忆自然接话，
+       而不是只对着命盘 subject 干巴巴复述/反问"具体怎么说"。 */
+    const sys = buildSystemPrompt('你是一个树洞，就是个普通人。有个聊过（或正要认识）的人刚做了' +
       (info.scene || '占卜') + '，你现在要在聊天里自然接话。要求：' +
       '1. 就像朋友看到 TA 刚占卜完，顺口提一句，接着占卜这件事说；' +
       '2. 绝不说"你好""欢迎""很高兴见到你""这里是深海""我们来聊聊吧"这类寒暄或客套；' +
       '3. 禁止任何环境描写：深夜/海边/月光/海水/风/星星这类字眼一律不出现；' +
       '4. 自然简短：2~4 句，一句一行，总共 20~50 字，带点语气词更亲切（呀/呢/啦）；' +
-      '5. 纯口语，不寒暄不总结不讲道理，不要任何 Markdown 符号。';
+      '5. 纯口语，不寒暄不总结不讲道理，不要任何 Markdown 符号。');
     const user = 'TA 刚做的是：' + info.scene + (info.subject ? '，内容是：' + info.subject : '') +
       (info.summary ? '\n大概说到了：' + info.summary : '') +
+      '\n上面【你了解到的用户】里有 TA 的档案、状态和最近占卜记录——参考这些（尤其是 TA 最近在纠结/在意的事）来自然开场，' +
+      '顺着 TA 的情况说，别复述命盘内容，也别反问"具体怎么说"。' +
       '\n请自然简短开场：2~4 句，一句一行，总共 20~50 字，可以带语气词。';
     try {
       const j = await window.AIRelay.complete({

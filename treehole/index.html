@@ -85,7 +85,7 @@
   .msg.user .who{text-align:right}
   /* 用户消息：微信式（名字在上 + 头像在右） */
   .msg.user .meta{display:flex;flex-direction:column;align-items:flex-end;max-width:84%}
-  .msg.user .row{display:flex;align-items:flex-end;gap:8px}
+  .msg.user .row{display:flex;align-items:flex-start;gap:8px}
   .msg.user .av{width:34px;height:34px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(135deg,#f0cf82,#c9a04c);color:#0a0815;font-size:.82rem;font-weight:bold;
     background-size:cover;background-position:center;box-shadow:0 3px 10px rgba(0,0,0,.28)}
@@ -175,7 +175,7 @@
 <script src="../supabase-config.js?v=7"></script>
 <script src="../ai-relay.js?v=6"></script>
 <script src="../crisis.js"></script>
-<script src="../treehole.js?v=4"></script>
+<script src="../treehole.js?v=6"></script>
 <script src="particles.min.js"></script>
 <script>
 (function () {
@@ -354,44 +354,52 @@
   /* 渲染全部历史消息 */
   function renderHistory() {
     const chats = window.TreeHole.readChats();
-    if (!chats.length) {
-      /* 从占卜页带信息进来：树洞自然开场（不欢迎卡）；否则照常显示欢迎卡 */
-      let hasPending = false;
-      try { hasPending = !!localStorage.getItem('treehole_pending_opening'); } catch (e) {}
-      if (!hasPending) { showWelcome(); return; }
-      /* 开场白生成中：顶部标题换成"对方正在输入中" */
-      setTyping(true);
-      scrollToBottom(true);
-      window.TreeHole.peekOpening().then(opening => {
-        setTyping(false);
-        if (!opening) { showWelcome(); return; }
-        /* 开场白写入聊天记录：让后续回复上下文连贯 */
-        try { window.TreeHole.appendChat('assistant', opening); } catch (e) {}
-        const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(opening, 4)) || [opening];
-        bubbles.forEach((b, i) => {
-          setTimeout(() => {
-            const d = document.createElement('div');
-            d.className = 'msg ai';
-            d.innerHTML = '<div class="who">' + (i === 0 ? '树洞' : '') + '</div><div class="bub">' + esc(b) + '</div>';
-            msgs.appendChild(d);
-            scrollToBottom(true);
-          }, i * 420);
-        });
-      }).catch(() => { setTyping(false); showWelcome(); });
-      return;
-    }
+    let hasPending = false;
+    try { hasPending = !!localStorage.getItem('treehole_pending_opening'); } catch (e) {}
+    /* 无历史且无 pending：照常显示欢迎卡 */
+    if (!chats.length && !hasPending) { showWelcome(); return; }
+
+    /* 先渲染历史（pending 待写入的 autoText 此时还没进记录，不会重复） */
+    const baseLen = chats.length;
     chats.forEach(m => openMsg(m.role, m.content));
-    /* 底部提示最近一次时间 */
-    const last = chats[chats.length - 1];
-    if (last && last.at) {
-      const d = new Date(last.at);
-      const tip = document.createElement('div');
-      tip.className = 'th-status';
-      tip.textContent = '— 上次 ' + [d.getMonth() + 1, d.getDate()].join('月') + '日 ' +
-        String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' —';
-      msgs.appendChild(tip);
+    if (baseLen) {
+      /* 底部提示最近一次时间 */
+      const last = chats[chats.length - 1];
+      if (last && last.at) {
+        const d = new Date(last.at);
+        const tip = document.createElement('div');
+        tip.className = 'th-status';
+        tip.textContent = '— 上次 ' + [d.getMonth() + 1, d.getDate()].join('月') + '日 ' +
+          String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' —';
+        msgs.appendChild(tip);
+      }
     }
-    scrollToBottom(false);
+    if (!hasPending) { scrollToBottom(false); return; }
+
+    /* 有 pending（从占卜/命盘页带信息进来）：AI 自然开场 + 自动写入用户消息 */
+    setTyping(true);
+    scrollToBottom(true);
+    window.TreeHole.peekOpening().then(opening => {
+      setTyping(false);
+      if (!opening) { if (!window.TreeHole.readChats().length) showWelcome(); scrollToBottom(false); return; }
+      /* 渲染 peekOpening 新写入的"用户消息"（占卜页带过来的内容） */
+      const after = window.TreeHole.readChats();
+      for (let i = baseLen; i < after.length; i++) {
+        if (after[i].role === 'user') openMsg('user', after[i].content);
+      }
+      /* 开场白写入聊天记录：让后续回复上下文连贯 */
+      try { window.TreeHole.appendChat('assistant', opening); } catch (e) {}
+      const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(opening, 4)) || [opening];
+      bubbles.forEach((b, i) => {
+        setTimeout(() => {
+          const d = document.createElement('div');
+          d.className = 'msg ai';
+          d.innerHTML = '<div class="who">' + (i === 0 ? '树洞' : '') + '</div><div class="bub">' + esc(b) + '</div>';
+          msgs.appendChild(d);
+          scrollToBottom(true);
+        }, i * 420);
+      });
+    }).catch(() => { setTyping(false); if (!window.TreeHole.readChats().length) showWelcome(); });
   }
   renderHistory();
 
