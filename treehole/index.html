@@ -42,6 +42,20 @@
     background:#6fb1e2;box-shadow:0 0 6px rgba(111,177,226,.8);display:none}
   .th-wave.on .tw-badge{display:block;animation:twPulse 1.6s ease-in-out infinite}
   @keyframes twPulse{0%,100%{opacity:.4;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
+  /* ===== 顶部"对方正在输入中…"（微信式） ===== */
+  .th-typingbar{position:fixed;top:calc(48px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+    z-index:30;display:none;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;
+    background:linear-gradient(160deg,rgba(20,16,38,.92),rgba(20,16,38,.85));
+    border:1px solid rgba(240,207,130,.22);box-shadow:0 6px 20px rgba(0,0,0,.35);
+    font-size:.66rem;color:rgba(240,207,130,.75);letter-spacing:.08em;
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);white-space:nowrap}
+  .th-typingbar .typing-dots{display:inline-flex;gap:3px;align-items:center}
+  .th-typingbar .typing-dots i{width:4px;height:4px;border-radius:50%;background:var(--gold);opacity:.55;
+    animation:tp 1.2s ease-in-out infinite}
+  .th-typingbar .typing-dots i:nth-child(2){animation-delay:.18s}
+  .th-typingbar .typing-dots i:nth-child(3){animation-delay:.36s}
+  .th-typingbar.show{display:flex;animation:typingIn .3s cubic-bezier(.16,1,.3,1)}
+  @keyframes typingIn{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
   /* ===== 消息区 ===== */
   #holeMsgs{position:fixed;inset:0;z-index:5;padding:calc(64px + env(safe-area-inset-top)) 14px calc(86px + env(safe-area-inset-bottom));
     overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
@@ -131,6 +145,9 @@
 <!-- 消息区 -->
 <div id="holeMsgs"></div>
 
+<!-- 顶部"对方正在输入中…"（微信式） -->
+<div class="th-typingbar" id="thTypingBar"><span class="typing-dots"><i></i><i></i><i></i></span>对方正在输入中…</div>
+
 <!-- 输入区 -->
 <div class="th-input">
   <div class="glassbox glass">
@@ -154,7 +171,8 @@
 <script src="../memory.js"></script>
 <script src="../supabase-config.js?v=6"></script>
 <script src="../ai-relay.js?v=6"></script>
-<script src="../treehole.js?v=3"></script>
+<script src="../crisis.js"></script>
+<script src="../treehole.js?v=4"></script>
 <script src="particles.min.js"></script>
 <script>
 (function () {
@@ -306,13 +324,12 @@
       let hasPending = false;
       try { hasPending = !!localStorage.getItem('treehole_pending_opening'); } catch (e) {}
       if (!hasPending) { showWelcome(); return; }
-      const aiDiv = document.createElement('div');
-      aiDiv.className = 'msg ai';
-      aiDiv.innerHTML = '<div class="who">树洞</div><div class="bub"><span class="typing"><i></i><i></i><i></i></span></div>';
-      msgs.appendChild(aiDiv);
+      /* 开场白生成中：顶部"对方正在输入中…"（微信式） */
+      const typingBar = $('thTypingBar');
+      typingBar.classList.add('show');
       scrollToBottom(true);
       window.TreeHole.peekOpening().then(opening => {
-        aiDiv.remove();
+        typingBar.classList.remove('show');
         if (!opening) { showWelcome(); return; }
         /* 开场白写入聊天记录：让后续回复上下文连贯 */
         try { window.TreeHole.appendChat('assistant', opening); } catch (e) {}
@@ -326,7 +343,7 @@
             scrollToBottom(true);
           }, i * 420);
         });
-      }).catch(() => { aiDiv.remove(); showWelcome(); });
+      }).catch(() => { typingBar.classList.remove('show'); showWelcome(); });
       return;
     }
     chats.forEach(m => openMsg(m.role, m.content));
@@ -360,12 +377,12 @@
 
     /* 用户气泡 */
     openMsg('user', text);
-    /* AI 占位 + 打字动画 */
-    const aiDiv = document.createElement('div');
-    aiDiv.className = 'msg ai';
-    aiDiv.innerHTML = '<div class="who">树洞</div><div class="bub"><span class="typing"><i></i><i></i><i></i></span></div>';
-    msgs.appendChild(aiDiv);
-    const bub = aiDiv.querySelector('.bub');
+    /* 顶部"对方正在输入中…"（微信式），替代消息区三点占位气泡 */
+    const typingBar = $('thTypingBar');
+    const live = document.createElement('div');
+    live.className = 'msg ai';
+    live.style.display = 'none';
+    typingBar.classList.add('show');
     scrollToBottom(true);
 
     const status = document.createElement('div');
@@ -385,14 +402,22 @@
     try {
       await window.TreeHole.sendMessage(text, (d) => {
         full += d;
-        bub.innerHTML = esc(full) + '<span class="typing" style="display:inline-flex;vertical-align:bottom"><i></i><i></i><i></i></span>';
+        /* 流式首字到达：隐藏顶部输入条，插入真实 AI 气泡 */
+        typingBar.classList.remove('show');
+        if (!live.isConnected) {
+          live.style.display = '';
+          live.innerHTML = '<div class="who">树洞</div><div class="bub"></div>';
+          msgs.appendChild(live);
+        }
+        live.querySelector('.bub').textContent = full;
         scrollToBottom(true);
       }, (tier, n) => {
         showStatus(tier, n);
       });
       /* 多气泡：把整段回复拆成短句，一条一条发（像真人连发微信） */
       const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(full)) || [full];
-      aiDiv.remove();
+      typingBar.classList.remove('show');
+      if (live.isConnected) live.remove();
       if (bubbles.length) {
         bubbles.forEach((b, i) => {
           setTimeout(() => {
@@ -411,7 +436,16 @@
         scrollToBottom(true);
       }
     } catch (e) {
-      bub.innerHTML = '🌫️ 树洞暂时听不到你说话，稍后再试试吧。';
+      typingBar.classList.remove('show');
+      /* 已有流式气泡：直接在气泡里显示错误；否则创建一个错误气泡 */
+      if (live.isConnected) {
+        live.querySelector('.bub').textContent = '🌫️ 树洞暂时听不到你说话，稍后再试试吧。';
+      } else {
+        live.style.display = '';
+        live.innerHTML = '<div class="who">树洞</div><div class="bub">🌫️ 树洞暂时听不到你说话，稍后再试试吧。</div>';
+        msgs.appendChild(live);
+      }
+      scrollToBottom(true);
       /* 失败回滚：移除刚才追加的 user 消息，避免一条消息变两条 */
       try {
         const chats = window.TreeHole.readChats();
@@ -420,6 +454,7 @@
         }
       } catch (e2) {}
     } finally {
+      typingBar.classList.remove('show');
       status.remove();
       busy = false; sendBtn.disabled = false;
       scrollToBottom(true);

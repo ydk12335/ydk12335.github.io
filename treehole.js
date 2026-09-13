@@ -21,6 +21,7 @@
   const PROFILE_KEY = 'treehole_profile_v1';   // 画像（本地记忆库）
   const CHAT_KEY = 'treehole_chat_v1';          // 聊天记录（短期记忆）
   const LS_MEM_KEY = 'sleepy_space_memory';     // 主记忆库（用户显式资料）
+  const FORGOT_KEY = 'treehole_forgot_v1';      // 本地遗忘标记：清空后存在，阻止云端画像拉回
   const SHORT_TERM = 10;                        // 短期记忆条数
 
   /* ==================== 本地读写 ==================== */
@@ -256,6 +257,16 @@
       '\n4. 纯口语，可以只有"嗯""在的""然后呢"，别凑字数；' +
       '\n5. 不要任何 Markdown 符号、不加粗、不列表、不用【】标签；' +
       '\n6. 拿不准就少说，短比长好。');
+    /* 心理危机保护（最高优先级·凌驾一切）：一旦察觉用户有自杀/自伤/轻生倾向，
+     * 立刻停下所有"解读/建议/占卜"类回应，先稳人、再给热线，绝不傻乎乎顺着话题继续。 */
+    lines.push('\n【绝对红线·最高优先级中的最高优先级】' +
+      '\n如果对方流露出想自杀、自残、轻生、不想活、撑不下去、伤害自己等任何倾向（哪怕只是开玩笑、说气话、试探）：' +
+      '\n1. 立刻停止一切普通回复，不要解读、不要讲道理、不要反问"为什么"、不要轻飘飘地安慰；' +
+      '\n2. 先稳稳接住情绪，一两句话表达"我听见了，我很担心你"，不要说空话套话；' +
+      '\n3. 必须把这句话原样发给对方（一字不落）："我担心你。请现在拨打 12356（全国心理援助热线，免费、24小时），或 12355（青少年心理援助热线）。"；' +
+      '\n4. 如果对方说已经准备好/正在实施，催他打 110 或 120，并让他联系身边信任的人；' +
+      '\n5. 不要替对方做判断（"你其实没事"），不要批判（"你怎么能这么想"），不要说"会好起来的"这种空话；' +
+      '\n6. 语气保持真人感、简短，但这条红线高于前面所有"极简/不说教"的要求——此时多说几句安全话比"短"更重要。');
     return lines.join('\n');
   }
 
@@ -307,10 +318,22 @@
   }
 
   /* ==================== AI 调用（复用中继） ==================== */
+  /** 心理危机保护文案：命中关键词时直接返回（不调 AI，确保稳定可靠） */
+  function crisisReply() {
+    return '嗯，我在。\n我担心你。\n请现在拨打 12356（全国心理援助热线，免费、24小时），或 12355（青少年心理援助热线）。\n也可以打 110 或 120。\n别一个人扛。';
+  }
   /** 用户发消息 → 追加短期记忆 → 调 AI（带画像 + 最近10条 + 摘要）→ 返回回复文本 */
   async function sendMessage(userText, onDelta, onRetry) {
     const chats = readChats();
     appendChat('user', userText);
+
+    /* 心理危机保护（硬拦截）：命中自杀/自伤关键词 → 不调 AI，直接返回暖心安抚+热线 */
+    if (window.CrisisGuard && CrisisGuard.check(userText)) {
+      const safe = crisisReply();
+      if (onDelta) { safe.split('\n').forEach((ln, i) => setTimeout(() => onDelta(ln + (i < 3 ? '\n' : '')), i * 180)); }
+      appendChat('assistant', safe);
+      return safe;
+    }
 
     const messages = [{ role: 'system', content: buildSystemPrompt() }];
     /* 长期记忆摘要（若有）放在最前，帮助 AI 记得上次 */
@@ -384,6 +407,8 @@
   /** 云端拉取画像（登录时合并到本地：只补空缺，不覆盖显式） */
   async function pullProfileCloud() {
     try {
+      /* 本地遗忘标记：用户清空过记录 → 不再把云端画像拉回，云端数据保留但永不复活 */
+      try { if (localStorage.getItem(FORGOT_KEY)) return; } catch (e) {}
       const sb = await getSb();
       if (!sb) return;
       const u = (await sb.auth.getSession()).data.session.user;
@@ -405,9 +430,12 @@
 
   /* ==================== 清空聊天记忆 ==================== */
   /* 用户 #7：清空只清本地聊天记录与本地画像，云端 user_profiles / chat_messages 保留不清 */
+  /* 用户 #00：清空后本地打「遗忘标记」——下次登录 pullProfileCloud 检测到标记就跳过合并，
+   * 云端数据仍然保留（只读不写、不删），但永远不会再被拉回"复活"。 */
   function clearChats() {
     try { localStorage.removeItem(CHAT_KEY); } catch (e) {}
     try { localStorage.removeItem(PROFILE_KEY); } catch (e) {}
+    try { localStorage.setItem(FORGOT_KEY, String(Date.now())); } catch (e) {}
     /* 云端：保留 user_profiles 与 chat_messages，不做任何清除或重置 */
   }
   /** 统计信息（树洞页右上角可显示：已聊条数/记忆条数） */
