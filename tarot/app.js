@@ -451,6 +451,12 @@ function animateShuffle(done){
 /* ================= 流程 ================= */
 $('btnStart').onclick=async()=>{
   if(readingBusy||$('btnStart').disabled)return;
+  /* 心理危机保护：命中自杀/自伤倾向关键词 → 全屏保护页，不占卜不解读 */
+  const _crisisQ=$('question').value.trim();
+  if(window.CrisisGuard && CrisisGuard.check(_crisisQ)){
+    CrisisGuard.show();
+    return;
+  }
   /* 违禁词检测 */
   const BAD_WORDS=['yd','ydk','易大可','一大颗','微易'];
   const q=$('question').value.toLowerCase().trim();
