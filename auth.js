@@ -344,6 +344,17 @@ function initAuth() {
     const btn = $('btnRegister');
     btn.disabled = true; btn.textContent = '注册中…';
     try {
+      /* 用户名唯一性校验：RPC 存在则前端直接拦截；RPC 缺失/失败降级为注册报错提示 */
+      if (typeof window.checkUsernameTaken === 'function') {
+        try {
+          const taken = await window.checkUsernameTaken(username);
+          if (taken) {
+            toast('这个名字已经有人用啦，换一个吧');
+            btn.disabled = false; btn.textContent = '注册账号';
+            return;
+          }
+        } catch (e) { /* RPC 不存在或网络异常：跳过预检，交给注册流程兜底 */ }
+      }
       const data = await registerWithEmail(email, p1, username);
       if (!data.session) {
         $('regTip').style.display = 'block';
@@ -357,7 +368,10 @@ function initAuth() {
         close(); location.reload();
       }
     } catch (e) {
-      toast(e.message?.includes('already registered') ? '这个邮箱已经注册过啦，直接登录吧' : '注册失败：' + (e.message || '稍后再试'));
+      const msg = String(e?.message || '');
+      toast(msg.includes('already registered') ? '这个邮箱已经注册过啦，直接登录吧'
+        : (msg.includes('duplicate') || msg.includes('unique') || msg.includes('用户名') ? '这个名字已经有人用啦，换一个吧'
+        : '注册失败：' + (msg || '稍后再试')));
       btn.disabled = false; btn.textContent = '注册账号';
     }
   });

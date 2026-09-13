@@ -129,3 +129,11 @@ DROP TRIGGER IF EXISTS on_auth_user_created_profile ON auth.users;
 CREATE TRIGGER on_auth_user_created_profile
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user_profile();
+
+-- 11. 用户名唯一性 RPC（供注册前端预检；SECURITY DEFINER 绕过 RLS，未登录也能查）
+CREATE OR REPLACE FUNCTION check_username(uname TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql SECURITY DEFINER STABLE
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.profiles WHERE username = uname);
+$$;

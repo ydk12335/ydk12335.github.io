@@ -93,6 +93,15 @@ async function registerWithEmail(email, password, username) {
   return data;
 }
 
+/** 检查用户名是否已被占用（RPC，SECURITY DEFINER 绕过 RLS；函数不存在则抛错由调用方兜底） */
+async function checkUsernameTaken(username) {
+  if (!username || !String(username).trim()) return false;
+  const sb = await initSupabase();
+  const { data, error } = await sb.rpc('check_username', { uname: String(username).trim() });
+  if (error) throw error;
+  return !!data;
+}
+
 /** ========== 云端记忆同步（快照方案 v2 · 时间戳防覆盖） ========== */
 const SNAP_TYPE = 'snapshot';
 const SYNC_META_KEY = 'ss_sync_meta_v1';
@@ -442,6 +451,7 @@ window.verifyAndLogin = verifyAndLogin;
 window.loginWithPassword = loginWithPassword;
 window.setPassword = setPassword;
 window.registerWithEmail = registerWithEmail;
+window.checkUsernameTaken = checkUsernameTaken;
 
 /* ---------- 启动：任何页面都自动做一次云地比对 ---------- */
 if (document.readyState === 'loading') {
