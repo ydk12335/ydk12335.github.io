@@ -146,7 +146,7 @@ function buildRain(){drops=[];splashes=[];if(!curWeather||!curWeather.rain)retur
   /* 白天亮天空：雨丝稍深+透明度略高才清晰；夜间深天空：浅色雨丝天然可见，透明度低更自然 */
   const bright=skyIsBright(),aLo=bright?.5:.25,aSpan=.3,lMin=12;
   for(let i=0;i<curWeather.rain;i++)drops.push({x:Math.random()*W,y:-Math.random()*H*.5,l:(lMin+Math.random()*12)*sp*DPR,
-    v:(9+Math.random()*6)*sp*DPR,drift:wind*DPR,a:aLo+Math.random()*aSpan,w:heavy?1.3*DPR:1*DPR});}
+    v:(9+Math.random()*6)*sp*DPR,drift:wind*DPR,a:aLo+Math.random()*aSpan,w:heavy?1.05*DPR:.85*DPR});}
 /* ===== 时间问候 ===== */
 /* ===== 时间问候：问候 + 贴心一句 ===== */
 const GREET_POOLS=[
@@ -246,7 +246,7 @@ function draw(t){
   const G=H*.98;
   /* 雨丝颜色（含透明度）：白天比亮天空稍深才可见；夜间比深天空稍亮。同一条雨丝整体一致、无亮珠 */
   const rt=skyIsBright()
-    ? {drop:'rgba(64,86,120,1)',splash:'rgba(84,106,144,1)',bounce:'rgba(110,130,162,1)'}
+    ? {drop:'rgba(96,118,152,1)',splash:'rgba(108,130,162,1)',bounce:'rgba(128,148,176,1)'}
     : {drop:'rgba(208,222,246,1)',splash:'rgba(180,200,235,1)',bounce:'rgba(225,235,252,1)'};
   if(drops.length){
     ctx.strokeStyle=rt.drop;ctx.lineCap='round';ctx.lineJoin='round';
