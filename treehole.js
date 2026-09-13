@@ -20,7 +20,8 @@
 
   const PROFILE_KEY = 'treehole_profile_v1';   // 画像（本地记忆库）
   const CHAT_KEY = 'treehole_chat_v1';          // 聊天记录（短期记忆）
-  const LS_MEM_KEY = 'sleepy_space_memory';     // 主记忆库（用户显式资料）
+  const LS_MEM_KEY = 'sleepy_space_memory';     // 主记忆库 v1（用户显式资料：生日/星座等）
+  const LS_MEM_V2_KEY = 'sleepy_space_memory_v2'; // 记忆库 v2（星空记忆：含「◈ 我的画像」等用户亲笔条目）
   const FORGOT_KEY = 'treehole_forgot_v1';      // 本地遗忘标记：清空后存在，阻止云端画像拉回
   const SHORT_TERM = 10;                        // 短期记忆条数
 
@@ -194,8 +195,31 @@
   }
 
   /* ==================== 拼装完整画像提示词 ==================== */
+  /* 第零层 · 记忆库 v2：用户亲笔写入的「画像 / 性格」类条目，最权威，放最前面 */
+  function readV2Portrait() {
+    try {
+      const db = lsGet(LS_MEM_V2_KEY, {}) || {};
+      const items = Array.isArray(db.items) ? db.items : [];
+      const want = items.filter(it => {
+        const t = String(it.title || '');
+        const ty = String(it.type || '');
+        return t.indexOf('画像') >= 0 || t.indexOf('性格') >= 0 || ty === 'traits';
+      });
+      return want.map(it => {
+        const d = (it.data && typeof it.data === 'object') ? it.data : {};
+        const note = String(d.note || d.content || '');
+        return { title: it.title || '画像', note };
+      }).filter(x => x.note);
+    } catch (e) { return []; }
+  }
   function buildProfilePrompt() {
     const parts = [];
+    /* 第零层 · 记忆库 v2 画像（用户亲笔，权威） */
+    const v2 = readV2Portrait();
+    if (v2.length) {
+      const v2Lines = v2.map(x => (x.title ? '【' + x.title + '】\n' : '') + x.note);
+      parts.push('【用户画像（记忆库亲笔版，最权威，请牢记）】\n' + v2Lines.join('\n\n'));
+    }
     /* 第一层 · 显式 */
     const ex = readExplicit();
     const exLines = [];

@@ -785,11 +785,44 @@ function migrateOldData(){
 const migrated=migrateOldData();
 buildNodes();
 if(migrated)setTimeout(()=>toast('已点亮 '+migrated+' 颗旧记忆的星 ✦'),600);
+
+/* ================= 自动总结（记忆有新增/首访时，自动更新「🌙 核心记忆」） ================= */
+const AUTO_META_KEY='ss_analysis_meta_v1';
+function readAutoMeta(){try{return JSON.parse(localStorage.getItem(AUTO_META_KEY)||'{}')||{};}catch(e){return{};}}
+let _autoBusy=false;
+function autoSummaryNeeded(){
+  const db=dbLoad();
+  if(!db.items.length)return false;                      // 夜空还是空的，不总结
+  const core=getCoreItem();
+  const nonCore=db.items.filter(i=>i.type!=='core').length;
+  if(!core&&nonCore>0)return true;                       // 还没有核心记忆 → 自动生成一次
+  const meta=readAutoMeta();
+  if(meta.lastCount==null)return true;                   // 从未自动总结过
+  return nonCore!==meta.lastCount;                       // 记忆条数变了 → 自动重新总结
+}
+async function autoSummary(){
+  if(_autoBusy)return;
+  if(!window.AIRelay||typeof window.AIRelay.complete!=='function')return;  // AI 未就绪，跳过
+  if(!autoSummaryNeeded())return;
+  _autoBusy=true;
+  const before=(getCoreItem()&&getCoreItem().data&&getCoreItem().data.note)||'';
+  try{
+    await runAnalysis();   // 成功会自动 saveCore + toast
+  }catch(e){console.warn('自动总结失败',e);}
+  const after=(getCoreItem()&&getCoreItem().data&&getCoreItem().data.note)||'';
+  if(after&&after!==before){
+    /* 真的生成了新总结，才记录条数基线，避免失败也被标记 */
+    localStorage.setItem(AUTO_META_KEY,JSON.stringify({lastCount:dbLoad().items.filter(i=>i.type!=='core').length,updatedAt:Date.now()}));
+  }
+  _autoBusy=false;
+}
+/* 页面加载 4 秒后再检查（等云端同步 + AI Relay 就绪），不打扰首次进入 */
+setTimeout(autoSummary,4000);
 </script>
 <script src="../supabase-config.js?v=9"></script>
 <script src="../ai-relay.js?v=8"></script>
 <script src="../crisis.js"></script>
-<script src="../treehole.js?v=4"></script>
+<script src="../treehole.js?v=7"></script>
 <script src="../achievements.js?v=27"></script>
 <script src="../personalize.js?v=3"></script>
 <script src="../profile.js?v=7"></script>
