@@ -134,10 +134,12 @@ function resize(){DPR=Math.min(devicePixelRatio||1,2);W=cv.width=innerWidth*DPR;
 function buildClouds(){clouds=[];const n=Math.min(3,Math.round((curWeather?curWeather.c:0)*3)+ (curWeather&&curWeather.c>0?1:0));
   for(let i=0;i<n;i++)clouds.push({x:Math.random()*W,y:(.03+Math.random()*.13)*H,w:(.2+Math.random()*.18)*W,h:(.035+Math.random()*.03)*H,
     v:(.1+Math.random()*.2)*wind*DPR,p:Math.random()*7,seed:Math.random()*9});}
+function groundY(){const p=document.querySelector('.portal');return p?Math.min(p.offsetHeight+6,(window.scrollY||0)+innerHeight):H;}
 function buildRain(){drops=[];splashes=[];if(!curWeather||!curWeather.rain)return;
   const heavy=curWeather.rain>=300,sp=heavy?1.5:curWeather.rain>=180?1.2:1;
-  const G=H*.98;
-  for(let i=0;i<curWeather.rain;i++)drops.push({x:Math.random()*W,y:Math.random()*G,l:(8+Math.random()*10)*sp*DPR,
+  const sy=window.scrollY||0,G=groundY();
+  const top=Math.max(0,sy-80),span=Math.max(60,G-top);
+  for(let i=0;i<curWeather.rain;i++)drops.push({x:Math.random()*W,y:top+Math.random()*span,l:(8+Math.random()*10)*sp*DPR,
     v:(7+Math.random()*5)*sp*DPR,drift:wind*DPR,a:.25+Math.random()*.35,w:heavy?1.4*DPR:1*DPR});}
 /* ===== 时间问候 ===== */
 /* ===== 时间问候：问候 + 贴心一句 ===== */
@@ -234,42 +236,52 @@ function draw(t){
     ctx.beginPath();ctx.ellipse(c.x+c.w*.7+drift,c.y+c.h*.25,c.w/2.2,c.h*.75,0,0,7);ctx.fill();
   });
   ctx.globalAlpha=1;
-  /* 雨（落到地面线，不越过内容区） */
-  const G=H*.98;
+  /* 雨（落到 portal 底部的地面线，跟随内容滚动，兜底不超出视口底部） */
+  const G=groundY(),scrl=(window.scrollY||0),gScr=G-scrl;
   if(drops.length){
     ctx.strokeStyle='rgba(200,220,255,1)';ctx.lineCap='round';
     drops.forEach(d=>{
       d.y+=d.v;d.x+=d.drift*.3;
-      if(d.y>G){splashes.push({x:d.x,y:G,r:1,a:.5});d.y=-d.l;d.x=Math.random()*W;}
+      if(d.y>G){splashes.push({x:d.x,y:G,r:1,a:.5});d.y=Math.max(0,scrl-80-Math.random()*40);d.x=Math.random()*W;}
       if(d.x>W)d.x=0;
-      ctx.globalAlpha=d.a;ctx.lineWidth=d.w;
-      ctx.beginPath();ctx.moveTo(d.x,Math.min(d.y,G));ctx.lineTo(d.x-d.drift*.3,Math.max(d.y-d.l,0)>G?G:d.y-d.l);ctx.stroke();
+      const sc=d.y-scrl;
+      if(sc>-d.l*1.2&&sc<innerHeight+d.l){
+        ctx.globalAlpha=d.a;ctx.lineWidth=d.w;
+        ctx.beginPath();ctx.moveTo(d.x,Math.min(sc,gScr));
+        ctx.lineTo(d.x-d.drift*.3,(sc-d.l)<gScr?sc-d.l:gScr);ctx.stroke();
+      }
     });
     ctx.globalAlpha=1;
     /* 地面涟漪（与成就卡同款：双圈扩散、缓慢淡出） */
     ctx.strokeStyle='rgba(228,240,255,1)';
     splashes=splashes.filter(s=>s.a>0);
     splashes.forEach(s=>{
-      s.r+=1.5*DPR;s.a-=.035;s.y=G;
-      ctx.globalAlpha=Math.min(.8,s.a);ctx.lineWidth=1*DPR;
-      ctx.beginPath();ctx.ellipse(s.x,s.y,s.r,s.r*.26,0,0,7);ctx.stroke();
-      if(s.r>4*DPR){ctx.globalAlpha=Math.max(0,s.a*.45);
-        ctx.beginPath();ctx.ellipse(s.x,s.y,s.r*.5,s.r*.13,0,0,7);ctx.stroke();}
+      s.r+=1.5*DPR;s.a-=.035;
+      const sc=s.y-scrl;
+      if(sc>-60&&sc<innerHeight+60){
+        ctx.globalAlpha=Math.min(.8,s.a);ctx.lineWidth=1*DPR;
+        ctx.beginPath();ctx.ellipse(s.x,sc,s.r,s.r*.26,0,0,7);ctx.stroke();
+        if(s.r>4*DPR){ctx.globalAlpha=Math.max(0,s.a*.45);
+          ctx.beginPath();ctx.ellipse(s.x,sc,s.r*.5,s.r*.13,0,0,7);ctx.stroke();}
+      }
     });
     ctx.globalAlpha=1;
     /* 溅起的水珠（少量，重力抛物线） */
     if(drops.length){
       splashes.forEach(s=>{
         if(s.r>2*DPR&&s.r<4*DPR&&Math.random()<.18){
-          bounces.push({x:s.x,y:G,vx:(Math.random()*2-1)*1.2*DPR,vy:-(1.6+Math.random()*1.2)*DPR,a:.9});
+          bounces.push({x:s.x,y:s.y,vx:(Math.random()*2-1)*1.2*DPR,vy:-(1.6+Math.random()*1.2)*DPR,a:.9});
         }
       });
     }
     bounces=bounces.filter(b=>b.a>0);
     bounces.forEach(b=>{
       b.x+=b.vx;b.y+=b.vy;b.vy+=.12*DPR;b.a-=.04;
-      ctx.globalAlpha=b.a;ctx.fillStyle='rgba(235,245,255,1)';
-      ctx.beginPath();ctx.arc(b.x,b.y,1.1*DPR,0,7);ctx.fill();
+      const sc=b.y-scrl;
+      if(sc>-20&&sc<innerHeight+20){
+        ctx.globalAlpha=b.a;ctx.fillStyle='rgba(235,245,255,1)';
+        ctx.beginPath();ctx.arc(b.x,sc,1.1*DPR,0,7);ctx.fill();
+      }
     });
     ctx.globalAlpha=1;
   }
