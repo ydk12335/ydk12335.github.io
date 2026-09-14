@@ -315,6 +315,7 @@
       '· 每句都要有信息量：真实反应（心疼/无语/好笑/惊讶）、自己的看法或经历、或顺着往下聊；要带问句就贴着 TA 刚说的具体内容问（"你说的那个领导后来咋说"），别问"然后呢"这种万能废话，也绝不连环问；',
       '· 有情绪先表达情绪："哎""服了""哈哈哈""这也太难了"，再说别的；',
       '· 短：一两句到三四句，一句一行，像发微信，别写小作文、别端着；',
+      '· 默认不带问号收尾：大部分回复直接说事、说想法、说反应就行，别老想着抛问题给 TA；实在想了解，最多问一个，而且必须贴着 TA 刚说的具体内容问——**一句话里只允许最多一个问号，末尾尽量别用问号收尾**；',
       '· 语气词自然用（呀/呢/啦/哦/嘛/叭），别堆。',
       '【绝对不要·AI 味黑名单】',
       '· 万能接话："你说啥都行""我在这听着呢""嗯嗯，我在"——没话接就老实说"我一时不知道说啥"，也别糊弄；',
@@ -401,6 +402,36 @@
   function crisisReply() {
     return '嗯，我在。\n我担心你。\n请现在拨打 12356（全国心理援助热线，免费、24小时），或 12355（青少年心理援助热线）。\n也可以打 110 或 120。\n别一个人扛。';
   }
+  /**
+   * 代码级硬兜底：修剪回复末尾的"纯废话追问"，防止树洞"回两句就问"。
+   * 保守规则（不误伤有信息量的问句）：
+   *  1) 万能废话问句清单（"然后呢/你呢/咋样"之类）整段或行末命中即删；
+   *  2) 极短无实义问句行（≤6字、问号结尾）从末尾逐行删，最多删 2 行；
+   *  3) 带具体内容的问句（如"你那个领导后来咋说？"）一律保留——贴内容问是允许的。
+   *  危机话术走独立分支，不受影响。
+   */
+  function trimTrailingQuestions(t) {
+    let s = String(t || '');
+    if (!s) return s;
+    /* 1) 万能废话问句兜底：整段结尾命中即整段删除 */
+    s = s.replace(/(\n|^)(然后呢|后来呢|还有呢|还有吗|还有啥|具体说说|咋了嘛|咋了|怎么了|怎么啦|怎么样啦|咋样|最近咋样|最近怎么样|你说呢|你觉得呢|是吗|真的吗|对不对|你说是吧|懂了吗|明白了吗|好不好|你呢|你嘞|那你呢|那你嘞|然后嘞|然后咧|最后呢)\s*[?？]?\s*$/, '');
+    /* 2) 从末尾逐行删"极短纯问句行"（≤6字、问号收尾、无陈述标点），最多删 2 行 */
+    const lines = s.split(/\n+/).map(x => x.trim());
+    let removed = 0;
+    while (lines.length && removed < 2) {
+      const last = lines[lines.length - 1];
+      const pureQ = /[?？]$/.test(last) &&
+        last.replace(/[?？]$/, '').length <= 6 &&   // 去掉问号后极短 → 无实义
+        !/[。！：]/.test(last.replace(/[?？]$/, '')); // 无陈述标点 → 纯问句
+      if (!pureQ) break;
+      lines.pop(); removed++;
+    }
+    s = lines.join('\n').trim();
+    /* 保护：绝不删空——如果修剪后没剩实质内容，原样返回（宁可不删也不让回复为空） */
+    if (!s) return String(t || '').trim();
+    return s;
+  }
+
   /** 用户发消息 → 追加短期记忆 → 调 AI（带画像 + 最近10条 + 摘要 + agent工具）→ 返回回复文本 */
   async function sendMessage(userText, onDelta, onRetry) {
     const chats = readChats();
@@ -443,6 +474,8 @@
         full = j && j.choices && j.choices[0] && (j.choices[0].message.content || '').trim() || '';
       }
       if (full) {
+        /* 播放前先剪掉末尾纯追问（agent 已拿到完整文本，播放前修正好，用户看不到追问尾巴） */
+        full = trimTrailingQuestions(full);
         /* 把最终正文逐字播放，模拟流式输出 */
         for (const ch of full) { if (onDelta) onDelta(ch); await new Promise(r => setTimeout(r, 16)); }
         if (onDelta) onDelta('\n');
@@ -469,12 +502,16 @@
       if (!full) full = await doComplete();
     }
     if (full) {
-      appendChat('assistant', full);
-      /* 【后台异步 · 不阻塞回复】画像提取 + 长期摘要（用户无感知） */
-      setTimeout(() => {
-        try { extractProfileSilent(userText, full); } catch (e) {}
-        try { buildSummary([{ role: 'user', content: userText }, { role: 'assistant', content: full }]); } catch (e) {}
-      }, 300);
+      /* 存储前统一修剪（幂等；真流式已播的尾巴不再入上下文，模型不再学"追问收尾"） */
+      full = trimTrailingQuestions(full);
+      if (full) {
+        appendChat('assistant', full);
+        /* 【后台异步 · 不阻塞回复】画像提取 + 长期摘要（用户无感知） */
+        setTimeout(() => {
+          try { extractProfileSilent(userText, full); } catch (e) {}
+          try { buildSummary([{ role: 'user', content: userText }, { role: 'assistant', content: full }]); } catch (e) {}
+        }, 300);
+      }
     }
     return full;
   }
@@ -638,7 +675,7 @@
     PROFILE_KEY, CHAT_KEY,
     readExplicit, readProfile, saveProfile, extractFromReply, extractProfileSilent, readBehavior,
     buildProfilePrompt, buildSystemPrompt, splitReply,
-    readChats, saveChats, recentChats, appendChat, sendMessage, buildSummary,
+    readChats, saveChats, recentChats, appendChat, sendMessage, buildSummary, trimTrailingQuestions,
     pullProfileCloud, clearChats, getStats,
     setOpening, peekOpening
   };
