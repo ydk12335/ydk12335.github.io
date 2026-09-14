@@ -64,6 +64,12 @@ body[data-phase="day"] .rel-chip.on,body[data-phase="dusk"] .rel-chip.on{
 .b-pick:active{background:rgba(240,207,130,.2);transform:scale(.93)}
 .b-unknown{display:flex;align-items:center;gap:5px;font-size:.72rem;color:#8f86b8;cursor:pointer;user-select:none;margin-top:2px}
 .b-unknown input{accent-color:#f0cf82}
+.b-hint{font-size:.66rem;color:var(--muted);letter-spacing:.04em;margin-top:-2px;line-height:1.5}
+.b-time{display:flex;align-items:center;gap:6px}
+.b-time .b-input{text-align:center;padding:9px 6px;min-width:0}
+.b-time-hh{flex:1}
+.b-time-mm{flex:1}
+.b-time-colon{flex:none;color:var(--muted);font-size:1.05rem;font-weight:600;line-height:1}
 .b-field.dim{opacity:.45}
 .b-gender{display:flex;gap:8px}
 .b-gender button{flex:1;padding:8px 0;border-radius:10px;border:1px solid rgba(240,207,130,.22);
@@ -203,11 +209,13 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
       <div class="b-row">
         <div class="b-field">
           <label class="b-label">出生时间（24小时制）</label>
-          <div class="b-pickrow">
-            <input class="b-input" id="pTimeA" type="text" inputmode="numeric" value="10:00" placeholder="如 14:30 或 1430（24小时制）" autocomplete="off">
-            <button type="button" class="b-pick" data-pick="pTimeA">⏰</button>
+          <div class="b-time">
+            <input class="b-input b-time-hh" id="pTimeHhA" type="number" inputmode="numeric" min="0" max="23" maxlength="2" placeholder="时" value="10" autocomplete="off">
+            <span class="b-time-colon">:</span>
+            <input class="b-input b-time-mm" id="pTimeMmA" type="number" inputmode="numeric" min="0" max="59" maxlength="2" placeholder="分" value="00" autocomplete="off">
           </div>
-          <label class="b-unknown"><input type="checkbox" data-unknowntime="pTimeA"> 时间未知</label>
+          <div class="b-hint">24小时制：小时填 0-23（下午1点=13），分钟填 0-59</div>
+          <label class="b-unknown"><input type="checkbox" data-unknowntime="pTimeHhA"> 时间未知</label>
         </div>
         <div class="b-field">
           <label class="b-label">省份</label>
@@ -253,11 +261,13 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
       <div class="b-row">
         <div class="b-field">
           <label class="b-label">出生时间（24小时制）</label>
-          <div class="b-pickrow">
-            <input class="b-input" id="pTimeB" type="text" inputmode="numeric" value="14:30" placeholder="如 14:30 或 1430（24小时制）" autocomplete="off">
-            <button type="button" class="b-pick" data-pick="pTimeB">⏰</button>
+          <div class="b-time">
+            <input class="b-input b-time-hh" id="pTimeHhB" type="number" inputmode="numeric" min="0" max="23" maxlength="2" placeholder="时" value="14" autocomplete="off">
+            <span class="b-time-colon">:</span>
+            <input class="b-input b-time-mm" id="pTimeMmB" type="number" inputmode="numeric" min="0" max="59" maxlength="2" placeholder="分" value="30" autocomplete="off">
           </div>
-          <label class="b-unknown"><input type="checkbox" data-unknowntime="pTimeB"> 时间未知</label>
+          <div class="b-hint">24小时制：小时填 0-23（下午1点=13），分钟填 0-59</div>
+          <label class="b-unknown"><input type="checkbox" data-unknowntime="pTimeHhB"> 时间未知</label>
         </div>
         <div class="b-field">
           <label class="b-label">省份</label>
@@ -512,10 +522,28 @@ $('relCustomInput').addEventListener('keydown',e=>{if(e.key==='Enter'){$('relCus
       }
     };
   });
+  document.querySelectorAll('.b-time .b-input').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      let v=inp.value.replace(/\D/g,'').slice(0,2);
+      if(inp.classList.contains('b-time-hh')&&v&&+v>23)v='23';
+      if(inp.classList.contains('b-time-mm')&&v&&+v>59)v='59';
+      if(inp.value!==v)inp.value=v;
+    });
+    inp.addEventListener('blur',()=>{
+      if(inp.value===''){inp.value='';return;}
+      let v=String(+inp.value);
+      if(inp.classList.contains('b-time-hh')&&+v>23)v='23';
+      if(inp.classList.contains('b-time-mm')&&+v>59)v='59';
+      if(inp.value!==v)inp.value=v;
+    });
+  });
   document.querySelectorAll('input[data-unknowntime]').forEach(cb=>{
     cb.addEventListener('change',()=>{
-      const inp=$('pTime'+cb.dataset.unknowntime.slice(5));
-      if(inp)inp.disabled=cb.checked;
+      const tag=cb.dataset.unknowntime; // 形如 pTimeHhA
+      const s=tag.slice(-1);
+      const hh=document.getElementById('pTimeHh'+s),mm=document.getElementById('pTimeMm'+s);
+      if(hh)hh.disabled=cb.checked;
+      if(mm)mm.disabled=cb.checked;
       cb.closest('.b-field').classList.toggle('dim',!cb.checked);
     });
   });
@@ -551,6 +579,7 @@ function parseTimeStr(s){
   s=String(s||'').trim();if(!s)return null;
   let m=s.match(/^(\d{1,2})[:：.点时](\d{1,2})(?:分)?$/);
   if(!m)m=s.match(/^(\d{2})(\d{2})$/);
+  if(!m)m=s.match(/^(\d)(\d{2})$/);
   if(!m)m=s.match(/^(\d{1,2})[点时]?$/);
   if(!m)return null;
   const hh=+m[1],mm=m[2]?+m[2]:0;
@@ -563,17 +592,19 @@ function readOne(s){
   const name=$('pName'+s).value.trim();
   const pd=parseDateStr($('pDate'+s).value);
   if(!pd)throw new Error('第'+(s==='A'?'一':'二')+'位出生日期格式不对');
-  const rawTime=$('pTime'+s).value;
+  const rawHh=($('pTimeHh'+s)||{}).value,rawMm=($('pTimeMm'+s)||{}).value;
+  const rawTime=(String(rawHh||'').trim()||String(rawMm||'').trim())
+    ? (String(rawHh||'').trim()+':'+String(rawMm||'').trim()) : '';
   const citySel=document.querySelector('select[data-city="'+s+'"]');
   const city=citySel?citySel.value:'';
-  const tmUnk=!!(document.querySelector('input[data-unknowntime="pTime'+s+'"]')||{}).checked;
+  const tmUnk=!!(document.querySelector('input[data-unknowntime="pTimeHh'+s+'"]')||{}).checked;
   const ctUnk=!!(document.querySelector('input[data-unknowncity="'+s+'"]')||{}).checked;
   const genEl=document.querySelector('.b-gender[data-gender="'+s+'"]');
   const gen=(genEl&&genEl.querySelector('button.on'))?genEl.querySelector('button.on').dataset.g:'男';
   let hh=12,mm=0;
   if(!tmUnk&&String(rawTime||'').trim()){
     const pt=parseTimeStr(rawTime);
-    if(!pt)throw new Error('第'+(s==='A'?'一':'二')+'位出生时间格式不对');
+    if(!pt)throw new Error('第'+(s==='A'?'一':'二')+'位出生时间格式不对（小时0-23，分钟0-59）');
     hh=pt.hh;mm=pt.mm;
   }
   const p=window.BaziEngine.paipan(name||('命主'+s),gen,pd.y,pd.m,pd.d,tmUnk?12:hh,tmUnk?0:mm,ctUnk?'':city,false);
