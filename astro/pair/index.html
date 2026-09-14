@@ -461,33 +461,51 @@ $('btnGo').onclick=async()=>{
   $('pText').innerHTML='<div class="a-loading"><span class="orb-ring"></span><span>✦ 两颗星辰正在相互靠近……</span></div>';
   try{
     const d=new Date(),wk=['日','一','二','三','四','五','六'][d.getDay()];
+    /* agent 记忆注入：画像 + 相关记忆 */
+    let pairCtx='';
+    if(typeof window.MemoryTools !== 'undefined' && window.MemoryTools.buildContext){
+      try{ pairCtx=window.MemoryTools.buildContext(a[0]+' 与 '+b[0]+' 的关系'); }catch(e){}
+    }
     const j=await window.AIRelay.complete({
       messages:[{role:'system',content:PAIR_SYS},
-        {role:'user',content:'请推演「'+a[0]+'」（'+a[2]+'，核心性格特质：'+a[3]+'）与「'+b[0]+'」（'+b[2]+'，核心性格特质：'+b[3]+'）之间的星座关系（爱情/友情/搭档均可涵盖，以感情关系为主）。今天日期：'+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 周'+wk+'。请严格贴合两个星座各自的特质，避免通用套话。'}],temperature:.8,max_tokens:1500,
+        {role:'user',content:'请推演「'+a[0]+'」（'+a[2]+'，核心性格特质：'+a[3]+'）与「'+b[0]+'」（'+b[2]+'，核心性格特质：'+b[3]+'）之间的星座关系（爱情/友情/搭档均可涵盖，以感情关系为主）。今天日期：'+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 周'+wk+'。请严格贴合两个星座各自的特质，避免通用套话。'+(pairCtx?'\n\n【记忆与画像】\n'+pairCtx:'')}],temperature:.8,max_tokens:1500,
       onRetry:(tier,n)=>{ $('pText').innerHTML='<div class="a-loading"><span class="orb-ring"></span><span>🔄 '+tier+'重连中（'+n+'/'+window.AIRelay.RETRY+'）…</span></div>'; }});
     const raw=(j.choices[0].message.content||'').trim();
     const m=raw.match(/匹配指数[：:]\s*(\d{1,3})\s*%/);
     $('pScore').textContent=m?('✦ 匹配指数 '+m[1]+'% ✦'):'';
     $('pText').innerHTML=miniMD(raw.replace(/^匹配指数[：:].*$/m,'').trim());
-lastPair={a:a[0],as:a[1],b:b[0],bs:b[1],na:nameA,nb:nameB,score:m?m[1]+'%':'',text:raw,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk};
-     $('pairNote').textContent='✦ 推演完成，可分享这份星辰缘分';
-     /* 保存到记忆库 */
-     if(typeof HistoryManager !== 'undefined') {
-       HistoryManager.savePair({
-         a: nameA || a[0],
-         b: nameB || b[0],
-         score: m?m[1]+'%':'',
-         result: raw,
-         date: d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'
-       });
-     }
-     /* 画像提取（用户#7）：配对解读完成后后台静默提取，不阻塞主流程 */
-     setTimeout(()=>{
-       try{ if(typeof window.TreeHole!=='undefined'&&window.TreeHole.extractProfileSilent) window.TreeHole.extractProfileSilent('想知道「'+a[0]+'」与「'+b[0]+'」的星座关系（'+((nameA||a[0])+'与'+(nameB||b[0]))+'）', raw); }catch(e){}
-     }, 400);
+    /* 善后步骤与渲染分离：任何一步失败都不覆盖已显示的正文 */
+    try{
+      lastPair={a:a[0],as:a[1],b:b[0],bs:b[1],na:nameA,nb:nameB,score:m?m[1]+'%':'',text:raw,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk};
+      $('pairNote').textContent='✦ 推演完成，可分享这份星辰缘分';
+    }catch(e){console.warn('配对记录失败',e);}
+    try{
+      /* 保存到记忆库 */
+      if(typeof HistoryManager !== 'undefined') {
+        HistoryManager.savePair({
+          a: nameA || a[0],
+          b: nameB || b[0],
+          score: m?m[1]+'%':'',
+          result: raw,
+          date: d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'
+        });
+      }
+    }catch(e){console.warn('配对保存历史失败',e);}
+    try{
+      /* 画像提取（用户#7）：配对解读完成后后台静默提取，不阻塞主流程 */
+      setTimeout(()=>{
+        try{ if(typeof window.TreeHole!=='undefined'&&window.TreeHole.extractProfileSilent) window.TreeHole.extractProfileSilent('想知道「'+a[0]+'」与「'+b[0]+'」的星座关系（'+((nameA||a[0])+'与'+(nameB||b[0]))+'）', raw); }catch(e){}
+      }, 400);
+    }catch(e){console.warn('配对画像提取失败',e);}
   }catch(e){
-    $('pText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再试一次</span>';
-    $('pairNote').textContent='';
+    /* 仅当正文还没显示出来才显示中断提示，避免覆盖已显示的正文 */
+    const curTxt=$('pText').innerHTML||'';
+    if(curTxt.indexOf('✕ 观星信号中断了')>=0||curTxt.indexOf('两颗星辰正在相互靠近')>=0||curTxt.indexOf('正在连接')>=0){
+      $('pText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再试一次</span>';
+      $('pairNote').textContent='';
+    }else{
+      console.warn('配对善后步骤出错（正文已显示，保留结果）:',e);
+    }
   }
   pairBusy=false;$('btnGo').disabled=false;
 };
@@ -575,10 +593,11 @@ $('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList
 $('btnBack').onclick=()=>{if(history.length>1)history.back();else location.href='../';};
 </script>
 <script src="../../memory.js"></script>
-<script src="../../ai-relay.js?v=9"></script>
+<script src="../../ai-relay.js?v=10"></script>
+<script src="../../agent-tools.js?v=1"></script>
 <script src="../../music-widget.js?v=1"></script>
 <script src="../../crisis.js"></script>
-<script src="../../treehole.js?v=8"></script>
+<script src="../../treehole.js?v=9"></script>
 <script src="../../personalize.js?v=3"></script>
 <script src="../../supabase-config.js?v=9"></script>
 <script src="../../achievements.js?v=27"></script>

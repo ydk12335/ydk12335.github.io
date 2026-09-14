@@ -369,6 +369,13 @@ async function pick(i){
       const pz=window.Personalize.buildPersonalizedPrompt('astro');
       if(pz)userMsg+=pz;
     }
+    /* agent 记忆注入：画像 + 相关记忆 */
+    if(typeof window.MemoryTools !== 'undefined' && window.MemoryTools.buildContext){
+      try{
+        const ctx=window.MemoryTools.buildContext(name+' 今日运势');
+        if(ctx)userMsg+='\n\n【记忆与画像】\n'+ctx;
+      }catch(e){}
+    }
     let raw=await window.AIRelay.stream({
       messages:[{role:'system',content:HORO_SYS},
         {role:'user',content:userMsg}],temperature:.8,max_tokens:1500,
@@ -377,26 +384,40 @@ async function pick(i){
       onRetry:(tier,n)=>{ if(my===horoSeq)$('aText').innerHTML='<div class="a-loading"><span class="orb-ring"></span><span>🔄 '+tier+'重连中（'+n+'/'+window.AIRelay.RETRY+'）…</span></div>'; }});
     if(my!==horoSeq)return;
     raw=String(raw||'').trim();
-     $('aText').innerHTML=miniMD(raw);
-     /* 记录本次运势供分享 */
-     lastHoro={sign:name,sym,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk,text:raw};
-     $('aShare').style.display='flex';
-     /* 保存到记忆库 */
-     if(typeof HistoryManager !== 'undefined') {
-       HistoryManager.saveHoroscope({
-         sign: name,
-         date: d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日',
-         result: raw
-       });
-     }
-     /* 画像提取（用户#7）：观星解读完成后后台静默提取，不阻塞主流程 */
-     setTimeout(()=>{
-       try{ if(typeof window.TreeHole!=='undefined'&&window.TreeHole.extractProfileSilent) window.TreeHole.extractProfileSilent('求「'+name+'」今日运势（'+range+'）', raw); }catch(e){}
-     }, 400);
+    if(!raw){throw new Error('空响应');}
+    $('aText').innerHTML=miniMD(raw);
+    /* 善后步骤与渲染分离：任何一步失败都不覆盖已显示的正文 */
+    try{
+      /* 记录本次运势供分享 */
+      lastHoro={sign:name,sym,date:d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wk,text:raw};
+      $('aShare').style.display='flex';
+    }catch(e){console.warn('观星分享记录失败',e);}
+    try{
+      /* 保存到记忆库 */
+      if(typeof HistoryManager !== 'undefined') {
+        HistoryManager.saveHoroscope({
+          sign: name,
+          date: d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日',
+          result: raw
+        });
+      }
+    }catch(e){console.warn('观星保存历史失败',e);}
+    try{
+      /* 画像提取（用户#7）：观星解读完成后后台静默提取，不阻塞主流程 */
+      setTimeout(()=>{
+        try{ if(typeof window.TreeHole!=='undefined'&&window.TreeHole.extractProfileSilent) window.TreeHole.extractProfileSilent('求「'+name+'」今日运势（'+range+'）', raw); }catch(e){}
+      }, 400);
+    }catch(e){console.warn('观星画像提取失败',e);}
   }catch(e){
     if(my!==horoSeq)return;
-    $('aShare').style.display='none';
-    $('aText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再点一次星座试试</span>';
+    /* 仅当正文还没显示出来才显示中断提示，避免覆盖已显示的正文 */
+    const curTxt=$('aText').innerHTML||'';
+    if(curTxt.indexOf('✕ 观星信号中断了')>=0||curTxt.indexOf('正在为你观星')>=0||curTxt.indexOf('星辰推演中')>=0){
+      $('aShare').style.display='none';
+      $('aText').innerHTML='<strong style="color:#ff9d9d">✕ 观星信号中断了…</strong><br><span style="font-size:.85rem;color:#b5abd8">请检查网络后再点一次星座试试</span>';
+    }else{
+      console.warn('观星善后步骤出错（正文已显示，保留结果）:',e);
+    }
   }
 }
 let lastHoro=null;
@@ -488,10 +509,11 @@ $('btnShot').onclick=()=>{
   $('btnBack').onclick=()=>{if(history.length>1)history.back();else location.href='../';};
 </script>
 <script src="../memory.js"></script>
-<script src="../ai-relay.js?v=9"></script>
+<script src="../ai-relay.js?v=10"></script>
+<script src="../agent-tools.js?v=1"></script>
 <script src="../music-widget.js?v=1"></script>
 <script src="../crisis.js"></script>
-<script src="../treehole.js?v=8"></script>
+<script src="../treehole.js?v=9"></script>
 <script src="../personalize.js?v=3"></script>
 <script src="../supabase-config.js?v=9"></script>
 <script src="../achievements.js?v=27"></script>

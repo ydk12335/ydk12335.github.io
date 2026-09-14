@@ -231,8 +231,9 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 <script src="bazi-engine.js"></script>
 <script src="../memory.js"></script>
 <script src="../ai-prompt-template.js"></script>
-<script src="../treehole.js?v=8"></script>
-<script src="../ai-relay.js?v=9"></script>
+<script src="../treehole.js?v=9"></script>
+<script src="../ai-relay.js?v=10"></script>
+<script src="../agent-tools.js?v=1"></script>
 <script>
 'use strict';
 /* ================= 基础 ================= */
@@ -669,6 +670,11 @@ function readMemContext(){
 }
 async function askAI(p){
   const memCtx=readMemContext();
+  /* agent 记忆注入：画像 + 相关记忆（记忆库 v2 + 聊天记录），比本地历史更全 */
+  let agentCtx='';
+  if(typeof window.MemoryTools !== 'undefined' && window.MemoryTools.buildContext){
+    try{ agentCtx=window.MemoryTools.buildContext('命盘 八字 运势'); }catch(e){}
+  }
   /* 命理专属要求（只写板块特有的，通用人设/中立/结合经历都在模板里） */
   const BAZI_SPECIALTY='你是一位资深命理先生，承子平遗风，熟读《三命通会》《渊海子平》《滴天髓征义》《穷通宝鉴》《子平真诠评注》等经典，'
     +'人称"子平先生"。你收到的是一套真实的四柱八字排盘结果（含四柱干支、十神、五行、格局、大运、神煞、命宫身宫等）。'
@@ -717,7 +723,7 @@ async function askAI(p){
   try{
     txt=await window.AIRelay.stream({
       temperature:.85,max_tokens:2000,
-      messages:[{role:'system',content:sys},{role:'user',content:'请为下面这个命盘做深度解析。'}],
+      messages:[{role:'system',content:sys},{role:'user',content:'请为下面这个命盘做深度解析。'+(agentCtx?'\n\n【记忆与画像】\n'+agentCtx:'')}],
       onDelta:(_c,total)=>{ shown=total;if(tx){tx.innerHTML=mdToHtml(shown)+renderEnd;} },
       onReason:(r)=>{
         const w=document.querySelector('#panAIStatus .status-word');

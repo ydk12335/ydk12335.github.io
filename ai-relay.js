@@ -74,9 +74,12 @@
 
   /** 非流式补全（支持 progress SSE 进度事件解析） */
   async function complete(opts) {
-    const { messages, temperature, max_tokens, onRetry, onProgress } = opts || {};
+    const { messages, temperature, max_tokens, onRetry, onProgress, tools, tool_choice } = opts || {};
     return relay(async (tier) => {
       const body = { messages, temperature, max_tokens };
+      // 透传工具定义（agnes-2.5-flash 支持 function calling，Edge Function 纯透传）
+      if (tools && tools.length) body.tools = tools;
+      if (tool_choice) body.tool_choice = tool_choice;
       // progress 模式：带进度事件（Edge Function 返回 SSE，逐条上报线路切换过程）
       if (onProgress) body.progress = true;
       const res = await tryFetch(tier, body);
@@ -113,9 +116,12 @@
      onReason(reasonFull)：思考过程累计全文（用于「已推理 X 字」进度提示）
      onDelta(content, full)：正文增量与累计全文 */
   async function stream(opts) {
-    const { messages, temperature, max_tokens, onDelta, onReason, onRetry } = opts || {};
+    const { messages, temperature, max_tokens, onDelta, onReason, onRetry, tools, tool_choice } = opts || {};
     return relay(async (tier) => {
-      const res = await tryFetch(tier, { messages, temperature, max_tokens, stream: true });
+      const body = { messages, temperature, max_tokens, stream: true };
+      if (tools && tools.length) body.tools = tools;
+      if (tool_choice) body.tool_choice = tool_choice;
+      const res = await tryFetch(tier, body);
       const ct = (res.headers.get('content-type') || '');
       /* 兜底：若上游未按 SSE 返回，则整包 JSON 解析 */
       if (!ct.includes('text/event-stream')) {
@@ -157,5 +163,49 @@
     }, onRetry);
   }
 
-  window.AIRelay = { complete, stream, TIERS, RETRY, relay };
+  /**
+   * Agent 循环：模型可主动调用工具，前端执行后把结果回填，直到模型产出最终正文。
+   * - 每轮非流式（快，模型先决策要不要查记忆）
+   * - 若返回 tool_calls → 执行每个工具 → 把结果作为 tool 消息续发 → 下一轮
+   * - 最多 maxRounds 轮（默认 4），防止死循环
+   * @param {object} opts
+   * @param {Array}  opts.messages      对话消息（会复制，不污染原数组）
+   * @param {Array}  opts.tools         工具定义（OpenAI 格式）
+   * @param {Function} opts.executeTool async (name, args) => string  执行工具，返回结果字符串
+   * @param {Function} opts.onTool      每轮工具执行后回调 (name, args, result)，用于 UI 提示
+   * @param {number}  opts.maxRounds    最大轮数
+   * @returns {Promise<object>} 最终完整响应 { choices, usage }
+   */
+  async function agent(opts) {
+    const { messages, tools, executeTool, onTool, onRetry, maxRounds, temperature, max_tokens } = opts || {};
+    if (!Array.isArray(tools) || !tools.length || typeof executeTool !== 'function') {
+      // 没工具就当普通 complete 用
+      return complete({ messages, temperature, max_tokens, onRetry });
+    }
+    const rounds = Math.max(1, maxRounds || 4);
+    const msgs = (messages || []).slice();
+    for (let i = 0; i < rounds; i++) {
+      const j = await complete({ messages: msgs, temperature, max_tokens, tools, tool_choice: 'auto', onRetry });
+      const msg = j && j.choices && j.choices[0] && j.choices[0].message;
+      const calls = (msg && msg.tool_calls) || [];
+      if (!calls.length) return j;   // 模型直接回答 → 完成
+      // 记录 assistant 的 tool_calls 消息
+      msgs.push({ role: 'assistant', content: msg.content || '', tool_calls: calls });
+      for (const call of calls) {
+        const fn = call.function || {};
+        let result = '';
+        try {
+          const args = JSON.parse(fn.arguments || '{}');
+          result = await executeTool(fn.name, args);
+        } catch (e) { result = '工具执行失败: ' + (e && e.message || e); }
+        if (onTool) { try { onTool(fn.name, JSON.parse(fn.arguments || '{}'), result); } catch (e2) {} }
+        msgs.push({ role: 'tool', tool_call_id: call.id, content: String(result).slice(0, 4000) });
+      }
+    }
+    // 超过轮数：返回最后一轮（可能是 tool_calls，调用方自行处理）
+    const j = await complete({ messages: msgs, temperature, max_tokens, tools, tool_choice: 'none', onRetry });
+    return j;
+  }
+
+  window.AIRelay = { complete, stream, agent, TIERS, RETRY, relay };
 })();

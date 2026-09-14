@@ -312,7 +312,7 @@
       '你是一个树洞，就是个普通人，听人说话的那种。不装深沉、不文艺、不煽情。',
       '【最重要·真的去想 TA 说了什么】',
       '· 先读懂 TA 的具体事和情绪，回应贴着那个具体内容走——TA 说工作就问工作，提到谁就接谁，不许绕开去说万能话；',
-      '· 每句都要有信息量：真实反应（心疼/无语/好笑/惊讶）、一个具体的追问、或顺着往下聊；',
+      '· 每句都要有信息量：真实反应（心疼/无语/好笑/惊讶）、自己的看法或经历、或顺着往下聊；要带问句就贴着 TA 刚说的具体内容问（"你说的那个领导后来咋说"），别问"然后呢"这种万能废话，也绝不连环问；',
       '· 有情绪先表达情绪："哎""服了""哈哈哈""这也太难了"，再说别的；',
       '· 短：一两句到三四句，一句一行，像发微信，别写小作文、别端着；',
       '· 语气词自然用（呀/呢/啦/哦/嘛/叭），别堆。',
@@ -323,10 +323,11 @@
       '· 假客气："我们聊聊吧""有什么都可以和我说""不用怕"；',
       '· 环境描写和文艺腔：月光/海水/风/星星/深夜这类字一个都别出现；',
       '· 大道理、说教、硬塞建议；也不许凭空编造 TA 没说过的事、替 TA 下结论。',
+      '· 问废话："然后呢""后来呢""还有呢""具体说说"——要问就问能看出你真在想的（他提到的人/事/矛盾点），贴着内容问，别问没营养的万能问句；',
       '【怎么接不同的情绪】',
-      '· 伤心事：别急着安慰给建议，先接实话"这也太难了"，再问一两个具体细节（当时咋想的/后来呢）；',
+      '· 伤心事：先接实话"这也太难了"；可以问一个细节（当时咋想的？），对方接了你就陪着聊，不接就别追问；',
       '· 吐槽：跟着吐槽或"这也太离谱了"，站在 TA 那边；',
-      '· 好事：真心替 TA 高兴，问具体的（真的假的/啥时候/然后呢）。',
+      '· 好事：真心替 TA 高兴，多表达你的反应，可以问一个具体的，别连环问细节。',
       '【记住】TA 说过的事记着，下次自然提一句，别生硬罗列。',
       '【占卜】上面若有 TA 最近占卜的记录，聊天时自然顺着 TA 问过的事接话（问过工作就问进展，问过感情就关心关系），要有针对性。',
       '【格式】不要 Markdown、不加粗、不列表、不用【】标签。'
@@ -400,7 +401,7 @@
   function crisisReply() {
     return '嗯，我在。\n我担心你。\n请现在拨打 12356（全国心理援助热线，免费、24小时），或 12355（青少年心理援助热线）。\n也可以打 110 或 120。\n别一个人扛。';
   }
-  /** 用户发消息 → 追加短期记忆 → 调 AI（带画像 + 最近10条 + 摘要）→ 返回回复文本 */
+  /** 用户发消息 → 追加短期记忆 → 调 AI（带画像 + 最近10条 + 摘要 + agent工具）→ 返回回复文本 */
   async function sendMessage(userText, onDelta, onRetry) {
     const chats = readChats();
     appendChat('user', userText);
@@ -420,18 +421,52 @@
     /* 短期记忆：最近 10 条 */
     const recent = recentChats(SHORT_TERM);
     recent.forEach(m => messages.push({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
+    /* agent 工具：模型可主动 search_memory（翻旧记忆）/ save_memory（存新事实） */
+    const tools = (window.MemoryTools && window.MemoryTools.TOOLS) || [];
 
     let full = '';
+    const doComplete = async () => {
+      const j = await window.AIRelay.complete({ messages, temperature: .85, max_tokens: 1200, onRetry, tools });
+      return j && j.choices && j.choices[0] && (j.choices[0].message.content || '').trim() || '';
+    };
     if (onDelta) {
-      full = await window.AIRelay.stream({
-        messages,
-        temperature: .85, max_tokens: 1200,
-        onDelta: (d) => { full += d; if (onDelta) onDelta(d); },
-        onRetry
-      });
+      /* 流式 + agent：先让模型用非流式快决策（工具调用 → 执行 → 回填），
+         拿到最终正文后按原有流式逻辑逐字播放，保留打字机体验 */
+      if (tools.length && window.AIRelay.agent) {
+        const j = await window.AIRelay.agent({
+          messages,
+          tools,
+          temperature: .85, max_tokens: 1200, maxRounds: 3,
+          executeTool: (name, args) => (window.MemoryTools.execute(name, args)),
+          onRetry
+        });
+        full = j && j.choices && j.choices[0] && (j.choices[0].message.content || '').trim() || '';
+      }
+      if (full) {
+        /* 把最终正文逐字播放，模拟流式输出 */
+        for (const ch of full) { if (onDelta) onDelta(ch); await new Promise(r => setTimeout(r, 16)); }
+        if (onDelta) onDelta('\n');
+      } else {
+        /* agent 没产出 → 直接真流式（此时已含记忆注入，保持原有体验） */
+        full = await window.AIRelay.stream({
+          messages,
+          temperature: .85, max_tokens: 1200,
+          onDelta: (d) => { if (onDelta) onDelta(d); },
+          onRetry
+        });
+      }
     } else {
-      const j = await window.AIRelay.complete({ messages, temperature: .85, max_tokens: 1200, onRetry });
-      full = j && j.choices && j.choices[0] && (j.choices[0].message.content || '').trim() || '';
+      /* 非流式：直接走 agent（模型可查记忆/存记忆后一次性回答） */
+      if (tools.length && window.AIRelay.agent) {
+        const j = await window.AIRelay.agent({
+          messages, tools,
+          temperature: .85, max_tokens: 1200, maxRounds: 3,
+          executeTool: (name, args) => (window.MemoryTools.execute(name, args)),
+          onRetry
+        });
+        full = j && j.choices && j.choices[0] && (j.choices[0].message.content || '').trim() || '';
+      }
+      if (!full) full = await doComplete();
     }
     if (full) {
       appendChat('assistant', full);

@@ -637,6 +637,13 @@ function buildPrompt(){
     const pz=window.Personalize.buildPersonalizedPrompt('tarot');
     if(pz)L.push(pz);
   }
+  /* agent 记忆注入：画像 + 相关记忆（记忆库 v2 + 聊天记录） */
+  if(typeof window.MemoryTools !== 'undefined' && window.MemoryTools.buildContext){
+    try{
+      const ctx=window.MemoryTools.buildContext(q||'近期整体状态');
+      if(ctx)L.push('【记忆与画像】\n'+ctx);
+    }catch(e){}
+  }
   return L.join('\n');
 }
 const SYS_PROMPT=`你是一位经验丰富、口碑极好的华人专业塔罗师，人称"月下塔罗师"。你现在收到的是一套真实的韦特塔罗抽牌结果（含日期星期、牌阵、各位置的牌、正逆位与通行词义）。请严格基于这套给出的牌进行解读，绝不虚构或替换任何一张牌。\
@@ -879,12 +886,18 @@ async function sendFollowup(){
   btn.disabled=true;
   note.innerHTML='<span style="color:#a79ade">🌙 塔罗师正凝视牌面，思考你的追问……</span>';
   const lastAns=fuHistory.length?fuHistory[fuHistory.length-1].a:'';
+  /* agent 记忆注入：追问也结合画像与相关记忆 */
+  let fuCtxMem='';
+  if(typeof window.MemoryTools !== 'undefined' && window.MemoryTools.buildContext){
+    try{ fuCtxMem=window.MemoryTools.buildContext(q); }catch(e){}
+  }
   try{
     const j=await window.AIRelay.complete({
       temperature:.8,max_tokens:1200,
       messages:[
         {role:'system',content:'你是「月下塔罗师」。求问者刚完成一次塔罗占卜并已收到完整解读，现在可以就**这次牌面**继续追问，最多 3 次。\n'+
           '【本次占卜】'+fuCtx+'\n'+
+          (fuCtxMem?'【记忆与画像】\n'+fuCtxMem+'\n':'')+
           '【规则】1. 回答必须紧扣本次抽到的牌与已给出的解读，可以展开某张牌、某个位置、某段结论，也可以结合牌面给出更细的建议；\n'+
           '2. 如果追问与本次占卜的问题和牌面明显无关（例如问别的占卜、闲聊、要求重新占卜、问与牌面无关的事实信息等），你必须婉拒：以塔罗师的口吻温和说明牌面能量只覆盖这一次占问，建议重新洗牌开一局，输出不超过 3 句话；\n'+
           '3. 保持公正中立，不要为了迎合用户而只说好话。如果牌面显示的是警示或负面信息，如实告知；\n'+
