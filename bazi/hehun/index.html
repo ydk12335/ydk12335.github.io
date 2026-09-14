@@ -125,6 +125,20 @@ body[data-phase="day"] .pan-col .pc-gz,body[data-phase="dusk"] .pan-col .pc-gz{c
 .rel-custom{display:flex;gap:8px;justify-content:center;align-items:center;margin-top:10px;width:min(560px,94vw)}
 .rel-custom .b-input{flex:1;max-width:340px}
 body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--muted)}
+/* ---------- 分享弹窗（对齐单盘命盘页） ---------- */
+.mask{position:fixed;inset:0;z-index:99;background:rgba(3,1,14,.86);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;padding:24px}
+.mask.show{display:flex}
+.sheet{width:min(560px,94vw);background:rgba(18,14,36,.92);border:1px solid rgba(240,207,130,.22);
+  border-radius:20px;padding:clamp(14px,3vw,22px);box-shadow:0 18px 60px rgba(0,0,0,.5);
+  font-family:inherit;color:var(--ivory)}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.sheet-h .t{color:var(--gold);letter-spacing:.12em;font-size:.95rem}
+.sheet-h .x{background:none;border:none;color:#b5abd8;font-size:1.1rem;cursor:pointer;font-family:inherit;padding:4px 8px}
+.btn{border-radius:999px;padding:11px 24px;font-family:inherit;font-size:.85rem;letter-spacing:.08em;cursor:pointer;transition:.25s;border:1px solid transparent}
+.btn:active{transform:scale(.95)}
+.btn-primary{background:linear-gradient(160deg,rgba(240,207,130,.25),rgba(255,255,255,.05));border-color:rgba(240,207,130,.55);color:#f6ecc9}
+.btn-ghost{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#d8d0ef}
 @media(max-width:420px){.b-row{flex-direction:column}.b-row .b-field{flex:auto}}
 </style>
 </head>
@@ -180,17 +194,27 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
       </div>
       <div class="b-row">
         <div class="b-field">
-          <label class="b-label">出生时间</label>
+          <label class="b-label">出生时间（24小时制）</label>
           <div class="b-pickrow">
-            <input class="b-input" id="pTimeA" type="text" inputmode="numeric" value="10:00" placeholder="如 10:30 或 1030" autocomplete="off">
+            <input class="b-input" id="pTimeA" type="text" inputmode="numeric" value="10:00" placeholder="如 14:30 或 1430（24小时制）" autocomplete="off">
             <button type="button" class="b-pick" data-pick="pTimeA">⏰</button>
           </div>
           <label class="b-unknown"><input type="checkbox" data-unknowntime="pTimeA"> 时间未知</label>
         </div>
         <div class="b-field">
+          <label class="b-label">省份</label>
+          <select class="b-select" data-province="A"></select>
+        </div>
+      </div>
+      <div class="b-row">
+        <div class="b-field">
           <label class="b-label">城市</label>
           <select class="b-select" data-city="A"></select>
           <label class="b-unknown"><input type="checkbox" data-unknowncity="A"> 地点未知</label>
+        </div>
+        <div class="b-field">
+          <label class="b-label">搜索城市</label>
+          <input class="b-input" data-citysearch="A" type="text" placeholder="输入城市名，如：义乌" autocomplete="off">
         </div>
       </div>
       <div class="b-field">
@@ -200,6 +224,7 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
           <button data-g="女">女</button>
         </div>
       </div>
+    </div>
     </div>
 
     <div class="b-pair-person">
@@ -219,17 +244,27 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
       </div>
       <div class="b-row">
         <div class="b-field">
-          <label class="b-label">出生时间</label>
+          <label class="b-label">出生时间（24小时制）</label>
           <div class="b-pickrow">
-            <input class="b-input" id="pTimeB" type="text" inputmode="numeric" value="14:30" placeholder="如 14:30 或 1430" autocomplete="off">
+            <input class="b-input" id="pTimeB" type="text" inputmode="numeric" value="14:30" placeholder="如 14:30 或 1430（24小时制）" autocomplete="off">
             <button type="button" class="b-pick" data-pick="pTimeB">⏰</button>
           </div>
           <label class="b-unknown"><input type="checkbox" data-unknowntime="pTimeB"> 时间未知</label>
         </div>
         <div class="b-field">
+          <label class="b-label">省份</label>
+          <select class="b-select" data-province="B"></select>
+        </div>
+      </div>
+      <div class="b-row">
+        <div class="b-field">
           <label class="b-label">城市</label>
           <select class="b-select" data-city="B"></select>
           <label class="b-unknown"><input type="checkbox" data-unknowncity="B"> 地点未知</label>
+        </div>
+        <div class="b-field">
+          <label class="b-label">搜索城市</label>
+          <input class="b-input" data-citysearch="B" type="text" placeholder="输入城市名，如：义乌" autocomplete="off">
         </div>
       </div>
       <div class="b-field">
@@ -250,8 +285,22 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
     <div class="p-rel" id="pRel"></div>
     <div class="a-card" id="pText"></div>
     <div class="pair-share">
+      <button class="soon-pill" id="btnPairShare">🖼 图片分享</button>
       <button class="soon-pill" id="btnPairCopy">📋 文字分享</button>
       <button class="soon-pill" id="btnHole">🕳️ 去树洞聊聊</button>
+    </div>
+  </div>
+
+  <!-- 分享弹窗 -->
+  <div class="mask" id="shotModal" style="z-index:99;align-items:center;justify-content:center">
+    <div class="sheet" style="border-radius:20px;max-height:86vh;display:flex;flex-direction:column;gap:12px;align-items:center">
+      <div class="sheet-h" style="width:100%"><div class="t">📤 分享这次合盘</div><button class="x" id="shotClose">✕</button></div>
+      <img id="shotImg" alt="分享图" style="max-width:92%;max-height:52vh;border-radius:12px;box-shadow:0 14px 46px rgba(0,0,0,.5)">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <button class="btn btn-primary" id="btnShotImg" style="flex:0 0 auto;padding:11px 24px">🖼 图片分享</button>
+        <button class="btn btn-ghost" id="btnShotTxt" style="flex:0 0 auto;padding:11px 24px">📋 文字分享</button>
+      </div>
+      <div style="font-size:.72rem;color:rgba(var(--gold-rgb),.5);letter-spacing:.08em">也可以长按图片直接保存</div>
     </div>
   </div>
 
@@ -304,15 +353,81 @@ addEventListener('resize',resizeStars);resizeStars();requestAnimationFrame(drawS
 /* ================= 返回 ================= */
 $('btnBack').onclick=()=>{location.href='../';};
 
-/* ================= 城市下拉 ================= */
+/* ================= 城市：省份 → 城市 联动 + 搜索 ================= */
 (function(){
   const CITY_LON=window.BaziEngine&&BaziEngine.CITY_LON||{};
-  const common=['北京','上海','广州','深圳','杭州','南京','武汉','成都','重庆','西安','天津','苏州','长沙','郑州','沈阳','青岛','大连','厦门','福州','济南','合肥','南昌','昆明','贵阳','南宁','海口','哈尔滨','长春','太原','石家庄','兰州','西宁','银川','乌鲁木齐','呼和浩特','拉萨','香港','澳门','台北'];
-  const list=[];
-  common.forEach(c=>{if(CITY_LON[c])list.push(c);});
-  Object.keys(CITY_LON).forEach(c=>{if(!list.includes(c))list.push(c);});
-  const opts=list.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
-  document.querySelectorAll('select[data-city]').forEach(s=>{s.innerHTML=opts;s.value='北京';});
+  /* 省份 → 城市 映射（城市名与引擎键一致；直辖市区县并作市） */
+  const PROV_CITY={
+    '北京':['北京'],
+    '天津':['天津'],
+    '上海':['上海'],
+    '重庆':['重庆'],
+    '河北':['石家庄','唐山','秦皇岛','邯郸','邢台','保定','张家口','承德','沧州','廊坊','衡水','辛集市','晋州市','新乐市','遵化市','迁安市','滦州市','武安市','南宫市','沙河市','涿州市','定州市','安国市','高碑店市','平泉市','泊头市','任丘市','黄骅市','河间市','霸州市','三河市','深州市'],
+    '山西':['太原','大同','阳泉','长治','晋城','朔州','晋中','运城','忻州','临汾','吕梁','古交市','高平市','怀仁市','介休市','永济市','河津市','原平市','侯马市','霍州市','孝义市','汾阳市'],
+    '内蒙古':['呼和浩特','包头','乌海','赤峰','通辽','鄂尔多斯','呼伦贝尔','巴彦淖尔','乌兰察布','兴安盟','锡林郭勒','阿拉善','霍林郭勒市','满洲里市','牙克石市','扎兰屯市','额尔古纳市','根河市','丰镇市','乌兰浩特市','阿尔山市','二连浩特市','锡林浩特市'],
+    '辽宁':['沈阳','大连','鞍山','抚顺','本溪','丹东','锦州','营口','阜新','辽阳','盘锦','铁岭','朝阳','葫芦岛','新民市','瓦房店市','庄河市','海城市','东港市','凤城市','凌海市','北镇市','盖州市','大石桥市','灯塔市','调兵山市','开原市','北票市','凌源市','兴城市'],
+    '吉林':['长春','吉林','四平','辽源','通化','白山','松原','白城','延边','榆树市','德惠市','公主岭市','蛟河市','桦甸市','舒兰市','磐石市','双辽市','梅河口市','集安市','临江市','扶余市','洮南市','大安市','延吉市','图们市','敦化市','珲春市','龙井市','和龙市'],
+    '黑龙江':['哈尔滨','齐齐哈尔','鸡西','鹤岗','双鸭山','大庆','伊春','佳木斯','七台河','牡丹江','黑河','绥化','大兴安岭','尚志市','双城市','五常市','讷河市','密山市','虎林市','铁力市','同江市','富锦市','绥芬河市','海林市','宁安市','穆棱市','北安市','五大连池市','安达市','肇东市','海伦市'],
+    '江苏':['南京','无锡','徐州','常州','苏州','南通','连云港','淮安','盐城','扬州','镇江','泰州','宿迁','江阴市','宜兴市','新沂市','邳州市','溧阳市','常熟市','张家港市','昆山市','太仓市','启东市','如皋市','海安市','东台市','仪征市','高邮市','丹阳市','扬中市','句容市','兴化市','靖江市','泰兴市'],
+    '浙江':['杭州','宁波','温州','嘉兴','湖州','绍兴','金华','衢州','舟山','台州','丽水','建德市','余姚市','慈溪市','瑞安市','乐清市','海宁市','平湖市','桐乡市','诸暨市','嵊州市','兰溪市','义乌市','东阳市','永康市','江山市','温岭市','临海市','龙泉市'],
+    '安徽':['合肥','芜湖','蚌埠','淮南','马鞍山','淮北','铜陵','安庆','黄山','滁州','阜阳','宿州','六安','亳州','池州','宣城','巢湖市','天长市','明光市','桐城市','宁国市','界首市'],
+    '福建':['福州','厦门','莆田','三明','泉州','漳州','南平','龙岩','宁德','福清市','长乐市','永安市','石狮市','晋江市','南安市','龙海市','邵武市','武夷山市','建瓯市','建阳市','漳平市','福安市','福鼎市'],
+    '江西':['南昌','景德镇','萍乡','九江','新余','鹰潭','赣州','吉安','宜春','抚州','上饶','乐平市','瑞昌市','共青城市','贵溪市','瑞金市','井冈山市','丰城市','樟树市','高安市','德兴市'],
+    '山东':['济南','青岛','淄博','枣庄','东营','烟台','潍坊','济宁','泰安','威海','日照','临沂','德州','聊城','滨州','菏泽','胶州市','即墨市','平度市','莱西市','滕州市','龙口市','莱阳市','莱州市','蓬莱市','招远市','栖霞市','海阳市','青州市','诸城市','寿光市','安丘市','高密市','昌邑市','曲阜市','邹城市','新泰市','肥城市','乳山市','荣成市','文登市','乐陵市','禹城市','临清市'],
+    '河南':['郑州','开封','洛阳','平顶山','安阳','鹤壁','新乡','焦作','濮阳','许昌','漯河','三门峡','南阳','商丘','信阳','周口','驻马店','济源','巩义市','荥阳市','新密市','新郑市','登封市','偃师市','舞钢市','汝州市','林州市','卫辉市','辉县市','沁阳市','孟州市','禹州市','长葛市','义马市','灵宝市','邓州市','永城市','项城市'],
+    '湖北':['武汉','黄石','十堰','宜昌','襄阳','鄂州','荆门','孝感','荆州','黄冈','咸宁','随州','恩施','大冶市','丹江口市','宜都市','枝江市','当阳市','宜城市','钟祥市','应城市','安陆市','汉川市','石首市','洪湖市','松滋市','麻城市','武穴市','赤壁市','广水市','仙桃市','潜江市','天门市','利川市'],
+    '湖南':['长沙','株洲','湘潭','衡阳','邵阳','岳阳','常德','张家界','益阳','郴州','永州','怀化','娄底','湘西','浏阳市','醴陵市','湘乡市','韶山市','耒阳市','常宁市','武冈市','汨罗市','临湘市','津市市','沅江市','资兴市','洪江市','冷水江市','涟源市','吉首市'],
+    '广东':['广州','韶关','深圳','珠海','汕头','佛山','江门','湛江','茂名','肇庆','惠州','梅州','汕尾','河源','阳江','清远','东莞','中山','潮州','揭阳','云浮','南雄市','乐昌市','台山市','开平市','鹤山市','恩平市','廉江市','雷州市','吴川市','高州市','化州市','信宜市','四会市','兴宁市','陆丰市','阳春市','英德市','连州市','普宁市','罗定市'],
+    '广西':['南宁','柳州','桂林','梧州','北海','防城港','钦州','贵港','玉林','百色','贺州','河池','来宾','崇左','岑溪市','东兴市','桂平市','平果市','宜州市','凭祥市','合山市'],
+    '海南':['海口','三亚','儋州','琼海','文昌','万宁','东方','五指山'],
+    '四川':['成都','自贡','攀枝花','泸州','德阳','绵阳','广元','遂宁','内江','乐山','南充','眉山','宜宾','广安','达州','雅安','巴中','资阳','阿坝','甘孜','凉山','都江堰市','彭州市','邛崃市','崇州市','简阳市','广汉市','什邡市','绵竹市','江油市','峨眉山市','阆中市','华蓥市','万源市','会理市','康定市','马尔康市','西昌市'],
+    '贵州':['贵阳','六盘水','遵义','安顺','毕节','铜仁','黔西南','黔东南','黔南','清镇市','赤水市','仁怀市','兴义市','凯里市','都匀市','福泉市'],
+    '云南':['昆明','曲靖','玉溪','保山','昭通','丽江','普洱','临沧','楚雄','红河','文山','西双版纳','大理','德宏','怒江','迪庆','安宁市','宣威市','腾冲市','芒市','瑞丽市','泸水市','香格里拉市'],
+    '西藏':['拉萨','日喀则','昌都','林芝','山南','那曲','阿里'],
+    '陕西':['西安','铜川','宝鸡','咸阳','渭南','延安','汉中','榆林','安康','商洛','韩城市','华阴市','兴平市','神木市','子长市'],
+    '甘肃':['兰州','嘉峪关','金昌','白银','天水','武威','张掖','平凉','酒泉','庆阳','定西','陇南','临夏','甘南','玉门市','敦煌市','合作市','临夏市'],
+    '青海':['西宁','海东','海北','黄南','海南州','果洛','玉树','海西','格尔木市','德令哈市','茫崖市'],
+    '宁夏':['银川','石嘴山','吴忠','固原','中卫','灵武市','青铜峡市'],
+    '新疆':['乌鲁木齐','克拉玛依','吐鲁番','哈密','昌吉','博尔塔拉','巴音郭楞','阿克苏','克孜勒苏','喀什','和田','伊犁','塔城','阿勒泰','石河子市','阿拉尔市','图木舒克市','五家渠市','北屯市','铁门关市','双河市','可克达拉市','昆玉市','胡杨河市','新星市'],
+    '港澳台':['香港','澳门','台北','高雄','台中','台南','新北','桃园','基隆','新竹','嘉义']
+  };
+  /* 直辖市/特别行政区/自治区简写 */
+  const allProv=Object.keys(PROV_CITY);
+  /* 过滤：只保留引擎里真实存在的城市 */
+  const filt=arr=>(arr||[]).filter(c=>CITY_LON[c]);
+  /* 初始化每个 data-province / data-city / data-citysearch 对 */
+  document.querySelectorAll('select[data-province]').forEach(ps=>{
+    const tag=ps.dataset.province;
+    const cs=document.querySelector('select[data-city="'+tag+'"]');
+    const sr=document.querySelector('input[data-citysearch="'+tag+'"]');
+    ps.innerHTML='<option value="">选择省份</option>'+allProv.map(p=>'<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');
+    const fillCities=prov=>{
+      if(!cs)return;
+      const list=prov?filt(PROV_CITY[prov]||[]):[];
+      cs.innerHTML=list.length
+        ? list.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')
+        : '<option value="">—</option>';
+      if(prov)cs.value=list[0]||'';
+    };
+    ps.addEventListener('change',()=>{fillCities(ps.value);if(sr)sr.value='';});
+    /* 搜索：实时过滤省份下拉（模糊匹配城市名，命中即跳转省份并选中） */
+    if(sr){
+      sr.addEventListener('input',()=>{
+        const kw=sr.value.trim();
+        if(!kw){return;}
+        for(const p of allProv){
+          const hit=filt(PROV_CITY[p]).find(c=>c.indexOf(kw)>=0);
+          if(hit){
+            if(ps.value!==p){ps.value=p;fillCities(p);}
+            if(cs&&cs.querySelector('option[value="'+esc(hit)+'"]'))cs.value=hit;
+            return;
+          }
+        }
+      });
+    }
+    /* 默认：北京 */
+    ps.value='北京';fillCities('北京');
+  });
 })();
 
 /* ================= 关系类型选择（带介绍 + 自定义） ================= */
@@ -754,19 +869,145 @@ function autoSavePair(pa,pb,he,aiText){
 /* ================= 分享 / 去树洞 ================= */
 function stripHtml(h){const d=document.createElement('div');d.innerHTML=h;return d.innerText||d.textContent||'';}
 function fb(t){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
-$('btnPairCopy').onclick=()=>{
-  if(!lastPair||!lastPair.text){alert('先推演一次合盘');return;}
+/* ---------- 分享弹窗基础 ---------- */
+let shotModal=null;
+function getShotModal(){
+  if(shotModal)return shotModal;
+  shotModal=document.getElementById('shotModal');
+  if(shotModal){
+    shotModal.addEventListener('click',e=>{if(e.target===shotModal)shotModal.classList.remove('show');});
+    const c=document.getElementById('shotClose');
+    if(c)c.addEventListener('click',()=>shotModal.classList.remove('show'));
+  }
+  return shotModal;
+}
+function openShot(imgBlob){
+  const m=getShotModal();if(!m)return;
+  const im=document.getElementById('shotImg');
+  if(im&&imgBlob)im.src=URL.createObjectURL(imgBlob);
+  m.classList.add('show');
+}
+/* ---------- 合盘分享数据 + 图片长卡 ---------- */
+function buildPairShareCtx(){
+  if(!lastPair||!lastPair.text)return null;
   const na=lastPair.a.name||'第一位',nb=lastPair.b.name||'第二位';
-  const txt='【八字合盘 · '+lastPair.rel+'】\n'
-    +(lastPair.now?'现在：'+lastPair.now+'\n':'')
-    +na+' 四柱：'+lastPair.a.pillars.join(' ')+'\n'
-    +nb+' 四柱：'+lastPair.b.pillars.join(' ')+'\n'
-    +'合婚：'+lastPair.he.score+'分 · '+((lastPair.he.dims||[]).join('、')||'')+'\n\n'
-    +stripHtml(lastPair.text).slice(0,600)+'\n\n—— 来自「有点困」八字合盘';
-  if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(txt).then(()=>{alert('已复制合盘文字');}).catch(()=>{fb(txt);alert('已复制合盘文字');});
-  }else{fb(txt);alert('已复制合盘文字');}
-};
+  return {
+    aName:na,bName:nb,
+    aPillars:(lastPair.a.pillars||[]).join(' '),bPillars:(lastPair.b.pillars||[]).join(' '),
+    aSum:(lastPair.a.dayMasterFull||'')+' · '+(lastPair.a.pattern||'')+' · '+(lastPair.a.strength||''),
+    bSum:(lastPair.b.dayMasterFull||'')+' · '+(lastPair.b.pattern||'')+' · '+(lastPair.b.strength||''),
+    rel:lastPair.rel||'',
+    now:lastPair.now||'',
+    score:lastPair.he.score||0,
+    dims:(lastPair.he.dims||[]).join('、'),
+    aiText:stripHtml(lastPair.text).slice(0,300),
+    link:'https://ydk12335.github.io/bazi/hehun/'
+  };
+}
+function drawHehunCard(r){
+  const W=720,c=document.createElement('canvas');
+  c.width=W;c.height=1180;
+  const x=c.getContext('2d');
+  /* 底色：深空渐变 */
+  const g=x.createLinearGradient(0,0,0,1180);
+  g.addColorStop(0,'#0b0a1a');g.addColorStop(.55,'#101126');g.addColorStop(1,'#05040d');
+  x.fillStyle=g;x.fillRect(0,0,W,1180);
+  /* 金色描边框 */
+  x.strokeStyle='rgba(240,207,130,.55)';x.lineWidth=2;
+  x.strokeRect(22,22,W-44,1136);
+  /* 标题 */
+  x.fillStyle='#f0cf82';x.font='600 46px "Ma Shan Zheng","Kaiti SC","楷体",serif';x.textAlign='center';
+  x.fillText('八 字 合 盘',W/2,92);
+  x.fillStyle='rgba(240,207,130,.45)';x.font='20px "Ma Shan Zheng","Kaiti SC","楷体",serif';
+  x.fillText('✦ 双盘推演 · 有点困 ✦',W/2,132);
+  /* 关系 */
+  x.fillStyle='rgba(240,207,130,.9)';x.font='600 30px "Ma Shan Zheng","Kaiti SC","楷体",serif';
+  x.fillText('『 '+(r.rel||'关系')+' 』',W/2,186);
+  if(r.now){
+    x.fillStyle='rgba(181,173,216,.85)';x.font='20px "Kaiti SC","楷体",serif';
+    x.fillText('现状：'+r.now,W/2,220);
+  }
+  /* 双人四柱 */
+  const rowY=272;
+  x.fillStyle='rgba(245,236,220,.9)';x.font='600 34px "Ma Shan Zheng","Kaiti SC","楷体",serif';
+  x.fillText(r.aName,W/2-180,rowY+10);x.fillText(r.bName,W/2+180,rowY+10);
+  x.fillStyle='rgba(245,236,220,.9)';x.font='600 30px "Ma Shan Zheng","Kaiti SC","楷体",serif';
+  x.fillText((r.aPillars||''),W/2-180,rowY+58);x.fillText((r.bPillars||''),W/2+180,rowY+58);
+  x.fillStyle='rgba(181,173,216,.85)';x.font='18px "Kaiti SC","楷体",serif';
+  x.fillText((r.aSum||''),W/2-180,rowY+92);x.fillText((r.bSum||''),W/2+180,rowY+92);
+  /* 分隔线 */
+  x.strokeStyle='rgba(240,207,130,.25)';x.lineWidth=1;
+  x.beginPath();x.moveTo(60,rowY+130);x.lineTo(W-60,rowY+130);x.stroke();
+  /* 合婚分数 */
+  x.fillStyle='#f0cf82';x.font='600 72px "Ma Shan Zheng","Kaiti SC","楷体",serif';
+  x.fillText(String(r.score||0),W/2,rowY+230);
+  x.fillStyle='rgba(240,207,130,.7)';x.font='24px "Ma Shan Zheng","Kaiti SC","楷体",serif';
+  x.fillText('合 婚 分',W/2,rowY+272);
+  x.fillStyle='rgba(245,236,220,.9)';x.font='22px "Kaiti SC","楷体",serif';
+  x.fillText('命中　'+(r.dims||'—'),W/2,rowY+318);
+  /* 解读摘要 */
+  const body=(r.aiText||'').replace(/\s+/g,' ').trim();
+  if(body){
+    x.fillStyle='rgba(143,134,184,.9)';x.font='22px "Ma Shan Zheng","Kaiti SC","楷体",serif';
+    x.fillText('— 合盘解读 —',W/2,rowY+380);
+    x.fillStyle='rgba(230,224,244,.9)';x.font='20px "Kaiti SC","楷体",serif';
+    const lines=[];for(let i=0;i<body.length;i+=22)lines.push(body.slice(i,i+22));
+    lines.slice(0,9).forEach((l,i)=>x.fillText(l,W/2,rowY+418+i*32));
+  }
+  /* 落款 */
+  x.fillStyle='rgba(240,207,130,.6)';x.font='22px "Ma Shan Zheng","Kaiti SC","楷体",serif';
+  x.fillText('—— 来自「有点困 · Sleepy Space」',W/2,1100);
+  x.fillStyle='rgba(181,173,216,.6)';x.font='18px "Kaiti SC","楷体",serif';
+  x.fillText(r.link||'',W/2,1132);
+  return c;
+}
+/* ---------- 图片分享 ---------- */
+function openPairShare(){
+  const ctx=buildPairShareCtx();
+  if(!ctx){alert('先推演一次合盘');return;}
+  try{
+    const cv=drawHehunCard(ctx);
+    cv.toBlob(b=>{
+      if(b)openShot(b);
+    },'image/png');
+  }catch(e){alert('生成分享图失败：'+String(e&&e.message||e).slice(0,80));}
+}
+async function pairShareImage(){
+  const ctx=buildPairShareCtx();
+  if(!ctx)return;
+  const cv=drawHehunCard(ctx);
+  const shot=await new Promise(r=>cv.toBlob(r,'image/png'));
+  if(!shot)return;
+  try{
+    if(navigator.canShare&&shot&&navigator.canShare({files:[new File([shot],'hehun.png',{type:'image/png'})]})){
+      await navigator.share({title:'八字合盘',files:[new File([shot],'hehun.png',{type:'image/png'})]});
+      return;
+    }
+  }catch(e){}
+  const url=URL.createObjectURL(shot);
+  const a=document.createElement('a');a.href=url;a.download='hehun.png';
+  if(navigator.userAgent.match(/Android|iPhone/i)){
+    const w=window.open(url,'_blank');
+    if(w)setTimeout(()=>URL.revokeObjectURL(url),30000);
+  }else{a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+}
+function pairShareText(){
+  const ctx=buildPairShareCtx();
+  if(!ctx)return;
+  const t='【八字合盘 · '+ctx.rel+'】\n'
+    +(ctx.now?'现在：'+ctx.now+'\n':'')
+    +ctx.aName+' 四柱：'+ctx.aPillars+'\n'
+    +ctx.bName+' 四柱：'+ctx.bPillars+'\n'
+    +'合婚：'+ctx.score+'分 · '+ctx.dims+'\n\n'
+    +stripHtml(lastPair.text).slice(0,600)+'\n\n—— 来自「有点困」八字合盘\n☯ 在线合盘：https://ydk12335.github.io/bazi/hehun/';
+  const done=()=>alert('已复制，去分享吧 ✦');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done).catch(()=>{fb(t);done();});}
+  else{fb(t);done();}
+}
+$('btnPairShare').onclick=openPairShare;
+$('btnPairCopy').onclick=pairShareText;
+$('btnShotImg').onclick=pairShareImage;
+$('btnShotTxt').onclick=pairShareText;
 /* 去树洞聊聊：把本次合盘带入树洞，让它自然开场 */
 $('btnHole').onclick=()=>{
   let subject='',summary='';

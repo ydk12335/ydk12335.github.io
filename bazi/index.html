@@ -149,8 +149,26 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .btn:active{transform:scale(.95)}
 .btn-primary{background:linear-gradient(160deg,rgba(240,207,130,.25),rgba(255,255,255,.05));border-color:rgba(240,207,130,.55);color:#f6ecc9}
 .btn-ghost{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#d8d0ef}
-@media(max-width:420px){.b-row{flex-direction:column}.b-row .b-field{flex:auto}}
-</style>
+    /* ---------- 八字合盘入口胶囊按钮（对标星座页 soon-pill） ---------- */
+    .soon-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:min(560px,94vw);
+      margin-top:clamp(16px,3.4vh,32px)}
+    .soon-pill{border-radius:999px;text-align:center}
+    /* 可点击胶囊入口：金描边 + 微渐变（专供 <a> 入口，不覆盖分享按钮的 .b-go） */
+    a.soon-pill{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      text-decoration:none;min-width:200px;width:auto;flex:1;opacity:1;
+      font-size:1rem;font-weight:500;letter-spacing:.12em;color:#f0ead8;
+      border:1px solid rgba(240,207,130,.45);
+      background:linear-gradient(160deg,rgba(240,207,130,.12),rgba(255,255,255,.03));
+      backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      transition:all .25s;box-shadow:0 8px 24px rgba(4,2,18,.35),inset 0 1px 0 rgba(255,255,255,.15)}
+    a.soon-pill:active{transform:scale(.95)}
+    /* 昼夜主题（浅色向日葵底）适配 */
+    body[data-phase="day"] a.soon-pill,body[data-phase="dusk"] a.soon-pill{
+      color:#6b5a2e;border-color:rgba(138,106,46,.5);
+      background:linear-gradient(160deg,rgba(240,207,130,.5),rgba(255,255,255,.62));
+      box-shadow:0 6px 18px rgba(96,74,48,.18),inset 0 1px 0 rgba(255,255,255,.6)}
+    @media(max-width:420px){.b-row{flex-direction:column}.b-row .b-field{flex:auto}}
+    </style>
 </head>
 <body>
 <canvas id="stars"></canvas>
