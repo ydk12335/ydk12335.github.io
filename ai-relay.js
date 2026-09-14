@@ -129,8 +129,11 @@
       }
       const rd = res.body.getReader(), dec = new TextDecoder();
       let buf = '', full = '', reason = '';
+      let streamErr = null;   // 记录流中途异常（不立即抛，等读完已收到的内容）
       for (;;) {
-        const r = await rd.read();
+        let r;
+        try { r = await rd.read(); }
+        catch (e) { streamErr = e; break; }   // 读流出错：保留已收到的内容，不丢结果
         if (r.done) break;
         buf += dec.decode(r.value, { stream: true });
         const parts = buf.split('\n\n');
@@ -145,8 +148,12 @@
           if (d.content) { full += d.content; if (onDelta) onDelta(d.content, full); }
         }
       }
-      if (!full.trim()) throw new Error('空响应');
-      return full;
+      /* 关键修复：只要流式已产出内容，就视为成功返回——
+         避免「结果已显示完、流末尾被掐断」时抛错触发重试，
+         重试又把已显示的内容覆盖成 loading/中断提示。 */
+      if (full.trim()) return full;
+      if (streamErr) throw streamErr;
+      throw new Error('空响应');
     }, onRetry);
   }
 
