@@ -33,6 +33,14 @@ body[data-phase="day"],body[data-phase="dusk"]{background:#efe8d8}
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:.2s}
 .rel-chip.on{border-color:rgba(240,207,130,.65);color:var(--gold);background:rgba(240,207,130,.12);
   text-shadow:0 0 10px rgba(240,207,130,.4)}
+/* 昼夜主题（浅色向日葵底）适配：关系选择胶囊 */
+body[data-phase="day"] .rel-chip,body[data-phase="dusk"] .rel-chip{
+  color:#5d4e2c;border-color:rgba(138,106,46,.42);
+  background:linear-gradient(160deg,rgba(240,207,130,.38),rgba(255,255,255,.5));
+  text-shadow:none}
+body[data-phase="day"] .rel-chip.on,body[data-phase="dusk"] .rel-chip.on{
+  border-color:rgba(138,106,46,.75);color:#4a3c1c;background:rgba(240,207,130,.55);
+  box-shadow:0 0 12px rgba(138,106,46,.3);text-shadow:none}
 .b-form{width:min(560px,94vw);margin-top:clamp(18px,3vh,28px);text-align:left;
   background:rgba(255,255,255,.04);border:1px solid rgba(240,207,130,.16);border-radius:18px;
   padding:clamp(14px,3vw,20px);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
