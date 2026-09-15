@@ -55,6 +55,9 @@ async function verifyAndLogin(email, code, username) {
     type: 'email'
   });
   if (error) throw error;
+  /* 安全策略（用户 2026-09-15 明确）：登录成功即清空本地全部同步数据，避免本机残留任何占卜/命盘/解读记录；
+     随后由 bootCloudSync 从云端拉回本人数据。未登录状态产生的本地记录一律丢弃。 */
+  try { clearLocalCache(); } catch (e) { console.warn('登录清空本地失败', e); }
 
   // 登录成功，更新用户名
   if (username) {
@@ -71,6 +74,9 @@ async function loginWithPassword(email, password) {
   const sb = await initSupabase();
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error) throw error;
+  /* 安全策略（用户 2026-09-15 明确）：登录成功即清空本地全部同步数据，避免本机残留任何占卜/命盘/解读记录；
+     随后由 bootCloudSync 从云端拉回本人数据。未登录状态产生的本地记录一律丢弃。 */
+  try { clearLocalCache(); } catch (e) { console.warn('登录清空本地失败', e); }
   return data;
 }
 
