@@ -332,7 +332,7 @@
       div.className = 'msg user';
       div.innerHTML = '<div class="meta"><div class="who">' + esc(u.name) + '</div><div class="row">' +
         '<div class="bub">' + esc(text) + '</div>' +
-        '<div class="av"' + (u.avatar ? ' style="background-image:url("' + u.avatar + '")"' : '') + '>' + (u.avatar ? '' : esc(u.initial)) + '</div></div></div>';
+        '<div class="av"' + (u.avatar ? ' style="background-image:url(\'' + u.avatar + '\')"' : '') + '>' + (u.avatar ? '' : esc(u.initial)) + '</div></div></div>';
     } else {
       div.className = 'msg ai';
       div.innerHTML = '<div class="who">树洞</div><div class="bub">' + esc(text) + '</div>';

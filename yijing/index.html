@@ -344,6 +344,18 @@ body[data-phase="day"]::after,body[data-phase="dusk"]::after{
   </div>
 </div>
 
+<!-- 历史记录详情（点记录条目打开；全文滚动/选中/单独分享，对齐塔罗） -->
+<div class="mask" id="histDetailMask" style="z-index:100;align-items:center;justify-content:center">
+  <div class="sheet" style="border-radius:20px;max-height:84vh;display:flex;flex-direction:column;gap:12px">
+    <div class="sheet-h" style="width:100%"><div class="t">📜 问卦详情</div><button class="x" id="histDetailClose">✕</button></div>
+    <div id="histDetailBody" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;-webkit-user-select:text;user-select:text;text-align:left;font-size:.82rem;line-height:1.85;color:rgba(242,237,224,.88);white-space:pre-wrap;word-break:break-word"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" id="btnHistShare" style="flex:0 0 auto;padding:11px 22px">📤 分享这条记录</button>
+      <button class="btn btn-ghost" id="btnHistDetailClose2" style="flex:0 0 auto;padding:11px 22px">关 闭</button>
+    </div>
+  </div>
+</div>
+
 <!-- 历史记录 -->
 <div class="mask" id="histMask">
   <div class="sheet">
@@ -1035,17 +1047,41 @@ async function sendFollowup(){
 }
 
 /* ================= 历史弹窗 ================= */
+let histDetailIdx=-1;
+function openYiDetail(idx){
+  const h=loadHist(),r=h[idx];if(!r)return;
+  histDetailIdx=idx;
+  const name=(r.benName||'')+((r.bianName&&r.bianName!==r.benName)?(' → '+r.bianName):'');
+  const mv=(r.moving&&r.moving.length)?('动爻：'+r.moving.join('、')+(r.movingText?('　'+r.movingText):'')):'六爻皆静，以本卦卦辞断之';
+  let body='【'+(r.time||'')+' '+(r.date||'')+'】\n';
+  body+='本卦：'+name+'\n';
+  if(r.benDetail)body+='卦辞：'+r.benDetail+'\n';
+  body+=mv+'\n';
+  if(r.bianName&&r.bianName!==r.benName)body+='变卦：'+r.bianName+(r.bianDetail?('（'+r.bianDetail+'）'):'')+'\n';
+  if(r.question)body+='问：'+r.question+'\n';
+  body+='\n【解卦】\n'+(r.result||'（暂无解卦内容）');
+  $('histDetailBody').textContent=body;
+  $('histDetailMask').classList.add('open');
+  $('histDetailBody').scrollTop=0;
+}
 function renderHist(){
   const h=loadHist();
   const list=$('histList');
   if(!h.length){list.innerHTML='<div class="hist-empty">还没有问卦记录</div>';return;}
-  list.innerHTML=h.map(r=>{
+  list.innerHTML=h.map((r,idx)=>{
     const name=(r.benName||'')+((r.bianName&&r.bianName!==r.benName)?(' → '+r.bianName):'');
     const p=(r.question?('问：'+r.question+'　'):'')+('本卦：'+name)+(r.moving&&r.moving.length?('　动爻：'+r.moving.join('、')):'');
-    return '<div class="hist-item"><div class="hi-t">☯ '+esc(name)+'</div>'+
+    const snippet=String(r.result||'').replace(/\s+/g,' ').slice(0,72);
+    return '<div class="hist-item" data-i="'+idx+'" style="cursor:pointer">'+
+      '<div class="hi-t">☯ '+esc(name)+'</div>'+
       '<div class="hi-d">'+esc((r.date||'')+' '+(r.time||''))+'</div>'+
-      '<div class="hi-p">'+esc(p)+'</div></div>';
+      '<div class="hi-p">'+esc(p)+'</div>'+
+      (snippet?'<div style="color:rgba(242,237,224,.55);margin-top:5px;font-size:.72rem;line-height:1.6">'+esc(snippet)+'…<span style="color:var(--gold);font-size:.68rem">　▼ 点开看全文</span></div>':'')+
+      '</div>';
   }).join('');
+  list.querySelectorAll('.hist-item').forEach(el=>{
+    el.onclick=()=>openYiDetail(parseInt(el.dataset.i,10));
+  });
 }
 function copyHist(){
   const h=loadHist();
@@ -1132,6 +1168,15 @@ $('btnHole').onclick=()=>{
 $('btnHist').onclick=()=>{renderHist();$('histMask').classList.add('open');};
 $('histClose').onclick=()=>$('histMask').classList.remove('open');
 $('histMask').onclick=e=>{if(e.target===$('histMask'))$('histMask').classList.remove('open');};
+/* 记录详情弹窗（对齐塔罗：全文滚动/选中/单独分享） */
+$('histDetailClose').onclick=()=>$('histDetailMask').classList.remove('open');
+$('btnHistDetailClose2').onclick=()=>$('histDetailMask').classList.remove('open');
+$('histDetailMask').onclick=e=>{if(e.target===$('histDetailMask'))$('histDetailMask').classList.remove('open');};
+$('btnHistShare').onclick=()=>{
+  const h=loadHist(),r=h[histDetailIdx];if(!r)return;
+  const name=(r.benName||'')+((r.bianName&&r.bianName!==r.benName)?(' → '+r.bianName):'');
+  openYiShare({time:(r.time||'')+' '+(r.date||''),q:r.question||'',ben:name,bian:'',moving:(r.moving||[]).join('、'),text:r.result||'',fu:[]});
+};
 $('histClear').onclick=async()=>{if(!confirm('清空全部问卦记录吗？'))return;localStorage.removeItem(HKEY);if(typeof window.clearCloudSnapshot==='function'){try{await window.clearCloudSnapshot([HKEY]);}catch(e){}}renderHist();toast('记录已清空');};
 $('histCopy').onclick=doCopy;
 $('histCopyMem').onclick=()=>{doCopy();toast('已复制 · 到记忆库点 ⇩ 粘贴导入');};
