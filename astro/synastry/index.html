@@ -278,6 +278,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 </div>
 
 <div id="shotModal">
+  <div id="shotLoading" style="display:none;color:#f0cf82;letter-spacing:.18em;font-size:1rem;padding:60px 0;text-align:center">✦ 正在生成分享图…</div>
   <img id="shotImg" alt="分享图">
   <div class="shot-tip">长按图片保存 / 分享</div>
   <button class="soon-pill" id="shotClose" style="padding:10px 30px">关 闭</button>
@@ -600,8 +601,16 @@ function drawSynCard(){
 }
 $('btnPairShot').onclick=()=>{
   if(!lastSyn)return;
-  $('shotImg').src=drawSynCard().toDataURL('image/png');
-  $('shotModal').classList.add('show');
+  const m=$('shotModal'),img=$('shotImg'),ld=$('shotLoading');
+  /* 立即弹窗 + 加载提示，图片异步生成后替换 */
+  m.classList.add('show');
+  if(ld)ld.style.display='block';
+  if(img)img.style.display='none';
+  setTimeout(()=>{
+    img.src=drawSynCard().toDataURL('image/png');
+    if(ld)ld.style.display='none';
+    img.style.display='block';
+  },30);
 };
 $('shotClose').onclick=()=>$('shotModal').classList.remove('show');
 $('shotModal').onclick=e=>{if(e.target.id==='shotModal')$('shotModal').classList.remove('show');};

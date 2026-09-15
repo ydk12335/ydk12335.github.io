@@ -74,6 +74,12 @@ body[data-phase="day"] .rel-chip.on,body[data-phase="dusk"] .rel-chip.on{
 .b-time-hh{flex:1}
 .b-time-mm{flex:1}
 .b-time-colon{flex:none;color:var(--muted);font-size:1.05rem;font-weight:600;line-height:1}
+.b-date{display:flex;align-items:center;gap:4px}
+.b-date .b-input{text-align:center;padding:9px 4px;min-width:0}
+.b-date-y{flex:1.6}
+.b-date-m{flex:1}
+.b-date-d{flex:1}
+.b-date-sep{flex:none;color:var(--muted);font-size:.8rem;font-weight:600}
 .b-field.dim{opacity:.45}
 .b-gender{display:flex;gap:8px}
 .b-gender button{flex:1;padding:9px 0;border-radius:10px;border:1px solid rgba(240,207,130,.22);
@@ -213,10 +219,15 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
       <div class="b-row">
         <div class="b-field">
           <label class="b-label">出生日期</label>
-          <div class="b-pickrow">
-            <input class="b-input" id="pDateA" type="text" inputmode="numeric" value="1998-08-08" placeholder="如 1998-08-08" autocomplete="off">
-            <button type="button" class="b-pick" data-pick="pDateA">📅</button>
+          <div class="b-date">
+            <input class="b-input b-date-y" id="pDateAY" type="number" inputmode="numeric" min="1900" max="2100" maxlength="4" placeholder="年" value="1998" autocomplete="off">
+            <span class="b-date-sep">年</span>
+            <input class="b-input b-date-m" id="pDateAM" type="number" inputmode="numeric" min="1" max="12" maxlength="2" placeholder="月" value="8" autocomplete="off">
+            <span class="b-date-sep">月</span>
+            <input class="b-input b-date-d" id="pDateAD" type="number" inputmode="numeric" min="1" max="31" maxlength="2" placeholder="日" value="8" autocomplete="off">
+            <span class="b-date-sep">日</span>
           </div>
+          <button type="button" class="b-pick" data-pick="pDateA" style="margin-top:6px;width:100%" title="用选择器选日期">📅 用日历选</button>
         </div>
       </div>
       <div class="b-row">
@@ -264,10 +275,15 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
       <div class="b-row">
         <div class="b-field">
           <label class="b-label">出生日期</label>
-          <div class="b-pickrow">
-            <input class="b-input" id="pDateB" type="text" inputmode="numeric" value="1999-12-03" placeholder="如 1999-12-03" autocomplete="off">
-            <button type="button" class="b-pick" data-pick="pDateB">📅</button>
+          <div class="b-date">
+            <input class="b-input b-date-y" id="pDateBY" type="number" inputmode="numeric" min="1900" max="2100" maxlength="4" placeholder="年" value="1999" autocomplete="off">
+            <span class="b-date-sep">年</span>
+            <input class="b-input b-date-m" id="pDateBM" type="number" inputmode="numeric" min="1" max="12" maxlength="2" placeholder="月" value="12" autocomplete="off">
+            <span class="b-date-sep">月</span>
+            <input class="b-input b-date-d" id="pDateBD" type="number" inputmode="numeric" min="1" max="31" maxlength="2" placeholder="日" value="3" autocomplete="off">
+            <span class="b-date-sep">日</span>
           </div>
+          <button type="button" class="b-pick" data-pick="pDateB" style="margin-top:6px;width:100%" title="用选择器选日期">📅 用日历选</button>
         </div>
       </div>
       <div class="b-row">
@@ -325,6 +341,7 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
   <div class="mask" id="shotModal" style="z-index:99;align-items:center;justify-content:center">
     <div class="sheet" style="border-radius:20px;max-height:86vh;display:flex;flex-direction:column;gap:12px;align-items:center">
       <div class="sheet-h" style="width:100%"><div class="t">📤 分享这次合盘</div><button class="x" id="shotClose">✕</button></div>
+      <div id="shotLoading" style="display:none;color:#f0cf82;letter-spacing:.18em;font-size:1rem;padding:70px 0;text-align:center">✦ 正在生成分享图…</div>
       <img id="shotImg" alt="分享图" style="max-width:92%;max-height:52vh;border-radius:12px;box-shadow:0 14px 46px rgba(0,0,0,.5)">
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
         <button class="btn btn-primary" id="btnShotImg" style="flex:0 0 auto;padding:11px 24px">🖼 图片分享</button>
@@ -518,14 +535,14 @@ $('relCustomInput').addEventListener('keydown',e=>{if(e.key==='Enter'){$('relCus
     btn.onclick=()=>{
       const prefix=btn.dataset.pick;
       const isDate=prefix.indexOf('Date')>=0;
-      const inp=$('p'+(isDate?'Date':'Time')+prefix.slice(5));
-      if(!inp)return;
+      const s=prefix.slice(-1); // A / B
+      const inp=$('p'+(isDate?'Date':'Time')+s);
       const p=hp();
       if(isDate){
-        const m=String(inp.value).match(/^(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})日?$/);
-        p.date.value=m?(m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0')):'1998-08-08';
+        const y=$('pDate'+s+'Y'),m=$('pDate'+s+'M'),d=$('pDate'+s+'D');
+        p.date.value=(y&&y.value?String(y.value).padStart(4,'0'):'1998')+'-'+(m&&m.value?String(m.value).padStart(2,'0'):'08')+'-'+(d&&d.value?String(d.value).padStart(2,'0'):'08');
         p.date.showPicker?p.date.showPicker():p.date.focus();
-        p.date.onchange=()=>{if(p.date.value)inp.value=p.date.value;p.date.onchange=null;};
+        p.date.onchange=()=>{ if(p.date.value){const mm=String(p.date.value).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(mm){if(y)y.value=+mm[1];if(m)m.value=+mm[2];if(d)d.value=+mm[3];}} p.date.onchange=null; };
       }else{
         const tm=String(inp.value).match(/^(\d{1,2})[:：.点时](\d{1,2})?(?:分)?$/);
         p.time.value=(tm?(String(+tm[1]).padStart(2,'0')+':'+String(tm[2]?+tm[2]:0).padStart(2,'0')):'10:00');
@@ -546,6 +563,25 @@ $('relCustomInput').addEventListener('keydown',e=>{if(e.key==='Enter'){$('relCus
       let v=String(+inp.value);
       if(inp.classList.contains('b-time-hh')&&+v>23)v='23';
       if(inp.classList.contains('b-time-mm')&&+v>59)v='59';
+      if(inp.value!==v)inp.value=v;
+    });
+  });
+  /* 日期三框输入守卫：年4位、月1-12、日1-31、越界自动修正 */
+  document.querySelectorAll('.b-date .b-input').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      let v=inp.value.replace(/\D/g,'');
+      if(inp.classList.contains('b-date-y'))v=v.slice(0,4);
+      else v=v.slice(0,2);
+      if(inp.classList.contains('b-date-m')&&v&&+v>12)v='12';
+      if(inp.classList.contains('b-date-d')&&v&&+v>31)v='31';
+      if(inp.value!==v)inp.value=v;
+    });
+    inp.addEventListener('blur',()=>{
+      if(inp.value===''){inp.value='';return;}
+      let v=String(+inp.value);
+      if(inp.classList.contains('b-date-y')&&+v<1900)v='1900';
+      if(inp.classList.contains('b-date-m')&&+v>12)v='12';
+      if(inp.classList.contains('b-date-d')&&+v>31)v='31';
       if(inp.value!==v)inp.value=v;
     });
   });
@@ -607,7 +643,9 @@ function parseTimeStr(s){
 /* ================= 读取一位信息 ================= */
 function readOne(s){
   const name=$('pName'+s).value.trim();
-  const pd=parseDateStr($('pDate'+s).value);
+  const y=$('pDate'+s+'Y'),m=$('pDate'+s+'M'),d=$('pDate'+s+'D');
+  const dateStr=(y&&y.value?String(y.value).trim():'')+'-'+(m&&m.value?String(m.value).trim():'')+'-'+(d&&d.value?String(d.value).trim():'');
+  const pd=parseDateStr(dateStr);
   if(!pd)throw new Error('第'+(s==='A'?'一':'二')+'位出生日期格式不对');
   const rawHh=($('pTimeHh'+s)||{}).value,rawMm=($('pTimeMm'+s)||{}).value;
   const rawTime=(String(rawHh||'').trim()||String(rawMm||'').trim())
@@ -1021,11 +1059,21 @@ function drawHehunCard(r){
 function openPairShare(){
   const ctx=buildPairShareCtx();
   if(!ctx){alert('先推演一次合盘');return;}
+  const m=document.getElementById('shotModal');
+  const img=document.getElementById('shotImg');
+  const ld=document.getElementById('shotLoading');
   try{
-    const cv=drawHehunCard(ctx);
-    cv.toBlob(b=>{
-      if(b)openShot(b);
-    },'image/png');
+    /* 立即弹窗 + 加载提示，图片异步生成后替换 */
+    if(m)m.classList.add('show');
+    if(ld)ld.style.display='block';
+    if(img)img.style.display='none';
+    setTimeout(()=>{
+      const cv=drawHehunCard(ctx);
+      cv.toBlob(b=>{
+        if(ld)ld.style.display='none';
+        if(img){img.style.display='block';img.src=b?URL.createObjectURL(b):'';}
+      },'image/png');
+    },30);
   }catch(e){alert('生成分享图失败：'+String(e&&e.message||e).slice(0,80));}
 }
 async function pairShareImage(){

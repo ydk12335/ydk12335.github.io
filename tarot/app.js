@@ -801,11 +801,20 @@ function drawTarotCard(r){
 let shareCtx=null;/* {time,q,spread,cards,text,fu:[]} 本次要分享的内容快照 */
 function openShareModal(rec){
   shareCtx={time:rec.time,q:rec.q||'',spread:rec.spread||'',cards:rec.cards||'',text:rec.text||'',fu:rec.fu||[]};
-  const cv=drawTarotCard(shareCtx);
-  cv.toBlob(b=>{
-    if(b)document.getElementById('shotImg').src=URL.createObjectURL(b);
-    document.getElementById('shotModal').style.display='flex';
-  },'image/png');
+  const modal=document.getElementById('shotModal');
+  const img=document.getElementById('shotImg');
+  const ld=document.getElementById('shotLoading');
+  /* 立即弹窗 + 加载提示，图片异步生成后替换 */
+  modal.style.display='flex';
+  if(ld)ld.style.display='block';
+  if(img)img.style.display='none';
+  setTimeout(()=>{
+    const cv=drawTarotCard(shareCtx);
+    cv.toBlob(b=>{
+      if(ld)ld.style.display='none';
+      if(img){img.style.display='block';img.src=b?URL.createObjectURL(b):'';}
+    },'image/png');
+  },30);
 }
 function buildShareText(r){
   r=r||shareCtx;if(!r)return '';

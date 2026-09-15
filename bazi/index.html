@@ -69,6 +69,12 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .b-time-hh{flex:1}
 .b-time-mm{flex:1}
 .b-time-colon{flex:none;color:#9a90c0;font-size:1.05rem;font-weight:600;line-height:1}
+.b-date{display:flex;align-items:center;gap:4px}
+.b-date .b-input{text-align:center;padding:9px 4px;min-width:0}
+.b-date-y{flex:1.6}
+.b-date-m{flex:1}
+.b-date-d{flex:1}
+.b-date-sep{flex:none;color:#9a90c0;font-size:.8rem;font-weight:600}
 .b-input:disabled,.b-select:disabled{opacity:.4}
 .b-row{display:flex;gap:10px}
 .b-row .b-field{flex:1}
@@ -202,10 +208,15 @@ body[data-phase="day"] .b-gender button.on,body[data-phase="dusk"] .b-gender but
     <div class="b-row">
       <div class="b-field">
         <label class="b-label">出生日期</label>
-        <div class="b-pickrow">
-          <input class="b-input" id="bDate" type="text" inputmode="numeric" value="1998-08-08" placeholder="如 1998-08-08 或 1998/8/8" autocomplete="off">
-          <button type="button" class="b-pick" id="btnDatePick" title="用选择器选日期">📅</button>
+        <div class="b-date">
+          <input class="b-input b-date-y" id="bDateY" type="number" inputmode="numeric" min="1900" max="2100" maxlength="4" placeholder="年" value="1998" autocomplete="off">
+          <span class="b-date-sep">年</span>
+          <input class="b-input b-date-m" id="bDateM" type="number" inputmode="numeric" min="1" max="12" maxlength="2" placeholder="月" value="8" autocomplete="off">
+          <span class="b-date-sep">月</span>
+          <input class="b-input b-date-d" id="bDateD" type="number" inputmode="numeric" min="1" max="31" maxlength="2" placeholder="日" value="8" autocomplete="off">
+          <span class="b-date-sep">日</span>
         </div>
+        <button type="button" class="b-pick" id="btnDatePick" style="margin-top:6px;width:100%" title="用选择器选日期">📅 用日历选</button>
       </div>
     </div>
     <div class="b-row">
@@ -272,6 +283,7 @@ body[data-phase="day"] .b-gender button.on,body[data-phase="dusk"] .b-gender but
 <div class="mask" id="shotModal" style="z-index:99;align-items:center;justify-content:center">
   <div class="sheet" style="border-radius:20px;max-height:86vh;display:flex;flex-direction:column;gap:12px;align-items:center">
     <div class="sheet-h" style="width:100%"><div class="t">📤 分享这次命盘</div><button class="x" id="shotClose">✕</button></div>
+    <div id="shotLoading" style="display:none;color:#f0cf82;letter-spacing:.18em;font-size:1rem;padding:70px 0;text-align:center">✦ 正在生成分享图…</div>
     <img id="shotImg" alt="分享图" style="max-width:92%;max-height:52vh;border-radius:12px;box-shadow:0 14px 46px rgba(0,0,0,.5)">
     <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
       <button class="btn btn-primary" id="btnShotImg" style="flex:0 0 auto;padding:11px 24px">🖼 图片分享</button>
@@ -569,6 +581,25 @@ document.querySelectorAll('.b-time .b-input').forEach(inp=>{
     if(inp.value!==v)inp.value=v;
   });
 });
+/* ---------- 日期三框输入守卫：年4位、月1-12、日1-31、越界自动修正 ---------- */
+document.querySelectorAll('.b-date .b-input').forEach(inp=>{
+  inp.addEventListener('input',()=>{
+    let v=inp.value.replace(/\D/g,'');
+    if(inp.classList.contains('b-date-y'))v=v.slice(0,4);
+    else v=v.slice(0,2);
+    if(inp.classList.contains('b-date-m')&&v&&+v>12)v='12';
+    if(inp.classList.contains('b-date-d')&&v&&+v>31)v='31';
+    if(inp.value!==v)inp.value=v;
+  });
+  inp.addEventListener('blur',()=>{
+    if(inp.value===''){inp.value='';return;}
+    let v=String(+inp.value);
+    if(inp.classList.contains('b-date-y')&&+v<1900)v='1900';
+    if(inp.classList.contains('b-date-m')&&+v>12)v='12';
+    if(inp.classList.contains('b-date-d')&&+v>31)v='31';
+    if(inp.value!==v)inp.value=v;
+  });
+});
 /* ---------- 选择器按钮：选完回填文本（保留自由输入能力） ---------- */
 (function(){
   const hidden=$('bHiddenPicker')||null;
@@ -585,10 +616,10 @@ document.querySelectorAll('.b-time .b-input').forEach(inp=>{
   /* 日期选择 */
   $('btnDatePick').onclick=function(){
     const d=p.date;
-    const cur=parseDateStr($('bDate').value);
-    d.value=cur?(String(cur.y).padStart(4,'0')+'-'+String(cur.m).padStart(2,'0')+'-'+String(cur.d).padStart(2,'0')):'1998-08-08';
+    const y=$('bDateY'),m=$('bDateM'),dd=$('bDateD');
+    d.value=(y&&y.value?String(y.value).padStart(4,'0'):'1998')+'-'+(m&&m.value?String(m.value).padStart(2,'0'):'08')+'-'+(dd&&dd.value?String(dd.value).padStart(2,'0'):'08');
     d.showPicker?d.showPicker():d.focus();
-    d.onchange=()=>{ if(d.value)$('bDate').value=d.value; d.onchange=null; };
+    d.onchange=()=>{ if(d.value){const mm=String(d.value).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(mm){if(y)y.value=+mm[1];if(m)m.value=+mm[2];if(dd)dd.value=+mm[3];}} d.onchange=null; };
   };
   /* 日期选择保留；时间选择器已改为双框直接填写，无需 ⏰ 按钮 */
 })();
@@ -625,7 +656,9 @@ function parseTimeStr(s){
 }
 
 $('bGo').onclick=async function(){
-  const date=$('bDate').value,city=$('bCity').value;
+  const y0=$('bDateY'),m0=$('bDateM'),d0=$('bDateD');
+  const date=(y0&&y0.value?String(y0.value).trim():'')+'-'+(m0&&m0.value?String(m0.value).trim():'')+'-'+(d0&&d0.value?String(d0.value).trim():'');
+  const city=$('bCity').value;
   const rawHh=($('bTimeHh')||{}).value,rawMm=($('bTimeMm')||{}).value;
   const rawTime=(String(rawHh||'').trim()||String(rawMm||'').trim())?(String(rawHh||'').trim()+':'+String(rawMm||'').trim()):'';
   const pd=parseDateStr(date);
@@ -916,11 +949,20 @@ function openBaziShare(){
     link:'https://ydk12335.github.io/bazi/'
   };
   try{
-    const cv=drawBaziCard(shareCtx);
-    cv.toBlob(b=>{
-      if(b)document.getElementById('shotImg').src=URL.createObjectURL(b);
-      const m=document.getElementById('shotModal');if(m)m.classList.add('show');
-    },'image/png');
+    const m=document.getElementById('shotModal');
+    const img=document.getElementById('shotImg');
+    const ld=document.getElementById('shotLoading');
+    /* 立即弹窗 + 加载提示，图片异步生成后替换 */
+    m.classList.add('show');
+    if(ld)ld.style.display='block';
+    if(img)img.style.display='none';
+    setTimeout(()=>{
+      const cv=drawBaziCard(shareCtx);
+      cv.toBlob(b=>{
+        if(ld)ld.style.display='none';
+        if(img){img.style.display='block';img.src=b?URL.createObjectURL(b):'';}
+      },'image/png');
+    },30);
   }catch(e){alert('生成分享图失败：'+String(e&&e.message||e).slice(0,80));}
 }
 /* 分享图：深空古风长卡（四柱+五行+大运+解读） */
