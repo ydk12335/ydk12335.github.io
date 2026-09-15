@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<title>聊天树洞 · Tree Hole</title>
+<title>云汐 · Tree Hole</title>
 <link rel="preconnect" href="https://fonts.loli.net">
 <link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&display=swap">
 <style>
@@ -143,7 +143,7 @@
 <!-- 顶栏 -->
 <div class="th-head">
   <div class="th-back glass" id="thBack">←</div>
-  <div class="th-title glass" id="thTitle">聊天树洞</div>
+  <div class="th-title glass" id="thTitle">云汐</div>
   <div class="th-clear glass" id="thClear" title="清空记忆">⌫</div>
   <div class="th-wave" id="thWave" title="海浪白噪音（现场合成）">🌊<span class="tw-badge"></span></div>
 </div>
@@ -186,7 +186,7 @@
   /* ============ 顶部标题"对方正在输入中…"切换 ============
      不再弹浮动框：等待回复时把顶栏"聊天树洞"临时换成
      "对方正在输入中"，首字到达/完成/出错后换回。无动态点。 */
-  const TITLE_NORMAL = '聊天树洞';
+  const TITLE_NORMAL = '云汐';
   const TITLE_TYPING = '对方正在输入中…';
   var titleEl = $('thTitle');
   function setTyping(on) {
@@ -324,7 +324,7 @@
   function scrollToBottom(smooth) {
     requestAnimationFrame(() => msgs.scrollTo({ top: msgs.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }));
   }
-  function openMsg(role, text) {
+  function openMsg(role, text, showWho) {
     const div = document.createElement('div');
     if (role === 'user') {
       /* 微信式：名字在上，右侧头像+气泡 */
@@ -335,7 +335,7 @@
         '<div class="av"' + (u.avatar ? ' style="background-image:url(\'' + u.avatar + '\')"' : '') + '>' + (u.avatar ? '' : esc(u.initial)) + '</div></div></div>';
     } else {
       div.className = 'msg ai';
-      div.innerHTML = '<div class="who">树洞</div><div class="bub">' + esc(text) + '</div>';
+      div.innerHTML = '<div class="who">' + (showWho === false ? '' : '云汐') + '</div><div class="bub">' + esc(text) + '</div>';
     }
     msgs.appendChild(div);
     scrollToBottom(true);
@@ -344,10 +344,10 @@
   function showWelcome() {
     const chats = window.TreeHole.readChats();
     if (chats.length) return;
+    /* 首次进入：云汐的简单自我介绍气泡（不再用欢迎卡片） */
     const div = document.createElement('div');
-    div.className = 'welcome glass';
-    div.innerHTML = '<div class="wic">🕳️</div>' +
-      '<div class="wtitle">一个听你倾诉的树洞</div>';
+    div.className = 'msg ai';
+    div.innerHTML = '<div class="who">云汐</div><div class="bub">你好呀，我叫云汐，一个听人说话的树洞朋友。想说什么都可以丢给我，我在的。</div>';
     msgs.appendChild(div);
     scrollToBottom(false);
   }
@@ -360,9 +360,17 @@
     /* 无历史且无 pending：照常显示欢迎卡 */
     if (!chats.length && !hasPending) { showWelcome(); return; }
 
-    /* 先渲染历史（pending 待写入的 autoText 此时还没进记录，不会重复） */
+    /* 先渲染历史（pending 待写入的 autoText 此时还没进记录，不会重复）
+     * AI 消息按 splitReply 拆成多个气泡（像当时发送一样分段），user 消息保持单气泡 */
     const baseLen = chats.length;
-    chats.forEach(m => openMsg(m.role, m.content));
+    chats.forEach(m => {
+      if (m.role === 'assistant') {
+        const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(m.content, 6)) || [m.content];
+        bubbles.forEach((b, i) => openMsg('assistant', b, i === 0));
+      } else {
+        openMsg(m.role, m.content);
+      }
+    });
     if (baseLen) {
       /* 底部提示最近一次时间 */
       const last = chats[chats.length - 1];
@@ -382,12 +390,13 @@
     scrollToBottom(true);
     window.TreeHole.peekOpening().then(opening => {
       setTyping(false);
-      if (!opening) { if (!window.TreeHole.readChats().length) showWelcome(); scrollToBottom(false); return; }
-      /* 渲染 peekOpening 新写入的"用户消息"（占卜页带过来的内容） */
+      /* 先渲染 peekOpening 新写入的"用户消息"（占卜页带过来的内容）——
+         无论开场白是否成功都必须显示（否则 AI 不可用时命盘内容会"消失"） */
       const after = window.TreeHole.readChats();
       for (let i = baseLen; i < after.length; i++) {
         if (after[i].role === 'user') openMsg('user', after[i].content);
       }
+      if (!opening) { if (!after.length) showWelcome(); scrollToBottom(false); return; }
       /* 开场白写入聊天记录：让后续回复上下文连贯 */
       try { window.TreeHole.appendChat('assistant', opening); } catch (e) {}
       const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(opening, 4)) || [opening];
@@ -395,12 +404,12 @@
         setTimeout(() => {
           const d = document.createElement('div');
           d.className = 'msg ai';
-          d.innerHTML = '<div class="who">' + (i === 0 ? '树洞' : '') + '</div><div class="bub">' + esc(b) + '</div>';
+          d.innerHTML = '<div class="who">' + (i === 0 ? '云汐' : '') + '</div><div class="bub">' + esc(b) + '</div>';
           msgs.appendChild(d);
           scrollToBottom(true);
         }, i * 420);
       });
-    }).catch(() => { setTyping(false); if (!window.TreeHole.readChats().length) showWelcome(); });
+    }).catch(() => { setTyping(false); const after = window.TreeHole.readChats(); for (let i = baseLen; i < after.length; i++) { if (after[i].role === 'user') openMsg('user', after[i].content); } if (!after.length) showWelcome(); });
   }
   renderHistory();
 
@@ -434,6 +443,27 @@
     scrollToBottom(true);
 
     let full = '';
+    let bubbleCount = 0;   /* 本次回复已发出的独立气泡数（第一个带 who「云汐」） */
+    /* 边流式边切气泡：把已说完的完整句子立即切成独立气泡发出，live 只留未说完的尾巴 */
+    const flushDone = () => {
+      let guard = 0;
+      while (guard++ < 20) {
+        let cut = -1;
+        for (let i = full.length - 1; i >= 0; i--) {
+          const ch = full[i];
+          if (ch === '。' || ch === '！' || ch === '？' || ch === '!' || ch === '?' || ch === '；' || ch === ';' || ch === '\n') { cut = i + 1; break; }
+        }
+        if (cut <= 0) break;
+        const done = full.slice(0, cut).trim();
+        full = full.slice(cut);
+        if (!done) continue;
+        const d = document.createElement('div');
+        d.className = 'msg ai';
+        d.innerHTML = '<div class="who">' + (bubbleCount === 0 ? '云汐' : '') + '</div><div class="bub">' + esc(done) + '</div>';
+        bubbleCount++;
+        msgs.appendChild(d);
+      }
+    };
     /* 重连提示条：只有 onRetry 触发时才显示/更新（此前 50ms 定时器把元素删了导致提示永远不显示） */
     const showStatus = (tier, n) => {
       if (!status.isConnected) { msgs.appendChild(status); scrollToBottom(true); }
@@ -444,47 +474,40 @@
     try {
       await window.TreeHole.sendMessage(text, (d) => {
         full += d;
-        /* 流式首字到达：标题换回"聊天树洞"，插入真实 AI 气泡 */
+        /* 流式首字到达：标题换回"云汐"，插入真实 AI 气泡 */
         setTyping(false);
         if (!live.isConnected) {
           live.style.display = '';
-          live.innerHTML = '<div class="who">树洞</div><div class="bub"></div>';
+          live.innerHTML = '<div class="bub"></div>';
           msgs.appendChild(live);
         }
+        /* 已说完的句子立即成独立气泡；live 只显示未说完的尾巴 */
+        flushDone();
         live.querySelector('.bub').textContent = full;
         scrollToBottom(true);
       }, (tier, n) => {
         showStatus(tier, n);
       });
-      /* 多气泡：把整段回复拆成短句，一条一条发（像真人连发微信） */
-      const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(full)) || [full];
+      /* 收尾：剩余未成句的尾巴作为最后一个气泡发出，移除 live */
       setTyping(false);
-      if (live.isConnected) live.remove();
-      if (bubbles.length) {
-        bubbles.forEach((b, i) => {
-          setTimeout(() => {
-            const d = document.createElement('div');
-            d.className = 'msg ai';
-            d.innerHTML = '<div class="who">' + (i === 0 ? '树洞' : '') + '</div><div class="bub">' + esc(b) + '</div>';
-            msgs.appendChild(d);
-            scrollToBottom(true);
-          }, i * 420);
-        });
-      } else {
-        const d = document.createElement('div');
-        d.className = 'msg ai';
-        d.innerHTML = '<div class="who">树洞</div><div class="bub">' + esc(full || '…') + '</div>';
-        msgs.appendChild(d);
+      if (live.isConnected) {
+        live.remove();
+        if (full.trim()) {
+          const d = document.createElement('div');
+          d.className = 'msg ai';
+          d.innerHTML = '<div class="who">' + (bubbleCount === 0 ? '云汐' : '') + '</div><div class="bub">' + esc(full.trim()) + '</div>';
+          msgs.appendChild(d);
+        }
         scrollToBottom(true);
       }
     } catch (e) {
       setTyping(false);
       /* 已有流式气泡：直接在气泡里显示错误；否则创建一个错误气泡 */
       if (live.isConnected) {
-        live.querySelector('.bub').textContent = '🌫️ 树洞暂时听不到你说话，稍后再试试吧。';
+        live.querySelector('.bub').textContent = '🌫️ 我暂时听不到你说话，稍后再试试吧。';
       } else {
         live.style.display = '';
-        live.innerHTML = '<div class="who">树洞</div><div class="bub">🌫️ 树洞暂时听不到你说话，稍后再试试吧。</div>';
+        live.innerHTML = '<div class="who">云汐</div><div class="bub">🌫️ 我暂时听不到你说话，稍后再试试吧。</div>';
         msgs.appendChild(live);
       }
       scrollToBottom(true);

@@ -849,6 +849,7 @@ async function askAI(p){
   const panText=[
     '【命盘数据】',
     '四柱：'+p.pillars.join(' '),
+    '性别：'+(p.gender||gender||'男'),
     '十神：'+p.tens.join(' '),
     '日主：'+p.dayMasterFull,
     '身强弱：'+p.strength,
