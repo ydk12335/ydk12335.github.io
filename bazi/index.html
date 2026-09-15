@@ -48,12 +48,15 @@ canvas#stars{position:fixed;inset:0;z-index:0}
   box-shadow:0 6px 20px rgba(4,2,18,.35),inset 0 1px 0 rgba(255,255,255,.18)}
 .btn-back:active{transform:scale(.94)}
 /* ---------- 输入表单 ---------- */
-.b-form{width:min(560px,94vw);display:flex;flex-direction:column;gap:14px;margin-top:clamp(12px,2.6vh,24px)}
+.b-form{width:min(560px,94vw);display:flex;flex-direction:column;gap:14px;margin-top:clamp(12px,2.6vh,24px);
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:clamp(14px,3vw,20px);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .b-field{display:flex;flex-direction:column;gap:6px;text-align:left}
 .b-label{font-size:.8rem;letter-spacing:.14em;color:#cfc6ea}
-.b-input,.b-select{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);
+.b-input,.b-select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);
   border-radius:12px;padding:12px 14px;font-family:inherit;font-size:.95rem;color:var(--ivory);
-  outline:none;transition:border-color .25s;width:100%;-webkit-appearance:none;appearance:none}
+  outline:none;transition:border-color .25s;width:100%;-webkit-appearance:none;appearance:none;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .b-input:focus,.b-select:focus{border-color:rgba(240,207,130,.6)}
 .b-select option{background:#14102b;color:#f2ede0}
 .b-unknown{display:flex;align-items:center;gap:6px;font-size:.68rem;color:#9a90c0;letter-spacing:.05em;margin-top:4px;cursor:pointer;user-select:none}
@@ -70,23 +73,31 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .b-row .b-field{flex:1}
 .b-pickrow{display:flex;gap:8px;align-items:stretch}
 .b-pickrow .b-input{flex:1}
-.b-pick{flex:0 0 auto;width:46px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);color:var(--ivory);font-size:1.05rem;cursor:pointer;
-  transition:border-color .25s,background .25s;display:flex;align-items:center;justify-content:center}
+.b-pick{flex:0 0 auto;width:46px;border-radius:12px;border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.07);color:var(--ivory);font-size:1.05rem;cursor:pointer;
+  transition:border-color .25s,background .25s;display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .b-pick:active{transform:scale(.94)}
 .b-pick:hover{border-color:rgba(240,207,130,.5)}
 .b-field:has(.b-pick:disabled) .b-pick{opacity:.35;pointer-events:none}
 /* 性别按钮组 */
 .b-gender{display:flex;gap:10px}
 .b-gender button{flex:1;cursor:pointer;padding:12px 0;border-radius:12px;font-family:inherit;font-size:.95rem;
-  letter-spacing:.14em;color:#cfc6ea;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);
-  transition:all .25s}
-.b-gender button.on{color:#14102b;background:var(--gold);border-color:var(--gold);box-shadow:0 0 18px rgba(240,207,130,.4)}
+  letter-spacing:.14em;color:#cfc6ea;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);
+  transition:all .25s;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.b-gender button.on{color:#14102b;background:var(--gold);border-color:var(--gold);font-weight:700;
+  box-shadow:0 0 18px rgba(240,207,130,.55),inset 0 1px 0 rgba(255,255,255,.35);border-width:2px}
+body[data-phase="day"] .b-gender button,body[data-phase="dusk"] .b-gender button{
+  color:#5d4e2c;border-color:rgba(138,106,46,.35);background:rgba(255,255,255,.5)}
+body[data-phase="day"] .b-gender button.on,body[data-phase="dusk"] .b-gender button.on{
+  color:#14102b;background:linear-gradient(160deg,#d9b45c,#b8872e);border-color:#8a6a2e;font-weight:700;
+  box-shadow:0 0 14px rgba(138,106,46,.5),inset 0 1px 0 rgba(255,255,255,.4);border-width:2px}
 /* 主按钮 */
 .b-go{width:100%;cursor:pointer;padding:15px 0;border-radius:999px;border:1px solid rgba(240,207,130,.5);
   background:linear-gradient(160deg,rgba(240,207,130,.22),rgba(255,255,255,.05));color:#f6ecc9;
   font-family:inherit;font-size:1.05rem;letter-spacing:.3em;text-indent:.3em;transition:all .3s;
-  box-shadow:0 8px 24px rgba(4,2,18,.4),inset 0 1px 0 rgba(255,255,255,.15)}
+  box-shadow:0 8px 24px rgba(4,2,18,.4),inset 0 1px 0 rgba(255,255,255,.15);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .b-go:active{transform:scale(.97)}
 .b-go:disabled{opacity:.5;cursor:default}
 /* ---------- 命盘展示 ---------- */
@@ -118,7 +129,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .b-card table{width:100%;border-collapse:collapse;font-size:.82rem}
 .b-card table td{border-bottom:1px solid rgba(255,255,255,.06);padding:6px 4px;color:#d8d0ef}
 .b-card table td:first-child{color:#b5abd8;width:8em}
-.b-foot{text-align:center;font-size:.66rem;color:#8f86b8;margin-top:12px;letter-spacing:.05em}
+.b-foot{text-align:center;font-size:.8rem;color:#b5abd8;margin-top:12px;letter-spacing:.05em}
 .b-loading{display:flex;align-items:center;justify-content:center;gap:12px;color:#c9c0e8;padding:30px 0}
 .b-wait{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#c9c0e8;padding:34px 16px;text-align:center}
 .b-wait .bw-tip{font-size:.82rem;color:#d8c9a8;letter-spacing:.05em}
@@ -131,7 +142,7 @@ canvas#stars{position:fixed;inset:0;z-index:0}
   font-size:.5rem;color:var(--gold);animation:orbGlow 2.2s ease-in-out infinite}
 @keyframes orbSpin{to{transform:rotate(360deg)}}
 @keyframes orbGlow{0%,100%{opacity:.4}50%{opacity:1;text-shadow:0 0 10px rgba(240,207,130,.8)}}
-.p-foot{font-size:.72rem;letter-spacing:.3em;text-indent:.3em;color:#6f66a0}
+.p-foot{font-size:.82rem;letter-spacing:.3em;text-indent:.3em;color:#9a90c0;margin-top:36px;padding-top:8px}
 /* ---------- 分享按钮 ---------- */
 .b-share{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
 .share-btn{flex:0 1 auto;min-width:0;opacity:.9;cursor:pointer}
