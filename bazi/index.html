@@ -59,6 +59,12 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 .b-unknown{display:flex;align-items:center;gap:6px;font-size:.68rem;color:#9a90c0;letter-spacing:.05em;margin-top:4px;cursor:pointer;user-select:none}
 .b-unknown input{accent-color:var(--gold);width:14px;height:14px;cursor:pointer}
 .b-unknown.dim{opacity:.45}
+.b-hint{font-size:.66rem;color:#9a90c0;letter-spacing:.04em;margin-top:-2px;line-height:1.5}
+.b-time{display:flex;align-items:center;gap:6px}
+.b-time .b-input{text-align:center;padding:9px 6px;min-width:0}
+.b-time-hh{flex:1}
+.b-time-mm{flex:1}
+.b-time-colon{flex:none;color:#9a90c0;font-size:1.05rem;font-weight:600;line-height:1}
 .b-input:disabled,.b-select:disabled{opacity:.4}
 .b-row{display:flex;gap:10px}
 .b-row .b-field{flex:1}
@@ -195,10 +201,12 @@ canvas#stars{position:fixed;inset:0;z-index:0}
     <div class="b-row">
       <div class="b-field">
         <label class="b-label">出生时间</label>
-        <div class="b-pickrow">
-          <input class="b-input" id="bTime" type="text" inputmode="numeric" value="10:00" placeholder="如 10:30 或 1030 或 10点30" autocomplete="off">
-          <button type="button" class="b-pick" id="btnTimePick" title="用选择器选时间">⏰</button>
+        <div class="b-time">
+          <input class="b-input b-time-hh" id="bTimeHh" type="number" inputmode="numeric" min="0" max="23" maxlength="2" placeholder="时" value="10" autocomplete="off">
+          <span class="b-time-colon">:</span>
+          <input class="b-input b-time-mm" id="bTimeMm" type="number" inputmode="numeric" min="0" max="59" maxlength="2" placeholder="分" value="00" autocomplete="off">
         </div>
+        <div class="b-hint">24小时制：小时填 0-23（下午1点=13），分钟填 0-59</div>
         <label class="b-unknown"><input type="checkbox" id="bTimeUnknown"> 时间未知</label>
       </div>
       <div class="b-field">
@@ -445,15 +453,33 @@ let bTimeUnknown=false,bCityUnknown=false;
 function syncUnknown(){
   bTimeUnknown=$('bTimeUnknown').checked;
   bCityUnknown=$('bCityUnknown').checked;
-  $('bTime').disabled=bTimeUnknown;
+  const th=$('bTimeHh'),tm=$('bTimeMm');
+  if(th)th.disabled=bTimeUnknown;
+  if(tm)tm.disabled=bTimeUnknown;
   $('bCity').disabled=bCityUnknown;
-  const l1=$('bTime').closest('.b-field').querySelector('.b-unknown');
+  const l1=$('bTimeHh')?$('bTimeHh').closest('.b-field').querySelector('.b-unknown'):null;
   const l2=$('bCity').closest('.b-field').querySelector('.b-unknown');
   if(l1)l1.classList.toggle('dim',!bTimeUnknown);
   if(l2)l2.classList.toggle('dim',!bCityUnknown);
 }
 $('bTimeUnknown').addEventListener('change',syncUnknown);
 $('bCityUnknown').addEventListener('change',syncUnknown);
+/* ---------- 时间双框输入守卫：只允许 0-9、最多 2 位、越界自动修正 ---------- */
+document.querySelectorAll('.b-time .b-input').forEach(inp=>{
+  inp.addEventListener('input',()=>{
+    let v=inp.value.replace(/\D/g,'').slice(0,2);
+    if(inp.classList.contains('b-time-hh')&&v&&+v>23)v='23';
+    if(inp.classList.contains('b-time-mm')&&v&&+v>59)v='59';
+    if(inp.value!==v)inp.value=v;
+  });
+  inp.addEventListener('blur',()=>{
+    if(inp.value===''){inp.value='';return;}
+    let v=String(+inp.value);
+    if(inp.classList.contains('b-time-hh')&&+v>23)v='23';
+    if(inp.classList.contains('b-time-mm')&&+v>59)v='59';
+    if(inp.value!==v)inp.value=v;
+  });
+});
 /* ---------- 选择器按钮：选完回填文本（保留自由输入能力） ---------- */
 (function(){
   const hidden=$('bHiddenPicker')||null;
@@ -475,22 +501,7 @@ $('bCityUnknown').addEventListener('change',syncUnknown);
     d.showPicker?d.showPicker():d.focus();
     d.onchange=()=>{ if(d.value)$('bDate').value=d.value; d.onchange=null; };
   };
-  /* 时间选择 */
-  $('btnTimePick').onclick=function(){
-    const t=p.time;
-    const cur=parseTimeStr($('bTime').value);
-    t.value=cur?(String(cur.hh).padStart(2,'0')+':'+String(cur.mm).padStart(2,'0')):'10:00';
-    t.showPicker?t.showPicker():t.focus();
-    t.onchange=()=>{ if(t.value)$('bTime').value=t.value; t.onchange=null; };
-  };
-  /* 时间未知 → 禁用选择按钮 */
-  const syncPicks=()=>{
-    const bt=$('btnTimePick'),bd=$('btnDatePick');
-    if(bt)bt.disabled=bTimeUnknown;
-    if(bd)bd.disabled=false;
-  };
-  document.addEventListener('change',e=>{if(e.target&&e.target.id==='bTimeUnknown')syncPicks();});
-  syncPicks();
+  /* 日期选择保留；时间选择器已改为双框直接填写，无需 ⏰ 按钮 */
 })();
 syncUnknown();
 
@@ -525,14 +536,16 @@ function parseTimeStr(s){
 }
 
 $('bGo').onclick=async function(){
-  const date=$('bDate').value,rawTime=$('bTime').value,city=$('bCity').value;
+  const date=$('bDate').value,city=$('bCity').value;
+  const rawHh=($('bTimeHh')||{}).value,rawMm=($('bTimeMm')||{}).value;
+  const rawTime=(String(rawHh||'').trim()||String(rawMm||'').trim())?(String(rawHh||'').trim()+':'+String(rawMm||'').trim()):'';
   const pd=parseDateStr(date);
   if(!pd){alert('出生日期格式不对，试试如 1998-08-08 或 1998/8/8');return;}
   const y=pd.y,m=pd.m,d=pd.d;
   let hh=12,mm=0;
   if(!bTimeUnknown&&String(rawTime||'').trim()){
     const pt=parseTimeStr(rawTime);
-    if(!pt){alert('出生时间格式不对，试试如 10:30、1030 或 10点半');return;}
+    if(!pt){alert('出生时间格式不对（小时 0-23，分钟 0-59）');return;}
     hh=pt.hh;mm=pt.mm;
   }
   if(!window.BaziEngine){alert('命盘引擎未加载，请刷新重试');return;}
