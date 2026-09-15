@@ -319,7 +319,7 @@
       '· 默认不带问号收尾：大部分回复直接说事、说想法、说反应就行，别老想着抛问题给 TA；实在想了解，最多问一个，而且必须贴着 TA 刚说的具体内容问——**一句话里只允许最多一个问号，末尾尽量别用问号收尾**；',
       '· 语气词自然用（呀/呢/啦/哦/嘛/叭），别堆。',
       '【绝对不要·AI 味黑名单】',
-      '· 万能接话："你说啥都行""我在这听着呢""嗯嗯，我在"——没话接就老实说"我一时不知道说啥"，也别糊弄；',
+      '· 万能接话和敷衍空壳："你说啥都行""我在这听着呢""嗯嗯，我在""嗯我在""咋了吗""怎么了吗""怎么了""在呢"——回应必须有实际内容（接 TA 的事/表达真实反应/说自己的想法），不许只回"在""嗯""咋了"这种空壳；没话接就老实说"我一时不知道说啥"，也别糊弄；',
       '· 空泛安慰："我理解你的感受""抱抱你""一切都会好起来的""加油""你值得被爱"；',
       '· 总结或复述 TA 的话（"所以你其实是……"）；',
       '· 假客气："我们聊聊吧""有什么都可以和我说""不用怕"；也别问了又补一句"想说就说，不说算了/不想说也没关系"这种退路话——要问就直接问，贴内容问，别先给台阶下；',
@@ -364,20 +364,24 @@
     max = max || 6;
     /* 1) 优先按换行拆分 */
     let segs = t.split(/\n+/).map(s => s.trim()).filter(Boolean);
-    /* 2) 再按句子标点把过长段落切短（不足 max 时尽量都拆开，超过则合并兜底） */
+    /* 2) 按句子标点切分（每个完整句一个气泡，像真人连发微信；纯语气残句并入上句） */
     const out = [];
     const push = s => { s = s.trim(); if (s) out.push(s); };
     for (const seg of segs) {
-      if (seg.length <= 40) { push(seg); continue; }
+      /* 切成句子（保留句尾标点） */
       const parts = seg.split(/(?<=[。！？!?；;])/).map(s => s.trim()).filter(Boolean);
+      if (parts.length <= 1) { push(seg); continue; }
       let cur = '';
       for (const p of parts) {
-        if (cur && (cur + p).length > 46) { push(cur); cur = p; }
-        else cur += p;
+        /* 前一句存在且是短残句（无句尾标点结尾，像"哈哈""嗯"这种语气词）→ 并入上句 */
+        const isResidual = !/[。！？!?；;]$/.test(p) && p.length <= 10;
+        if (cur && isResidual) { cur += p; continue; }
+        if (cur) push(cur);
+        cur = p;
       }
       if (cur) push(cur);
     }
-    /* 3) 兜底：过长单气泡内部再按逗号切分 */
+    /* 3) 兜底：仍过长的单气泡（无标点的超长句）内部按逗号切分 */
     let final = [];
     for (const s of out) {
       if (s.length <= 46) { final.push(s); continue; }
@@ -393,8 +397,10 @@
     if (final.length > max) {
       const head = final.slice(0, max - 1);
       head.push(final.slice(max - 1).join(''));
-      return head;
+      final = head;
     }
+    /* 5) 句末标点清理：除非是语气标点（！？），去掉句末句号/分号/逗号，气泡更像真人连发（"哈哈哈。"→"哈哈哈"、"挺耗的，"→"挺耗的"） */
+    final = final.map(s => s.replace(/[。；;，,]+$/, '').trim()).filter(Boolean);
     return final;
   }
 
@@ -457,13 +463,16 @@
     return s;
   }
 
-  /** 用户发消息 → 追加短期记忆 → 调 AI（带画像 + 最近10条 + 摘要 + agent工具）→ 返回回复文本 */
-  async function sendMessage(userText, onDelta, onRetry) {
+  /** 用户发消息 → 追加短期记忆 → 调 AI（带画像 + 最近10条 + 摘要 + agent工具）→ 返回回复文本
+   *  @param {string|string[]} userTexts 单条消息，或连发的一批消息（数组） */
+  async function sendMessage(userTexts, onDelta, onRetry) {
+    const list = Array.isArray(userTexts) ? userTexts.filter(t => String(t || '').trim()) : [userTexts];
     const chats = readChats();
-    appendChat('user', userText);
+    list.forEach(t => appendChat('user', t));
+    const joined = list.join('\n');
 
-    /* 心理危机保护（硬拦截）：命中自杀/自伤关键词 → 不调 AI，直接返回暖心安抚+热线 */
-    if (window.CrisisGuard && CrisisGuard.check(userText)) {
+    /* 心理危机保护（硬拦截）：任一消息命中自杀/自伤关键词 → 不调 AI，直接返回暖心安抚+热线 */
+    if (window.CrisisGuard && CrisisGuard.check(joined)) {
       const safe = crisisReply();
       if (onDelta) { safe.split('\n').forEach((ln, i) => setTimeout(() => onDelta(ln + (i < 3 ? '\n' : '')), i * 180)); }
       appendChat('assistant', safe);
@@ -533,8 +542,8 @@
         appendChat('assistant', full);
         /* 【后台异步 · 不阻塞回复】画像提取 + 长期摘要（用户无感知） */
         setTimeout(() => {
-          try { extractProfileSilent(userText, full); } catch (e) {}
-          try { buildSummary([{ role: 'user', content: userText }, { role: 'assistant', content: full }]); } catch (e) {}
+          try { extractProfileSilent(joined, full); } catch (e) {}
+          try { buildSummary([{ role: 'user', content: joined }, { role: 'assistant', content: full }]); } catch (e) {}
         }, 300);
       }
     }

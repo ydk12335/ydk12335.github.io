@@ -421,20 +421,32 @@
   }
   inp.addEventListener('input', autoResize);
 
-  async function send() {
-    const text = inp.value.trim();
-    if (!text || busy) return;
-    inp.value = ''; autoResize();
-    busy = true; sendBtn.disabled = true;
+  /* ============ 发送（连发批量等待） ============ */
+  let pending = [];        /* 等待合并发送的用户消息队列 */
+  let waitTimer = null;    /* 连发等待定时器 */
+  const BATCH_WAIT = 1200; /* 发完一句后等待的毫秒数：没继续发就开回，继续发了就合并成一批 */
 
-    /* 用户气泡 */
+  function send() {
+    const text = inp.value.trim();
+    if (!text) return;
+    inp.value = ''; autoResize();
+    /* 用户气泡立即显示（微信式：先显示自己发的，再等对方回） */
     openMsg('user', text);
-    /* 顶部标题换成"对方正在输入中" */
-    const live = document.createElement('div');
-    live.className = 'msg ai';
-    live.style.display = 'none';
+    pending.push(text);
+    /* AI 回复中：入队即可，回复完成后自动续批 */
+    if (busy) return;
+    /* 空闲：重置等待定时器，期间继续连发会合并成一批 */
+    if (waitTimer) clearTimeout(waitTimer);
     setTyping(true);
     scrollToBottom(true);
+    waitTimer = setTimeout(() => { waitTimer = null; flushQueue(); }, BATCH_WAIT);
+  }
+
+  async function flushQueue() {
+    if (busy || !pending.length) return;
+    const batch = pending.slice();   /* 取走本批，期间用户新发的留在 pending 待续批 */
+    pending = [];
+    busy = true; sendBtn.disabled = true;
 
     const status = document.createElement('div');
     status.className = 'th-status changing';
@@ -442,28 +454,6 @@
     msgs.appendChild(status);
     scrollToBottom(true);
 
-    let full = '';
-    let bubbleCount = 0;   /* 本次回复已发出的独立气泡数（第一个带 who「云汐」） */
-    /* 边流式边切气泡：把已说完的完整句子立即切成独立气泡发出，live 只留未说完的尾巴 */
-    const flushDone = () => {
-      let guard = 0;
-      while (guard++ < 20) {
-        let cut = -1;
-        for (let i = full.length - 1; i >= 0; i--) {
-          const ch = full[i];
-          if (ch === '。' || ch === '！' || ch === '？' || ch === '!' || ch === '?' || ch === '；' || ch === ';' || ch === '\n') { cut = i + 1; break; }
-        }
-        if (cut <= 0) break;
-        const done = full.slice(0, cut).trim();
-        full = full.slice(cut);
-        if (!done) continue;
-        const d = document.createElement('div');
-        d.className = 'msg ai';
-        d.innerHTML = '<div class="who">' + (bubbleCount === 0 ? '云汐' : '') + '</div><div class="bub">' + esc(done) + '</div>';
-        bubbleCount++;
-        msgs.appendChild(d);
-      }
-    };
     /* 重连提示条：只有 onRetry 触发时才显示/更新（此前 50ms 定时器把元素删了导致提示永远不显示） */
     const showStatus = (tier, n) => {
       if (!status.isConnected) { msgs.appendChild(status); scrollToBottom(true); }
@@ -472,51 +462,48 @@
       scrollToBottom(true);
     };
     try {
-      await window.TreeHole.sendMessage(text, (d) => {
-        full += d;
-        /* 流式首字到达：标题换回"云汐"，插入真实 AI 气泡 */
-        setTyping(false);
-        if (!live.isConnected) {
-          live.style.display = '';
-          live.innerHTML = '<div class="bub"></div>';
-          msgs.appendChild(live);
-        }
-        /* 已说完的句子立即成独立气泡；live 只显示未说完的尾巴 */
-        flushDone();
-        live.querySelector('.bub').textContent = full;
-        scrollToBottom(true);
-      }, (tier, n) => {
+      /* 不流式输出：整批消息一次发给 AI，完整回复返回后拆成多个气泡按顺序逐条发出（像真人连发微信） */
+      const full = await window.TreeHole.sendMessage(batch, null, (tier, n) => {
         showStatus(tier, n);
       });
-      /* 收尾：剩余未成句的尾巴作为最后一个气泡发出，移除 live */
       setTyping(false);
-      if (live.isConnected) {
-        live.remove();
-        if (full.trim()) {
-          const d = document.createElement('div');
-          d.className = 'msg ai';
-          d.innerHTML = '<div class="who">' + (bubbleCount === 0 ? '云汐' : '') + '</div><div class="bub">' + esc(full.trim()) + '</div>';
-          msgs.appendChild(d);
-        }
+      const bubbles = (window.TreeHole.splitReply && window.TreeHole.splitReply(full)) || [full];
+      if (bubbles.length) {
+        bubbles.forEach((b, i) => {
+          setTimeout(() => {
+            const d = document.createElement('div');
+            d.className = 'msg ai';
+            d.innerHTML = '<div class="who">' + (i === 0 ? '云汐' : '') + '</div><div class="bub">' + esc(b) + '</div>';
+            msgs.appendChild(d);
+            scrollToBottom(true);
+          }, i * 420);
+        });
+      } else {
+        const d = document.createElement('div');
+        d.className = 'msg ai';
+        d.innerHTML = '<div class="who">云汐</div><div class="bub">' + esc(full || '…') + '</div>';
+        msgs.appendChild(d);
         scrollToBottom(true);
+      }
+      /* 回复期间用户又连发了新消息 → 等待片刻后自动续批 */
+      if (pending.length) {
+        waitTimer = setTimeout(() => { waitTimer = null; flushQueue(); }, BATCH_WAIT);
       }
     } catch (e) {
       setTyping(false);
-      /* 已有流式气泡：直接在气泡里显示错误；否则创建一个错误气泡 */
-      if (live.isConnected) {
-        live.querySelector('.bub').textContent = '🌫️ 我暂时听不到你说话，稍后再试试吧。';
-      } else {
-        live.style.display = '';
-        live.innerHTML = '<div class="who">云汐</div><div class="bub">🌫️ 我暂时听不到你说话，稍后再试试吧。</div>';
-        msgs.appendChild(live);
-      }
+      const d = document.createElement('div');
+      d.className = 'msg ai';
+      d.innerHTML = '<div class="who">云汐</div><div class="bub">🌫️ 我暂时听不到你说话，稍后再试试吧。</div>';
+      msgs.appendChild(d);
       scrollToBottom(true);
-      /* 失败回滚：移除刚才追加的 user 消息，避免一条消息变两条 */
+      /* 失败回滚：移除本批追加的 user 消息（其后没有 assistant 回复），避免消息变两条 */
       try {
         const chats = window.TreeHole.readChats();
-        if (chats.length && chats[chats.length - 1].role === 'user' && !chats.some(c => c.content === text && c.role === 'assistant')) {
-          chats.pop(); window.TreeHole.saveChats(chats);
+        let popped = 0;
+        while (popped < batch.length && chats.length && chats[chats.length - 1].role === 'user') {
+          chats.pop(); popped++;
         }
+        if (popped) window.TreeHole.saveChats(chats);
       } catch (e2) {}
     } finally {
       setTyping(false);
