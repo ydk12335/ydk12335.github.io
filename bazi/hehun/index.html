@@ -42,11 +42,14 @@ body[data-phase="day"] .rel-chip.on,body[data-phase="dusk"] .rel-chip.on{
   border-color:rgba(138,106,46,.75);color:#4a3c1c;background:rgba(240,207,130,.55);
   box-shadow:0 0 12px rgba(138,106,46,.3);text-shadow:none}
 .b-form{width:min(560px,94vw);margin-top:clamp(18px,3vh,28px);text-align:left;
-  background:rgba(255,255,255,.04);border:1px solid rgba(240,207,130,.16);border-radius:18px;
-  padding:clamp(14px,3vw,20px);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.b-pair-person{background:rgba(255,255,255,.05);border:1px solid rgba(240,207,130,.16);border-radius:16px;
-  padding:14px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  background:linear-gradient(155deg,rgba(255,255,255,.085),rgba(255,255,255,.025) 45%,rgba(255,255,255,.055));
+  border:1px solid rgba(240,207,130,.18);border-radius:18px;
+  padding:clamp(14px,3vw,20px);
+  backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);
+  box-shadow:0 22px 56px rgba(4,2,18,.35), inset 0 1px 0 rgba(255,255,255,.10)}
+.b-pair-person{background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
+  border:1px solid rgba(240,207,130,.15);border-radius:16px;
+  padding:14px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
 .b-pair-person:last-child{margin-bottom:0}
 .b-pair-tag{font-size:.72rem;color:#9a90c0;letter-spacing:.3em;text-align:center;text-indent:.3em}
 .b-row{display:flex;gap:10px}
@@ -55,14 +58,13 @@ body[data-phase="day"] .rel-chip.on,body[data-phase="dusk"] .rel-chip.on{
 .b-label{font-size:.74rem;color:#c9b98a;letter-spacing:.16em;text-indent:.16em}
 .b-input,.b-select{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(240,207,130,.22);
   border-radius:10px;padding:9px 12px;color:#f0ead8;font-family:inherit;font-size:.88rem;outline:none;
-  color-scheme:dark;transition:.2s;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  color-scheme:dark;transition:.2s}
 .b-input:focus,.b-select:focus{border-color:rgba(240,207,130,.6);background:rgba(240,207,130,.06)}
 .b-input::placeholder{color:#7d74a8;font-size:.8rem}
 .b-pickrow{display:flex;gap:8px}
 .b-pick{flex:none;width:38px;height:38px;border-radius:10px;border:1px solid rgba(240,207,130,.3);
   background:rgba(240,207,130,.08);cursor:pointer;font-size:1rem;line-height:1;
-  display:flex;align-items:center;justify-content:center;transition:.2s;padding:0;font-family:inherit;
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  display:flex;align-items:center;justify-content:center;transition:.2s;padding:0;font-family:inherit}
 .b-pick:active{background:rgba(240,207,130,.2);transform:scale(.93)}
 .b-unknown{display:flex;align-items:center;gap:5px;font-size:.72rem;color:#8f86b8;cursor:pointer;user-select:none;margin-top:2px}
 .b-unknown input{accent-color:#f0cf82}
@@ -75,8 +77,7 @@ body[data-phase="day"] .rel-chip.on,body[data-phase="dusk"] .rel-chip.on{
 .b-field.dim{opacity:.45}
 .b-gender{display:flex;gap:8px}
 .b-gender button{flex:1;padding:9px 0;border-radius:10px;border:1px solid rgba(240,207,130,.22);
-  background:rgba(255,255,255,.06);color:#cfc6ea;font-family:inherit;font-size:.84rem;cursor:pointer;transition:.2s;letter-spacing:.1em;
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  background:rgba(255,255,255,.06);color:#cfc6ea;font-family:inherit;font-size:.84rem;cursor:pointer;transition:.2s;letter-spacing:.1em}
 .b-gender button.on{color:#14102b;background:var(--gold);border-color:var(--gold);font-weight:700;
   box-shadow:0 0 16px rgba(240,207,130,.55),inset 0 1px 0 rgba(255,255,255,.35);border-width:2px}
 body[data-phase="day"] .b-gender button,body[data-phase="dusk"] .b-gender button{
