@@ -440,7 +440,14 @@
     setTyping(true);
     scrollToBottom(true);
     waitTimer = setTimeout(() => { waitTimer = null; flushQueue(); }, BATCH_WAIT);
+    /* 发完保持输入焦点：点 ➤ 发送后焦点会被按钮抢走导致键盘收起、无法追问。
+       立即把焦点还给输入框（rAF 确保在浏览器处理完按钮抢焦点之后仍能抢回） */
+    requestAnimationFrame(() => {
+      if (document.activeElement !== inp) inp.focus({ preventScroll: true });
+    });
   }
+  /* 阻止发送按钮抢焦点：pointerdown 时 preventDefault，焦点始终留在输入框 */
+  sendBtn.addEventListener('pointerdown', e => e.preventDefault());
 
   async function flushQueue() {
     if (busy || !pending.length) return;
