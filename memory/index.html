@@ -25,9 +25,12 @@ canvas#stars{position:fixed;inset:0;z-index:0}
 #world{position:absolute;left:0;top:0;width:100%;height:100%}
 .node{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;will-change:transform}
 .node-core{position:absolute;inset:0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#0a0815;font-weight:bold}
-.node-ring{position:absolute;inset:-7px;border-radius:50%;pointer-events:none;animation:pulse 3s ease-in-out infinite}
-.node-label{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);font-size:.62rem;white-space:nowrap;letter-spacing:.05em;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.node-ring{position:absolute;inset:-7px;border-radius:50%;pointer-events:none;opacity:.26}
+.node-ring.pulse{animation:pulse 3s ease-in-out infinite}
+.node-label{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);font-size:.62rem;white-space:nowrap;letter-spacing:.05em;text-shadow:0 1px 4px rgba(0,0,0,.8);transition:opacity .15s}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:.35}50%{transform:scale(1.12);opacity:.1}}
+/* 拖动/缩放中隐藏标签，减少排版压力；结束瞬间恢复 */
+#stage.moving .node-label{opacity:0}
 #emptyHint{position:absolute;left:50%;top:58%;transform:translateX(-50%);text-align:center;color:rgba(240,207,130,.45);font-size:.78rem;line-height:2;pointer-events:none;letter-spacing:.1em}
 #centerHint{position:absolute;left:50%;top:64px;transform:translateX(-50%);font-size:.6rem;color:rgba(240,207,130,.38);letter-spacing:.18em;pointer-events:none;z-index:19;white-space:nowrap}
 
@@ -214,10 +217,18 @@ const cv=document.getElementById('stars'),ctx=cv.getContext('2d');
 let starsArr=[],meteors=[];
 function resizeStars(){
   cv.width=innerWidth;cv.height=innerHeight;starsArr=[];
-  const n=Math.floor(cv.width*cv.height/13000);
+  /* 密度降低：13000 → 20000，手机上星数更少，减少每帧 fill 开销 */
+  const n=Math.floor(cv.width*cv.height/20000);
   for(let i=0;i<n;i++)starsArr.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.3+.25,a:Math.random()*.5+.08,sp:Math.random()*.0028+.0008,ph:Math.random()*7});
 }
+/* 页面不可见时暂停星空动画，省电省帧 */
+let starsRunning=true;
+addEventListener('visibilitychange',()=>{
+  if(document.hidden){starsRunning=false;}
+  else{starsRunning=true;requestAnimationFrame(drawStars);}
+});
 function drawStars(){
+  if(!starsRunning)return;
   ctx.clearRect(0,0,cv.width,cv.height);
   for(const s of starsArr){
     s.ph+=s.sp;
@@ -248,10 +259,13 @@ function buildNodes(){
   nodes=[{id:'center',label:'我',type:'center',x:0,y:0,z:1,size:52,data:null}];
   db.items.forEach((it,idx)=>{
     const T=TYPES[it.type]||TYPES.free;
+    const _lb = it.title || ((it.data && it.data.note) ? String(it.data.note).split('\n')[0].slice(0,14) : T.label);
     const ang=(idx/Math.max(db.items.length,4))*Math.PI*2- Math.PI/2;
-    const dist=130+Math.random()*70;
-    var _lb = it.title || ((it.data && it.data.note) ? String(it.data.note).split('\n')[0].slice(0,14) : T.label);
-    nodes.push({id:it.id,label:_lb,type:it.type,x:Math.cos(ang)*dist,y:Math.sin(ang)*dist,z:.55+Math.random()*.4,size:36,data:it});
+    /* 确定性分层排列：内圈(1/3 条) 120~170，外圈(余下) 190~250，z 按序号固定——不再随机抖动/重叠 */
+    const ring=idx<Math.ceil(db.items.length/3)?0:1;
+    const dist=ring?190+(idx%Math.max(1,Math.ceil(db.items.length*2/3)))*Math.min(60/db.items.length,4):120+(idx%Math.max(1,Math.ceil(db.items.length/3)))*Math.min(50/db.items.length,4);
+    const zIdx=ring?idx+1:idx;
+    nodes.push({id:it.id,label:_lb,type:it.type,x:Math.cos(ang)*dist,y:Math.sin(ang)*dist,z:.55+((zIdx%7)/10),size:36,data:it,isRecent:idx<2});
   });
   document.getElementById('emptyHint').style.display=db.items.length?'none':'block';
   const cnt=src=>db.items.filter(i=>i.source===src).length;
@@ -276,21 +290,28 @@ function proj(n){
   return{x:(n.x-cam.x)*s+innerWidth/2,y:(n.y-cam.y)*s+innerHeight/2,s};
 }
 
+/* DOM 缓存：节点元素与连线 path 引用保存在节点对象里，拖动/缩放只更新 transform/d，不重建 DOM */
+const svgNs='http://www.w3.org/2000/svg';
+let stageMoving=false;
+
 function render(){
   world.innerHTML='';
-  /* SVG 连线 */
-  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  /* SVG 连线（静态，去掉逐条 SMIL 动画 —— SMIL 是卡顿主因之一） */
+  const svg=document.createElementNS(svgNs,'svg');
   svg.setAttribute('style','position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none');
-  let svgHtml='';
   nodes.forEach(n=>{
     if(n.id==='center')return;
-    const c=proj(nodes[0]),p=proj(n);
-    const w=Math.max(.5,c.s*p.s*.9).toFixed(1);
-    const mx=(c.x+p.x)/2+(p.y-c.y)*.08,my=(c.y+p.y)/2-(p.x-c.x)*.08;
-    svgHtml+='<path d="M'+c.x.toFixed(1)+' '+c.y.toFixed(1)+' Q'+mx.toFixed(1)+' '+my.toFixed(1)+' '+p.x.toFixed(1)+' '+p.y.toFixed(1)+'" fill="none" stroke="rgba(240,207,130,.14)" stroke-width="'+w+'"/>';
-    svgHtml+='<circle r="1.6" fill="rgba(240,207,130,.5)"><animateMotion dur="'+(3+Math.random()*3).toFixed(1)+'s" repeatCount="indefinite" path="M'+c.x.toFixed(1)+' '+c.y.toFixed(1)+' Q'+mx.toFixed(1)+' '+my.toFixed(1)+' '+p.x.toFixed(1)+' '+p.y.toFixed(1)+'"/></circle>';
+    const c=proj(nodes[0]);
+    const w=Math.max(.5,c.s*n.s*.9).toFixed(1);
+    const path=document.createElementNS(svgNs,'path');
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke','rgba(240,207,130,.14)');
+    path.setAttribute('stroke-width',w);
+    const l={path,c:nodes[0],n};
+    n.link=l;
+    updateLink(l);
+    svg.appendChild(path);
   });
-  svg.innerHTML=svgHtml;
   world.appendChild(svg);
 
   /* 节点（按 z 从远到近画） */
@@ -300,17 +321,49 @@ function render(){
     const el=document.createElement('div');
     el.className='node';
     el.style.cssText='left:0;top:0;width:'+n.size+'px;height:'+n.size+'px;transform:translate('+(p.x-n.size/2)+'px,'+(p.y-n.size/2)+'px) scale('+p.s.toFixed(3)+');opacity:'+Math.min(1,.35+n.z*.65).toFixed(2);
-    el.innerHTML='<div class="node-ring" style="border:1px solid '+T.color+'"></div>'+
+    /* 呼吸光晕只为少数重点星保留：中心、核心记忆、最近点亮的两条，其余静态 */
+    const pulsing=n.type==='center'||n.type==='core'||(n.isRecent===true);
+    el.innerHTML='<div class="node-ring'+(pulsing?' pulse':'')+'" style="border:1px solid '+T.color+'"></div>'+
       '<div class="node-core" style="background:radial-gradient(circle at 32% 28%,#fff8,'+T.color+'dd 45%,'+T.color+'55);box-shadow:0 0 '+(n.z*22).toFixed(0)+'px '+T.color+'66;font-size:'+(n.size*.42).toFixed(0)+'px">'+T.icon+'</div>'+
       '<div class="node-label" style="color:'+T.color+'cc">'+escapeHtml(n.label)+'</div>';
     el.addEventListener('click',function(e){e.stopPropagation();if(!dragMoved){if(n.id==='center'||n.type==='core')showCore();else openEdit(n);}});
+    n.el=el;
     world.appendChild(el);
   });
+  sync();
+}
+
+/* 只更新位置/连线（拖动缩放时调用，零 DOM 重建） */
+function sync(){
+  nodes.forEach(n=>{
+    const p=proj(n);
+    if(n.el){
+      n.el.style.transform='translate('+(p.x-n.size/2)+'px,'+(p.y-n.size/2)+'px) scale('+p.s.toFixed(3)+')';
+      n.el.style.opacity=Math.min(1,.35+n.z*.65).toFixed(2);
+    }
+    if(n.link)updateLink(n.link);
+  });
+}
+function updateLink(l){
+  const c=proj(l.c),p=proj(l.n);
+  const mx=(c.x+p.x)/2+(p.y-c.y)*.08,my=(c.y+p.y)/2-(p.x-c.x)*.08;
+  l.path.setAttribute('d','M'+c.x.toFixed(1)+' '+c.y.toFixed(1)+' Q'+mx.toFixed(1)+' '+my.toFixed(1)+' '+p.x.toFixed(1)+' '+p.y.toFixed(1));
+  l.path.setAttribute('stroke-width',Math.max(.5,c.s*p.s*.9).toFixed(1));
 }
 
 function escapeHtml(t){const d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML;}
 
 /* ================= 平移缩放 ================= */
+/* rAF 节流：拖动/缩放高频事件只记录相机，下一帧统一 sync，避免一帧多次全量布局 */
+let rafQueued=false;
+function requestSync(){
+  if(rafQueued)return;
+  rafQueued=true;
+  requestAnimationFrame(()=>{rafQueued=false;sync();});
+}
+function moveState(on){
+  if(stageMoving!==on){stageMoving=on;stage.classList.toggle('moving',on);}
+}
 stage.addEventListener('pointerdown',e=>{
   if(e.target.closest('.node'))return;
   dragging=true;dragMoved=false;downPt={x:e.clientX,y:e.clientY};camStart={...cam};
@@ -321,19 +374,22 @@ stage.addEventListener('pointermove',e=>{
   const dx=e.clientX-downPt.x,dy=e.clientY-downPt.y;
   if(Math.abs(dx)+Math.abs(dy)>6)dragMoved=true;
   cam.x=camStart.x-dx/cam.z;cam.y=camStart.y-dy/cam.z;
-  render();
+  moveState(true);
+  requestSync();
 });
-stage.addEventListener('pointerup',()=>{dragging=false;setTimeout(()=>dragMoved=false,50);});
+stage.addEventListener('pointerup',()=>{dragging=false;moveState(false);setTimeout(()=>dragMoved=false,50);});
 stage.addEventListener('wheel',e=>{
   e.preventDefault();
   cam.z=Math.max(.35,Math.min(2.6,cam.z*(e.deltaY>0?.92:1.08)));
-  render();
+  moveState(true);
+  requestSync();
+  clearTimeout(moveState._t);moveState._t=setTimeout(()=>moveState(false),120);
 },{passive:false});
 /* 双指缩放 */
 let pinch=null;
 stage.addEventListener('touchstart',e=>{if(e.touches.length===2){pinch={d:dist2(e),z:cam.z};dragging=false;}},{passive:true});
-stage.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){cam.z=Math.max(.35,Math.min(2.6,pinch.z*dist2(e)/pinch.d));render();}},{passive:true});
-stage.addEventListener('touchend',()=>{pinch=null;},{passive:true});
+stage.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){cam.z=Math.max(.35,Math.min(2.6,pinch.z*dist2(e)/pinch.d));moveState(true);clearTimeout(moveState._t);moveState._t=setTimeout(()=>moveState(false),120);requestSync();}},{passive:true});
+stage.addEventListener('touchend',()=>{pinch=null;setTimeout(()=>moveState(false),120);},{passive:true});
 function dist2(e){const a=e.touches[0],b=e.touches[1];return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
 
 /* ================= 类型选择弹窗 ================= */
