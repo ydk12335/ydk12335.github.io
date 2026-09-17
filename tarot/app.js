@@ -1035,13 +1035,7 @@ const closeNotice=()=>{$('noticeMask').classList.remove('open');};
 $('btnNotice').onclick=openNotice;
 $('btnNoticeOk').onclick=closeNotice;
 $('noticeMask').onclick=e=>{if(e.target===$('noticeMask'))closeNotice()};
-/* 首次打开页面自动弹出公告指引（之后不再自动弹，可随时点右上角 ✦ 查看） */
-try{
-  if(!localStorage.getItem('tarot_notice_shown')){
-    localStorage.setItem('tarot_notice_shown','1');
-    setTimeout(openNotice,1200);
-  }
-}catch(e){}
+/* 公告不再自动弹出（2026-09-18 用户要求：可不用再弹），仅保留右上角 ✦ 手动查看 */
 
 /* ---------- 音乐播放器：夜色电台 ---------- */
 (function(){

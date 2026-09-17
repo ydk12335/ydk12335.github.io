@@ -99,7 +99,58 @@ const AUTH_HTML = `
       <div class="user-email" id="userEmail"></div>
       <div class="avatar-tip">点头像可更换</div>
       <button class="auth-btn-danger" id="btnSignOut">退出登录</button>
-      <div class="auth-footer"><a href="#" id="authClose4">关闭</a></div>
+      <div class="auth-footer"><a href="#" id="btnOpenVerif">邮箱验证</a> · <a href="#" id="authClose4">关闭</a></div>
+    </div>
+
+    <!-- ⑥ 邮箱真实性验证 · 公告 -->
+    <div class="auth-view" id="viewVerif" style="display:none">
+      <div class="verif-badge">🛡️</div>
+      <div class="auth-tip verif-tip">亲爱的用户：<br><br>
+        为营造安全、纯净的使用环境，我们近期加强了账号注册与登录的管理。<br><br>
+        为防止<b>批量注册</b>与<b>恶意注册</b>，保障每一位用户的账号与数据安全，\
+        恳请你配合完成一次邮箱真实性验证。过程约需一分钟，<b>你的全部数据将完整保留</b>。<br><br>
+        在完成验证前，本公告会在每次进入时<span style="color:#ff8080">持续提醒</span>；<b>完成验证后将不再弹出</b>。\
+        感谢你的理解与配合 ✦</div>
+      <button class="auth-btn-primary" id="btnVerifyCurrent">验证当前邮箱</button>
+      <button class="auth-btn-ghost" id="btnEmailProblem">邮箱用不了？更换邮箱</button>
+      <div class="auth-footer"><a href="#" id="authCloseV">暂不验证</a></div>
+    </div>
+
+    <!-- ⑦ 验证当前邮箱 -->
+    <div class="auth-view" id="viewVerifCode" style="display:none">
+      <div class="form-group">
+        <label class="form-label">当前邮箱</label>
+        <input class="form-input" id="verifEmail" type="email" readonly>
+      </div>
+      <button class="auth-btn-primary" id="btnVerifSend">发送验证码</button>
+      <div class="form-group" id="verifCodeGroup" style="display:none;margin-top:14px">
+        <label class="form-label">验证码</label>
+        <input class="form-input" id="verifCode" type="text" placeholder="8位数字" maxlength="8" inputmode="numeric">
+      </div>
+      <button class="auth-btn-primary" id="btnVerifOk" style="display:none">确认验证</button>
+      <div class="auth-tip" id="verifTip"></div>
+      <div class="auth-footer"><a href="#" id="btnVerifBack">返回</a></div>
+    </div>
+
+    <!-- ⑧ 更换邮箱（数据保留） -->
+    <div class="auth-view" id="viewChangeEmail" style="display:none">
+      <div class="auth-tip" style="margin-bottom:14px">更换后账号内所有数据（记忆、占卜记录、命盘等）都会保留，只会换掉登录邮箱 ✨</div>
+      <div class="form-group">
+        <label class="form-label">原邮箱</label>
+        <input class="form-input" id="oldEmail" type="email" readonly>
+      </div>
+      <div class="form-group">
+        <label class="form-label">新邮箱</label>
+        <input class="form-input" id="newEmail" type="email" placeholder="输入能正常收信的新邮箱">
+      </div>
+      <button class="auth-btn-primary" id="btnChangeSend">发送验证码到新邮箱</button>
+      <div class="form-group" id="changeCodeGroup" style="display:none;margin-top:14px">
+        <label class="form-label">验证码</label>
+        <input class="form-input" id="changeCode" type="text" placeholder="8位数字" maxlength="8" inputmode="numeric">
+      </div>
+      <button class="auth-btn-primary" id="btnChangeOk" style="display:none">确认更换</button>
+      <div class="auth-tip" id="changeTip"></div>
+      <div class="auth-footer"><a href="#" id="btnChangeBack">返回</a></div>
     </div>
   </div>
 </div>
@@ -208,6 +259,13 @@ button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
   -webkit-user-select:all;user-select:all;-webkit-touch-callout:default;touch-action:manipulation;
   border-radius:16px;border:2px solid rgba(240,207,130,.3);background:#fff;box-shadow:0 14px 44px rgba(0,0,0,.45)}
 .legal-contact .lc-sub{font-size:.62rem;color:rgba(240,207,130,.4);margin-top:14px}
+/* ===== 邮箱真实性验证 · 公告 ===== */
+.verif-badge{font-size:2rem;margin:6px auto 10px;animation:verifFloat 2.4s ease-in-out infinite}
+@keyframes verifFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.verif-tip{max-height:46vh;overflow-y:auto;overscroll-behavior:contain;text-align:left;
+  font-size:.75rem;line-height:1.85;color:rgba(240,207,130,.72);padding:0 2px;margin-bottom:8px}
+.verif-tip b{color:#f0cf82}
+.verif-tip::-webkit-scrollbar{width:0}
 `;
 
 function initAuth() {
@@ -240,13 +298,16 @@ function initAuth() {
   const titleEl = $('authTitle');
   const subEl = $('authSubtitle');
 
-  const VIEWS = { login: 'viewLogin', register: 'viewRegister', code: 'viewCode', setpwd: 'viewSetPwd', profile: 'authLogout' };
+  const VIEWS = { login: 'viewLogin', register: 'viewRegister', code: 'viewCode', setpwd: 'viewSetPwd', profile: 'authLogout', verif: 'viewVerif', verifcode: 'viewVerifCode', changeemail: 'viewChangeEmail' };
   const TEXT = {
     login:    ['登 录',      '登录后，你的记忆将随云端同步'],
     register: ['注 册',      '创建账号，随时同步你的记忆'],
     code:     ['验证码登录', '用邮箱收到的验证码登录'],
     setpwd:   ['设置密码',   '以后用密码就能快速登录'],
-    profile:  ['我 的',      '']
+    profile:  ['我 的',      ''],
+    verif:    ['邮箱验证',   '保障账号安全与数据纯净'],
+    verifcode:['验证当前邮箱', '输入收到的验证码即可完成'],
+    changeemail:['更换邮箱', '数据完整保留 · 凭证更新']
   };
   let locked = false, countdown = null, sentEmail = '', name0 = '?';
 
@@ -261,7 +322,7 @@ function initAuth() {
   const close = () => { if (!locked) mask.style.display = 'none'; };
   const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-  ['authClose1', 'authCloseR', 'authClose2', 'authClose3', 'authClose4'].forEach(id =>
+  ['authClose1', 'authCloseR', 'authClose2', 'authClose3', 'authClose4', 'authCloseV'].forEach(id =>
     $(id).addEventListener('click', e => { e.preventDefault(); close(); }));
   mask.addEventListener('click', e => { if (e.target === mask) close(); });
 
@@ -616,6 +677,143 @@ function initAuth() {
     close(); location.reload();
   });
 
+  // ===== ⑥⑦⑧ 邮箱真实性验证 · 公告 =====
+  /* 视图切换（保持在登录弹窗内，复用 showView） */
+  const verifCurr = { email: '', codeSent: false };
+  const verifChange = { email: '', codeSent: false };
+
+  const openVerifView = (name) => {
+    try {
+      if (name === 'verifcode' && verifCurr.email) $('verifEmail').value = verifCurr.email;
+      if (name === 'changeemail') $('oldEmail').value = verifCurr.email;
+    } catch (e) {}
+    showView(name);
+  };
+
+  /* 从「我 的」页打开验证公告 */
+  $('btnOpenVerif').addEventListener('click', e => {
+    e.preventDefault();
+    openVerifView('verif');
+  });
+
+  /* 公告 → 验证当前邮箱 */
+  $('btnVerifyCurrent').addEventListener('click', e => {
+    e.preventDefault();
+    openVerifView('verifcode');
+  });
+
+  /* 公告 → 更换邮箱 */
+  $('btnEmailProblem').addEventListener('click', e => {
+    e.preventDefault();
+    openVerifView('changeemail');
+  });
+
+  /* 验证当前邮箱：发送验证码 */
+  $('btnVerifSend').addEventListener('click', async () => {
+    const email = $('verifEmail').value.trim() || verifCurr.email;
+    if (!isEmail(email)) return toast('邮箱好像不对哦');
+    verifCurr.email = email;
+    const btn = $('btnVerifSend');
+    btn.disabled = true; btn.textContent = '发送中…';
+    try {
+      await sendVerificationCode(email);
+      $('verifCodeGroup').style.display = 'block';
+      $('btnVerifOk').style.display = 'block';
+      $('verifTip').textContent = '验证码已寄往 ' + email + '，请查收';
+      toast('验证码已发送，查收邮箱');
+      let sec = 60;
+      clearInterval(countdown);
+      const tick = () => {
+        btn.textContent = sec > 0 ? sec + 's 后可重发' : '重新发送';
+        if (sec-- <= 0) { clearInterval(countdown); btn.disabled = false; return; }
+      };
+      countdown = setInterval(tick, 1000); tick();
+    } catch (e) {
+      toast('发送失败：' + (e.message || '稍后再试'));
+      btn.disabled = false; btn.textContent = '发送验证码';
+    }
+  });
+
+  /* 验证当前邮箱：输入验证码确认 */
+  $('btnVerifOk').addEventListener('click', async () => {
+    const code = $('verifCode').value.trim();
+    if (code.length !== 8) return toast('输入8位验证码');
+    const btn = $('btnVerifOk');
+    btn.disabled = true; btn.textContent = '验证中…';
+    try {
+      /* 用当前邮箱验证码完成一次登录态确认（type=email），再标记已验证 */
+      await verifyEmailOtp(verifCurr.email, code);
+      await markEmailVerified();
+      toast('邮箱验证通过，谢谢你 ✨');
+      close(); location.reload();
+    } catch (e) {
+      toast('验证码不对或已过期');
+      btn.disabled = false; btn.textContent = '确认验证';
+    }
+  });
+
+  /* 更换邮箱：发送验证码到新邮箱 */
+  $('btnChangeSend').addEventListener('click', async () => {
+    const email = $('newEmail').value.trim();
+    if (!isEmail(email)) return toast('新邮箱好像不对哦');
+    if (email.toLowerCase() === String(verifCurr.email).toLowerCase()) return toast('新旧邮箱一样啦，直接用上面的验证就好');
+    const btn = $('btnChangeSend');
+    btn.disabled = true; btn.textContent = '检查中…';
+    try {
+      /* 判重：新邮箱已被别人注册则拒绝 */
+      if (typeof window.checkEmailRegistered === 'function') {
+        try {
+          const taken = await window.checkEmailRegistered(email);
+          if (taken) {
+            toast('这个邮箱已经注册过啦，换个新的吧');
+            btn.disabled = false; btn.textContent = '发送验证码到新邮箱';
+            return;
+          }
+        } catch (e) { /* RPC 异常则跳过预检，交给 Supabase 兜底 */ }
+      }
+      verifChange.email = email;
+      await requestEmailChange(email);
+      $('changeCodeGroup').style.display = 'block';
+      $('btnChangeOk').style.display = 'block';
+      $('changeTip').textContent = '验证码已寄往 ' + email + '，请查收';
+      toast('验证码已发送到新邮箱');
+      let sec = 60;
+      clearInterval(countdown);
+      const tick = () => {
+        btn.textContent = sec > 0 ? sec + 's 后可重发' : '重新发送';
+        if (sec-- <= 0) { clearInterval(countdown); btn.disabled = false; return; }
+      };
+      countdown = setInterval(tick, 1000); tick();
+    } catch (e) {
+      const msg = String(e?.message || '');
+      toast(msg.includes('already been registered') || msg.includes('already used') ? '这个邮箱已经注册过啦，换个新的吧' : ('发送失败：' + (msg || '稍后再试')));
+      btn.disabled = false; btn.textContent = '发送验证码到新邮箱';
+    }
+  });
+
+  /* 更换邮箱：输入新邮箱验证码，完成换绑 */
+  $('btnChangeOk').addEventListener('click', async () => {
+    const code = $('changeCode').value.trim();
+    if (code.length !== 8) return toast('输入8位验证码');
+    const btn = $('btnChangeOk');
+    btn.disabled = true; btn.textContent = '更换中…';
+    try {
+      await confirmEmailChange(verifChange.email, code);
+      /* 换绑成功后：user id 不变，业务数据全保留；同步资料表邮箱 + 标记已验证 */
+      try { await updateProfileEmail(verifChange.email); } catch (e) { console.warn('同步资料邮箱失败', e); }
+      try { await markEmailVerified(); } catch (e) { console.warn('标记已验失败', e); }
+      toast('邮箱已更换，数据完整保留 ✨');
+      close(); location.reload();
+    } catch (e) {
+      toast('验证码不对或已过期');
+      btn.disabled = false; btn.textContent = '确认更换';
+    }
+  });
+
+  /* 返回公告 */
+  $('btnVerifBack').addEventListener('click', e => { e.preventDefault(); openVerifView('verif'); });
+  $('btnChangeBack').addEventListener('click', e => { e.preventDefault(); openVerifView('verif'); });
+
   window.openAuthMask = function() {
     const m = document.getElementById('authMask');
     if (m) m.style.display = 'flex';
@@ -636,8 +834,23 @@ function initAuth() {
       $('userEmail').textContent = user.email;
       showAvatar(user.user_metadata?.avatar || null);
       showView('profile');
-      if (sessionStorage.getItem('open_auth')) { mask.style.display = 'flex'; sessionStorage.removeItem('open_auth'); }
-      else mask.style.display = 'none';
+      verifCurr.email = user.email || '';
+      /* 邮箱真实性验证公告：未标记 email_verified 则自动弹出（严谨，直到完成验证）；
+         「暂不验证」仅本次会话不再弹（sessionStorage），下次进入继续提醒 */
+      const emailVerified = !!(user.user_metadata && user.user_metadata.email_verified);
+      if (!emailVerified && !sessionStorage.getItem('verif_dismissed')) {
+        mask.style.display = 'flex';
+        openVerifView('verif');
+      } else if (sessionStorage.getItem('open_auth')) {
+        mask.style.display = 'flex';
+        sessionStorage.removeItem('open_auth');
+      } else {
+        mask.style.display = 'none';
+      }
+      /* 「暂不验证」：本次会话不再自动弹 */
+      try {
+        $('authCloseV').addEventListener('click', () => { sessionStorage.setItem('verif_dismissed', '1'); });
+      } catch (e) {}
     } else {
       locked = true;
       showView('login');

@@ -74,11 +74,10 @@ function mirrorToV2(type, data) {
           + '\n大运：' + ((data.dy && data.dy.steps) || []).join(' → ')
           + (data.aiText ? '\n解读：' + data.aiText : '');
       }
-      // 去重签名：同类型同标题同日期同时间
-      const sig = title + '|' + (data.date || '') + '|' + (data.time || '');
-      var sigVal = sig;
-      // 若已存在同一条（如先摇卦后补 AI 解读），则原地更新而不是跳过
-      var _exist = v2.items.find(i => i.source === type && (i.sig || '') === sig);
+      // 去重策略（2026-09-18 用户明确）：同一问题只要内容不同就保留；
+      // 仅当「同类型 + 内容(note)完全一致」时才视为重复（不重复放，原地更新时间戳）。
+      // 不再使用 title+date+time 做键（那样会把不同解读误判成同一条）。
+      var _exist = (note && v2.items.find(i => i.source === type && i.data && i.data.note === note)) || null;
       if (_exist) {
         _exist.title = title;
         _exist.data = { title: title, note: note };
@@ -95,7 +94,7 @@ function mirrorToV2(type, data) {
       data: { title: title, note: note },
       createdAt: Date.now(),
       source: type,
-      sig: sigVal || 'auto'
+      sig: (note ? (type + '|' + note) : (title + '|auto'))
     });
     localStorage.setItem(key, JSON.stringify(v2));
     if (typeof window.scheduleUpload === 'function') window.scheduleUpload();

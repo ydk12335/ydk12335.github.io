@@ -172,11 +172,20 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
 .btn:active{transform:scale(.95)}
 .btn-primary{background:linear-gradient(160deg,rgba(240,207,130,.25),rgba(255,255,255,.05));border-color:rgba(240,207,130,.55);color:#f6ecc9}
 .btn-ghost{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#d8d0ef}
+.btn-danger{background:rgba(232,122,122,.16);border-color:rgba(232,122,122,.4);color:#f0b3b3}
+.hist-item{padding:11px 12px;border-radius:11px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(240,207,130,.12);margin-bottom:9px;font-size:.78rem;line-height:1.7;cursor:pointer;transition:.2s}
+.hist-item:active{transform:scale(.97)}
+.hist-item .hi-t{color:var(--gold);letter-spacing:.04em}
+.hist-item .hi-d{font-size:.6rem;color:rgba(240,207,130,.45);margin-top:3px}
+.hist-item .hi-p{color:rgba(242,237,224,.7);margin-top:5px;max-height:2.8em;overflow:hidden}
+.hist-empty{text-align:center;color:rgba(240,207,130,.45);font-size:.75rem;padding:30px 0;letter-spacing:.1em}
 @media(max-width:420px){.b-row{flex-direction:column}.b-row .b-field{flex:auto}}
 </style>
 </head>
 <body>
 <canvas id="stars"></canvas>
+<button class="btn-back" id="btnHist" style="left:112px">📜 记录</button>
 <button class="btn-back" id="btnBack">◂ 返回</button>
 
 <div class="portal">
@@ -355,10 +364,38 @@ body[data-phase="day"] .rel-desc,body[data-phase="dusk"] .rel-desc{color:var(--m
   <footer class="p-foot2">‥ 有点困 ‥</footer>
 </div>
 
+<!-- 历史记录详情 -->
+<div class="mask" id="histDetailMask" style="z-index:100;align-items:center;justify-content:center">
+  <div class="sheet" style="border-radius:20px;max-height:84vh;display:flex;flex-direction:column;gap:12px">
+    <div class="sheet-h" style="width:100%"><div class="t">📜 合盘详情</div><button class="x" id="histDetailClose">✕</button></div>
+    <div id="histDetailBody" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;-webkit-user-select:text;user-select:text;text-align:left;font-size:.82rem;line-height:1.85;color:rgba(242,237,224,.88);white-space:pre-wrap;word-break:break-word"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" id="btnHistShare" style="flex:0 0 auto;padding:11px 22px">📤 分享这条记录</button>
+      <button class="btn btn-ghost" id="btnHistDetailClose2" style="flex:0 0 auto;padding:11px 22px">关 闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 历史记录 -->
+<div class="mask" id="histMask">
+  <div class="sheet">
+    <div class="sheet-h">
+      <div class="t">📜 合盘记录</div>
+      <button class="x" id="histClose">✕</button>
+    </div>
+    <div id="histList" style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div class="sheet-foot" style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-danger" id="histClear" style="flex:0 0 84px">清空</button>
+      <button class="btn btn-ghost" id="histCopy" style="flex:0 0 100px">☁️ 复制</button>
+      <button class="btn btn-primary" id="histCopyMem">☁️ 复制到记忆库</button>
+    </div>
+  </div>
+</div>
+
 <script src="../bazi-engine.js"></script>
-<script src="../../memory.js"></script>
-<script src="../../ai-prompt-template.js?v=1"></script>
-<script src="../../treehole.js?v=11"></script>
+<script src="../../memory.js?v=2"></script>
+<script src="../../ai-prompt-template.js?v=2"></script>
+<script src="../../treehole.js?v=12"></script>
 <script src="../../ai-relay.js?v=10"></script>
 <script src="../../agent-tools.js?v=1"></script>
 <script>
@@ -1126,6 +1163,92 @@ $('btnHole').onclick=()=>{
     if(window.TreeHole&&window.TreeHole.setOpening)window.TreeHole.setOpening({scene:'八字合盘',subject:subject,summary:summary.slice(0,300)});
   }catch(e){}
   location.href='../../treehole/';
+};
+
+/* ================= 历史记录（合盘，本地 syn_hist_v1 + 云端同步） ================= */
+const SYN_HKEY='syn_hist_v1';
+function loadSynHist(){try{return JSON.parse(localStorage.getItem(SYN_HKEY)||'[]');}catch(e){return [];}}
+function sToast(msg){let el=document.getElementById('syn-toast');if(!el){el=document.createElement('div');el.id='syn-toast';el.style.cssText='position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(10,8,25,.92);color:#f0cf82;padding:10px 22px;border-radius:20px;font-size:.82rem;z-index:9999;border:1px solid rgba(240,207,130,.25);transition:opacity .3s';document.body.appendChild(el);}el.textContent=msg;el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity='0';},1800);}
+function synDetailBody(r){
+  let b='【'+(r.date||'')+'】\n';
+  b+='合盘：'+(r.a||'')+' × '+(r.b||'')+'\n';
+  if(r.rel)b+='关系：'+r.rel+'\n';
+  if(r.score!=null&&r.score!=='')b+='契合度：'+r.score+'分\n';
+  if(r.result)b+='\n【合盘解读】\n'+r.result;
+  return b;
+}
+let synDetailIdx=-1;
+function openSynDetail(idx){
+  const h=loadSynHist(),r=h[idx];if(!r)return;
+  synDetailIdx=idx;
+  $('histDetailBody').textContent=synDetailBody(r);
+  $('histDetailMask').classList.add('show');
+  $('histDetailBody').scrollTop=0;
+}
+function renderSynHist(){
+  const h=loadSynHist();
+  const list=$('histList');
+  if(!h.length){list.innerHTML='<div class="hist-empty">还没有合盘记录</div>';return;}
+  list.innerHTML=h.map((r,idx)=>{
+    const rel=r.rel?('『'+r.rel+'』'):'合盘';
+    const p=(r.a||'')+' × '+(r.b||'')+(r.score!=null&&r.score!==''?(' · '+r.score+'分'):'');
+    const snippet=String(r.result||'').replace(/\s+/g,' ').slice(0,72);
+    return '<div class="hist-item" data-i="'+idx+'">'+
+      '<div class="hi-t">∞ '+esc(rel)+'</div>'+
+      '<div class="hi-d">'+(r.date||'')+'</div>'+
+      '<div class="hi-p">'+esc(p)+(snippet?'<br>'+esc(snippet):'')+'</div>'+
+      '</div>';
+  }).join('');
+  list.querySelectorAll('.hist-item').forEach(el=>{
+    el.onclick=()=>openSynDetail(parseInt(el.dataset.i,10));
+  });
+}
+function copySynHist(){
+  const h=loadSynHist();
+  if(!h.length){sToast('还没有记录');return null;}
+  const payload={moon_import:1,records:h.map(r=>({type:'synastry',date:r.date,content:synDetailBody(r)}))};
+  return JSON.stringify(payload);
+}
+$('btnHist').onclick=()=>{renderSynHist();$('histMask').classList.add('show');};
+$('histClose').onclick=()=>$('histMask').classList.remove('show');
+$('histMask').onclick=e=>{if(e.target===$('histMask'))$('histMask').classList.remove('show');};
+$('histDetailClose').onclick=()=>$('histDetailMask').classList.remove('show');
+$('btnHistDetailClose2').onclick=()=>$('histDetailMask').classList.remove('show');
+$('histDetailMask').onclick=e=>{if(e.target===$('histDetailMask'))$('histDetailMask').classList.remove('show');};
+$('histClear').onclick=()=>{if(!confirm('确定清空全部合盘记录？（云端同步数据仍会保留）'))return;localStorage.setItem(SYN_HKEY,'[]');renderSynHist();sToast('已清空本地记录');};
+$('histCopyMem').onclick=()=>{
+  const txt=copySynHist();if(!txt)return;
+  try{
+    const h=loadSynHist();
+    const key='sleepy_space_memory_v2';
+    const v2=JSON.parse(localStorage.getItem(key)||'{"items":[]}');
+    if(!v2.items)v2.items=[];
+    let added=0;
+    h.forEach(r=>{
+      const item={type:'synastry',title:'∞ 合盘 · '+(r.a||'')+' × '+(r.b||''),note:synDetailBody(r),date:r.date,source:'synastry'};
+      const sig=item.title+'|'+(item.date||'')+'|'+(r.time||'');
+      if(v2.items.some(i=>i.source==='synastry'&&i.data&&(i.data.title+'|'+(i.data.date||'')+'|'+(i.data.time||''))===sig))return;
+      v2.items.unshift({source:'synastry',data:item,ts:Date.now()});
+      added++;
+    });
+    localStorage.setItem(key,JSON.stringify(v2));
+    if(typeof window.scheduleUpload==='function')window.scheduleUpload();
+    sToast(added?('已复制 '+added+' 条到记忆库'):'记忆库已是最新');
+  }catch(e){sToast('复制失败：'+e.message);}
+};
+$('histCopy').onclick=()=>{
+  const txt=copySynHist();if(!txt)return;
+  const done=()=>sToast('已复制 '+loadSynHist().length+' 条记录');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{fb(txt);done();});}
+  else{fb(txt);done();}
+};
+$('btnHistShare').onclick=()=>{
+  const h=loadSynHist(),r=synDetailIdx>=0?h[synDetailIdx]:null;
+  if(!r){sToast('没有可分享的记录');return;}
+  const txt=synDetailBody(r)+'\n\n—— 来自「有点困」\n∞ 在线合盘：https://ydk12335.github.io/bazi/hehun/';
+  const done=()=>sToast('已复制，去分享吧 ✦');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{fb(txt);done();});}
+  else{fb(txt);done();}
 };
 </script>
 </body>

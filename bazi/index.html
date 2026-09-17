@@ -171,6 +171,14 @@ body[data-phase="day"] .b-gender button.on,body[data-phase="dusk"] .b-gender but
 .btn:active{transform:scale(.95)}
 .btn-primary{background:linear-gradient(160deg,rgba(240,207,130,.25),rgba(255,255,255,.05));border-color:rgba(240,207,130,.55);color:#f6ecc9}
 .btn-ghost{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#d8d0ef}
+.btn-danger{background:rgba(232,122,122,.16);border-color:rgba(232,122,122,.4);color:#f0b3b3}
+.hist-item{padding:11px 12px;border-radius:11px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(240,207,130,.12);margin-bottom:9px;font-size:.78rem;line-height:1.7;cursor:pointer;transition:.2s}
+.hist-item:active{transform:scale(.97)}
+.hist-item .hi-t{color:var(--gold);letter-spacing:.04em}
+.hist-item .hi-d{font-size:.6rem;color:rgba(240,207,130,.45);margin-top:3px}
+.hist-item .hi-p{color:rgba(242,237,224,.7);margin-top:5px;max-height:2.8em;overflow:hidden}
+.hist-empty{text-align:center;color:rgba(240,207,130,.45);font-size:.75rem;padding:30px 0;letter-spacing:.1em}
     /* ---------- 八字合盘入口胶囊按钮（对标星座页 soon-pill） ---------- */
     .soon-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:min(560px,94vw);
       margin-top:clamp(16px,3.4vh,32px)}
@@ -194,6 +202,7 @@ body[data-phase="day"] .b-gender button.on,body[data-phase="dusk"] .b-gender but
 </head>
 <body>
 <canvas id="stars"></canvas>
+<button class="btn-back" id="btnHist" style="right:112px">📜 记录</button>
 <button class="btn-back" id="btnBack">◂ 返回</button>
 
 <div class="portal">
@@ -293,11 +302,39 @@ body[data-phase="day"] .b-gender button.on,body[data-phase="dusk"] .b-gender but
   </div>
 </div>
 
+<!-- 历史记录详情（对齐问卦页） -->
+<div class="mask" id="histDetailMask" style="z-index:100;align-items:center;justify-content:center">
+  <div class="sheet" style="border-radius:20px;max-height:84vh;display:flex;flex-direction:column;gap:12px">
+    <div class="sheet-h" style="width:100%"><div class="t">📜 命盘详情</div><button class="x" id="histDetailClose">✕</button></div>
+    <div id="histDetailBody" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;-webkit-user-select:text;user-select:text;text-align:left;font-size:.82rem;line-height:1.85;color:rgba(242,237,224,.88);white-space:pre-wrap;word-break:break-word"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" id="btnHistShare" style="flex:0 0 auto;padding:11px 22px">📤 分享这条记录</button>
+      <button class="btn btn-ghost" id="btnHistDetailClose2" style="flex:0 0 auto;padding:11px 22px">关 闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 历史记录 -->
+<div class="mask" id="histMask">
+  <div class="sheet">
+    <div class="sheet-h">
+      <div class="t">📜 命盘记录</div>
+      <button class="x" id="histClose">✕</button>
+    </div>
+    <div id="histList" style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div class="sheet-foot" style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-danger" id="histClear" style="flex:0 0 84px">清空</button>
+      <button class="btn btn-ghost" id="histCopy" style="flex:0 0 100px">☁️ 复制</button>
+      <button class="btn btn-primary" id="histCopyMem">☁️ 复制到记忆库</button>
+    </div>
+  </div>
+</div>
+
 <script src="bazi-engine.js"></script>
-<script src="../memory.js"></script>
-<script src="../ai-prompt-template.js?v=1"></script>
-<script src="../supabase-config.js?v=12"></script>
-<script src="../treehole.js?v=11"></script>
+<script src="../memory.js?v=2"></script>
+<script src="../ai-prompt-template.js?v=2"></script>
+<script src="../supabase-config.js?v=13"></script>
+<script src="../treehole.js?v=12"></script>
 <script src="../ai-relay.js?v=10"></script>
 <script src="../agent-tools.js?v=1"></script>
 <script>
@@ -842,7 +879,7 @@ async function askAI(p){
     +'请严格基于给出的命盘数据进行解读，绝不虚构或替换任何一柱一字。'
     +'【必须覆盖的专项内容】\n'
     +'1. 整体格局分析：判断身强身弱（结合得令/得地/得势），分析十神关系（财官印食比劫的配置），体用平衡，综合交叉验证后输出结论；\n'
-    +'2. 绘制命盘五行能量分布图：用 ASCII 字符画出五行强弱（如 ██▓▓░░ 或柱状图），直观呈现木火土金水各自的能量；\n'
+    +'2. 绘制命盘五行能量分布图：用方块符号（如 ██▓▓▒▒░░）画出五行强弱柱状图，直观呈现木火土金水各自的能量；\n'
     +'3. 排出大运和流年，结合命主的历史事件验证推算准确性——若记忆库有真实经历（学业/工作/感情/健康等），要列出并对照大运流年做细节丰富的推演验证；\n'
     +'4. 根据未来五年的大运流年，分别从财运、感情、健康三方面推测运势，并给出具体可操作的指导方针。\n'
     +'【大运算法要求】三天折合一岁；阳年生男/阴年生女顺行，阴年生男/阳年生女逆行；按出生日距上一个节气（逆行）或下一个节气（顺行）的天数计算。'
@@ -1069,6 +1106,102 @@ function baziShareText(){
 $('btnShare').onclick=openBaziShare;
 $('btnShotImg').onclick=baziShareImage;
 $('btnShotTxt').onclick=baziShareText;
+
+/* ---------- 历史记录（命盘，数据来自本地 bazi_hist_v1 + 云端同步） ---------- */
+const BZI_HKEY='bazi_hist_v1';
+function loadBziHist(){try{return JSON.parse(localStorage.getItem(BZI_HKEY)||'[]');}catch(e){return [];}}
+function bToast(msg){let el=document.getElementById('bzi-toast');if(!el){el=document.createElement('div');el.id='bzi-toast';el.style.cssText='position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(10,8,25,.92);color:#f0cf82;padding:10px 22px;border-radius:20px;font-size:.82rem;z-index:9999;border:1px solid rgba(240,207,130,.25);transition:opacity .3s';document.body.appendChild(el);}el.textContent=msg;el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity='0';},1800);}
+function bziDetailBody(r){
+  let b='【'+(r.time||'')+' '+(r.date||'')+'】\n';
+  b+='公历：'+(r.y||'')+'年'+(r.m||'')+'月'+(r.d||'')+'日 '
+    +(r.timeUnknown?'时间未知':((r.hh!=null?r.hh:'')+':'+String(r.mm!=null?r.mm:'').padStart(2,'0')))
+    +(r.cityUnknown?' 地点未知':(' '+(r.city||'')))+'\n';
+  b+='性别：'+(r.gender||'—')+'\n';
+  b+='四柱：'+(r.pillars||[]).join(' ')+'\n';
+  b+='十神：'+(r.tens||[]).join(' ')+'\n';
+  b+='日主：'+(r.dayMasterFull||'')+'（'+(r.strength||'')+'）\n';
+  if(r.pattern)b+='格局：'+r.pattern+'\n';
+  if(r.xiYong&&r.xiYong.length)b+='喜用：'+(r.xiYong.join('、'))+(r.jiYong&&r.jiYong.length?(' / 忌：'+r.jiYong.join('、')):'')+'\n';
+  if(r.dy&&r.dy.steps&&r.dy.steps.length)b+='大运：'+(r.dy.steps.join(' → '))+'\n';
+  if(r.shenSha&&r.shenSha.length)b+='神煞：'+(r.shenSha.join('、'))+'\n';
+  if(r.aiText)b+='\n【AI 解读】\n'+r.aiText;
+  return b;
+}
+let histDetailIdx=-1;
+function openBziDetail(idx){
+  const h=loadBziHist(),r=h[idx];if(!r)return;
+  histDetailIdx=idx;
+  $('histDetailBody').textContent=bziDetailBody(r);
+  $('histDetailMask').classList.add('show');
+  $('histDetailBody').scrollTop=0;
+}
+function renderBziHist(){
+  const h=loadBziHist();
+  const list=$('histList');
+  if(!h.length){list.innerHTML='<div class="hist-empty">还没有命盘记录</div>';return;}
+  list.innerHTML=h.map((r,idx)=>{
+    const title=(r.pillars&&r.pillars.length)?r.pillars.join(' '):((r.y||'')+'年');
+    const p='公历：'+(r.y||'')+'年'+(r.m||'')+'月'+(r.d||'')+'日 '+(r.timeUnknown?'时辰未知':((r.hh!=null?r.hh:'')+':'+String(r.mm!=null?r.mm:'').padStart(2,'0')))
+      +(r.cityUnknown?'':' @'+(r.city||''))+(r.gender?' · '+(r.gender):'');
+    const snippet=String(r.aiText||'').replace(/\s+/g,' ').slice(0,72);
+    return '<div class="hist-item" data-i="'+idx+'">'+
+      '<div class="hi-t">☯ '+esc(title)+'</div>'+
+      '<div class="hi-d">'+(r.date||'')+(r.time?' '+r.time:'')+'</div>'+
+      '<div class="hi-p">'+esc(p)+(snippet?'<br>'+esc(snippet):'')+'</div>'+
+      '</div>';
+  }).join('');
+  list.querySelectorAll('.hist-item').forEach(el=>{
+    el.onclick=()=>openBziDetail(parseInt(el.dataset.i,10));
+  });
+}
+function copyBziHist(){
+  const h=loadBziHist();
+  if(!h.length){bToast('还没有记录');return null;}
+  const payload={moon_import:1,records:h.map(r=>({type:'bazi',date:r.date,time:r.time,content:bziDetailBody(r)}))};
+  return JSON.stringify(payload);
+}
+$('btnHist').onclick=()=>{renderBziHist();$('histMask').classList.add('show');};
+$('histClose').onclick=()=>$('histMask').classList.remove('show');
+$('histMask').onclick=e=>{if(e.target===$('histMask'))$('histMask').classList.remove('show');};
+$('histDetailClose').onclick=()=>$('histDetailMask').classList.remove('show');
+$('btnHistDetailClose2').onclick=()=>$('histDetailMask').classList.remove('show');
+$('histDetailMask').onclick=e=>{if(e.target===$('histDetailMask'))$('histDetailMask').classList.remove('show');};
+$('histClear').onclick=()=>{if(!confirm('确定清空全部命盘记录？（云端同步数据仍会保留）'))return;localStorage.setItem(BZI_HKEY,'[]');renderBziHist();bToast('已清空本地记录');};
+$('histCopyMem').onclick=()=>{
+  const txt=copyBziHist();if(!txt)return;
+  /* 复制到记忆库 v2：逐条写入（内容不同即保留，同内容去重） */
+  try{
+    const h=loadBziHist();
+    const key='sleepy_space_memory_v2';
+    const v2=JSON.parse(localStorage.getItem(key)||'{"items":[]}');
+    if(!v2.items)v2.items=[];
+    let added=0;
+    h.forEach(r=>{
+      const item={type:'bazi',title:'☯ 命盘 · '+(r.pillars?r.pillars.join(' '):''),note:bziDetailBody(r),date:r.date,time:r.time,source:'bazi'};
+      const sig=item.title+'|'+(item.date||'')+'|'+(item.time||'');
+      if(v2.items.some(i=>i.source==='bazi'&&i.data&&(i.data.title+'|'+(i.data.date||'')+'|'+(i.data.time||''))===sig))return;
+      v2.items.unshift({source:'bazi',data:item,ts:Date.now()});
+      added++;
+    });
+    localStorage.setItem(key,JSON.stringify(v2));
+    if(typeof window.scheduleUpload==='function')window.scheduleUpload();
+    bToast(added?('已复制 '+added+' 条到记忆库'):'记忆库已是最新');
+  }catch(e){bToast('复制失败：'+e.message);}
+};
+$('histCopy').onclick=()=>{
+  const txt=copyBziHist();if(!txt)return;
+  const done=()=>bToast('已复制 '+loadBziHist().length+' 条记录');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{fb(txt);done();});}
+  else{fb(txt);done();}
+};
+$('btnHistShare').onclick=()=>{
+  const h=loadBziHist(),r=histDetailIdx>=0?h[histDetailIdx]:null;
+  if(!r){bToast('没有可分享的记录');return;}
+  const txt=bziDetailBody(r)+'\n\n—— 来自「有点困」\n☯ 在线命盘：https://ydk12335.github.io/bazi/';
+  const done=()=>bToast('已复制，去分享吧 ✦');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{fb(txt);done();});}
+  else{fb(txt);done();}
+};
 
 /* ---------- 去树洞聊聊（把命盘带入树洞自然开场，对齐问卦页） ---------- */
 $('btnHole').onclick=()=>{

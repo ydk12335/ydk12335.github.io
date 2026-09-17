@@ -133,6 +133,45 @@ async function deleteMyAccount() {
   if (error) throw error;
 }
 
+/** 验证当前邮箱真实性（已登录用户在验证公告中确认；type=email 验证码） */
+async function verifyEmailOtp(email, code) {
+  const sb = await initSupabase();
+  const { data, error } = await sb.auth.verifyOtp({ email, token: code, type: 'email' });
+  if (error) throw error;
+  return data;
+}
+
+/** 申请更换登录邮箱（Supabase 向新邮箱发送确认邮件，含验证码 token；仅已登录可调） */
+async function requestEmailChange(newEmail) {
+  const sb = await initSupabase();
+  const { data, error } = await sb.auth.updateUser({ email: newEmail });
+  if (error) throw error;
+  return data;
+}
+
+/** 确认更换邮箱（用新邮箱收到的验证码完成换绑；user id 不变，业务数据全保留） */
+async function confirmEmailChange(newEmail, code) {
+  const sb = await initSupabase();
+  const { data, error } = await sb.auth.verifyOtp({ email: newEmail, token: code, type: 'email_change' });
+  if (error) throw error;
+  return data;
+}
+
+/** 标记账号邮箱已验证（写入 user_metadata，换设备也不重弹） */
+async function markEmailVerified() {
+  const sb = await initSupabase();
+  const { error } = await sb.auth.updateUser({ data: { email_verified: true } });
+  if (error) throw error;
+}
+
+/** 同步 profiles 表的邮箱字段（换绑成功后让资料页显示新邮箱） */
+async function updateProfileEmail(newEmail) {
+  const sb = await initSupabase();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+  await sb.from('profiles').update({ email: newEmail }).eq('id', user.id);
+}
+
 /** ========== 云端记忆同步（快照方案 v2 · 时间戳防覆盖） ========== */
 const SNAP_TYPE = 'snapshot';
 const SYNC_META_KEY = 'ss_sync_meta_v1';
@@ -518,6 +557,11 @@ window.registerWithEmail = registerWithEmail;
 window.checkUsernameTaken = checkUsernameTaken;
 window.checkEmailRegistered = checkEmailRegistered;
 window.deleteMyAccount = deleteMyAccount;
+window.verifyEmailOtp = verifyEmailOtp;
+window.requestEmailChange = requestEmailChange;
+window.confirmEmailChange = confirmEmailChange;
+window.markEmailVerified = markEmailVerified;
+window.updateProfileEmail = updateProfileEmail;
 
 /* ---------- 启动：任何页面都自动做一次云地比对 ---------- */
 if (document.readyState === 'loading') {
