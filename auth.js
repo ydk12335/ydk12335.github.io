@@ -812,11 +812,43 @@ function initAuth() {
 
   /* 返回公告 */
   $('btnVerifBack').addEventListener('click', e => { e.preventDefault(); openVerifView('verif'); });
-  $('btnChangeBack').addEventListener('click', e => { e.preventDefault(); openVerifView('verif'); });
+  $('btnChangeBack').addEventListener('click', e => {
+    e.preventDefault();
+    /* 从主页「我的」进来的换邮箱：返回回到「我的」；从公告进来的回公告 */
+    if (window.__changeEmailFromProfile) {
+      window.__changeEmailFromProfile = false;
+      showView('profile');
+    } else {
+      openVerifView('verif');
+    }
+  });
 
   window.openAuthMask = function() {
     const m = document.getElementById('authMask');
     if (m) m.style.display = 'flex';
+  };
+  /* 主页「我的」→ 更换邮箱：打开换邮箱视图（数据完整保留） */
+  window.openChangeEmail = async function() {
+    try {
+      const m = document.getElementById('authMask');
+      if (!m) return;
+      /* 标记来源：从「我的」进来，返回时回到「我的」（否则回公告） */
+      window.__changeEmailFromProfile = true;
+      if (!verifCurr.email) {
+        try { const u = await getCurrentUser(); if (u && u.email) verifCurr.email = u.email; } catch (e) {}
+      }
+      if (verifCurr.email) $('oldEmail').value = verifCurr.email;
+      /* 清空上次输入，回到初始步骤 */
+      try {
+        $('newEmail').value = ''; $('changeCode').value = '';
+        $('changeCodeGroup').style.display = 'none';
+        $('btnChangeOk').style.display = 'none';
+        $('changeTip').textContent = '';
+        const bs = $('btnChangeSend'); bs.disabled = false; bs.textContent = '发送验证码到新邮箱';
+      } catch (e) {}
+      m.style.display = 'flex';
+      openVerifView('changeemail');
+    } catch (e) {}
   };
   window.openLegal = openLegal;
   window.closeLegal = closeLegal;

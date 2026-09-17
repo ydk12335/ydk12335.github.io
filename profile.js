@@ -253,6 +253,7 @@
       <div class="pf-actions">
         <button class="pf-btn" id="pfBtnName">修改昵称</button>
         <button class="pf-btn" id="pfBtnBirthday">设置生日</button>
+        <button class="pf-btn" id="pfBtnEmail">更换邮箱</button>
         <button class="pf-btn full" id="pfBtnPwd">修改密码</button>
         <button class="pf-btn full danger" id="pfBtnOut">退出登录</button>
         <button class="pf-btn full danger" id="pfBtnDel">注销账号</button>
@@ -491,6 +492,31 @@
             toast('修改失败：' + (msg || '再试试'));
           }
         }
+      });
+    });
+
+    /* 更换邮箱（先验证当前密码，再进换邮箱流程；数据完整保留） */
+    $('pfBtnEmail').addEventListener('click', () => {
+      askInput('输入当前密码以更换邮箱', '', 'password', async v => {
+        v = (v || '').trim();
+        if (!v) { toast('请输入密码'); return; }
+        try {
+          let email = curUser && curUser.email ? curUser.email : null;
+          if (!email) { try { email = (await getCurrentUser())?.email || null; } catch (e) {} }
+          if (!email) { toast('拿不到账号邮箱，请重新登录后再试'); return; }
+          /* 先验证当前密码：不对就拦下，绝不放行 */
+          if (typeof window.verifyPassword === 'function') {
+            try { await window.verifyPassword(email, v); }
+            catch (e) {
+              const m = String(e && e.message || '');
+              toast(m.includes('Invalid login credentials') || m.includes('invalid') ? '密码不对，请重试' : ('密码验证失败：' + (m || '请稍后再试')));
+              return;
+            }
+          }
+          /* 密码通过 → 打开换邮箱视图 */
+          if (typeof window.openChangeEmail === 'function') window.openChangeEmail();
+          else { toast('换邮箱功能加载中，请稍后再试'); }
+        } catch (e) { toast('出错了：' + (e && e.message || '请稍后再试')); }
       });
     });
 

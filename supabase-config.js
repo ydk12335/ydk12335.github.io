@@ -89,6 +89,14 @@ async function loginWithPassword(email, password) {
   return data;
 }
 
+/** 仅校验当前密码（换邮箱等敏感操作前用）：只验证不改本地缓存、不动数据 */
+async function verifyPassword(email, password) {
+  const sb = await initSupabase();
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
 /** 为当前登录用户设置/更新密码（注册后引导设置） */
 async function setPassword(password) {
   const sb = await initSupabase();
@@ -552,6 +560,7 @@ window.sendVerificationCode = sendVerificationCode;
 window.resendSignupCode = resendSignupCode;
 window.verifyAndLogin = verifyAndLogin;
 window.loginWithPassword = loginWithPassword;
+window.verifyPassword = verifyPassword;
 window.setPassword = setPassword;
 window.registerWithEmail = registerWithEmail;
 window.checkUsernameTaken = checkUsernameTaken;
