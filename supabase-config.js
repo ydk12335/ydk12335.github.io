@@ -36,13 +36,22 @@ async function signOut() {
   await sbClient.auth.signOut();
 }
 
-/** 发送邮箱验证码（Supabase 内置 OTP） */
+/** 发送邮箱验证码（Supabase 内置 OTP）
+ * 注意：shouldCreateUser 保持 false——发送前前端已用 check_email 分流，
+ * 未注册邮箱不会走到这里（避免 OTP 静默创建占坑账号导致后续密码注册报 already registered） */
 async function sendVerificationCode(email) {
   const sb = await initSupabase();
   const { error } = await sb.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true }  // 不存在则自动注册
+    options: { shouldCreateUser: false }
   });
+  if (error) throw error;
+}
+
+/** 重发注册验证码（Supabase signup 类型重发；仅注册页用） */
+async function resendSignupCode(email) {
+  const sb = await initSupabase();
+  const { error } = await sb.auth.resend({ type: 'signup', email });
   if (error) throw error;
 }
 
@@ -106,6 +115,22 @@ async function checkUsernameTaken(username) {
   const { data, error } = await sb.rpc('check_username', { uname: String(username).trim() });
   if (error) throw error;
   return !!data;
+}
+
+/** 检查邮箱是否已注册（RPC；用于验证码登录分流：未注册→引导注册，已注册→才发验证码） */
+async function checkEmailRegistered(email) {
+  if (!email || !String(email).trim()) return false;
+  const sb = await initSupabase();
+  const { data, error } = await sb.rpc('check_email', { p_email: String(email).trim().toLowerCase() });
+  if (error) throw error;
+  return !!data;
+}
+
+/** 注销当前账号（RPC：删除 auth.users 本人记录，业务数据经外键级联清空） */
+async function deleteMyAccount() {
+  const sb = await initSupabase();
+  const { error } = await sb.rpc('delete_my_account');
+  if (error) throw error;
 }
 
 /** ========== 云端记忆同步（快照方案 v2 · 时间戳防覆盖） ========== */
@@ -485,11 +510,14 @@ window.uploadAvatar = uploadAvatar;
 window.getCurrentUser = getCurrentUser;
 window.signOut = signOut;
 window.sendVerificationCode = sendVerificationCode;
+window.resendSignupCode = resendSignupCode;
 window.verifyAndLogin = verifyAndLogin;
 window.loginWithPassword = loginWithPassword;
 window.setPassword = setPassword;
 window.registerWithEmail = registerWithEmail;
 window.checkUsernameTaken = checkUsernameTaken;
+window.checkEmailRegistered = checkEmailRegistered;
+window.deleteMyAccount = deleteMyAccount;
 
 /* ---------- 启动：任何页面都自动做一次云地比对 ---------- */
 if (document.readyState === 'loading') {

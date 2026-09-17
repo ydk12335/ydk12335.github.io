@@ -51,10 +51,11 @@ const AUTH_HTML = `
       <button class="auth-btn-primary" id="btnRegister">注册账号</button>
       <div class="form-group" id="regCodeGroup" style="display:none">
         <label class="form-label">邮箱验证码</label>
-        <input class="form-input" id="regCode" type="text" placeholder="6位数字" maxlength="6" inputmode="numeric">
+        <input class="form-input" id="regCode" type="text" placeholder="8位数字" maxlength="8" inputmode="numeric">
       </div>
       <button class="auth-btn-primary" id="btnRegVerify" style="display:none">确认并登录</button>
       <div class="auth-tip" id="regTip" style="display:none"></div>
+      <div class="auth-footer" id="regResendRow" style="display:none"><a href="#" id="btnResendRegCode">没收到验证码？重新发送</a></div>
       <div class="auth-footer"><a href="#" id="btnBackLogin2">已有账号？去登录</a> · <a href="#" id="authCloseR">关闭</a></div>
     </div>
 
@@ -67,7 +68,7 @@ const AUTH_HTML = `
       <button class="auth-btn-primary" id="btnSendCode">发送验证码</button>
       <div class="form-group" id="codeInputGroup" style="display:none;margin-top:14px">
         <label class="form-label">验证码</label>
-        <input class="form-input" id="codeInput" type="text" placeholder="6位数字" maxlength="6" inputmode="numeric">
+        <input class="form-input" id="codeInput" type="text" placeholder="8位数字" maxlength="8" inputmode="numeric">
       </div>
       <button class="auth-btn-primary" id="btnVerifyCode" style="display:none">验证登录</button>
       <div class="auth-tip" id="codeTip"></div>
@@ -355,12 +356,26 @@ function initAuth() {
           }
         } catch (e) { /* RPC 不存在或网络异常：跳过预检，交给注册流程兜底 */ }
       }
+      /* 邮箱是否已注册：与用户名同一套 RPC 判定；已注册就别再走 signUp，直接引导去登录 */
+      if (typeof window.checkEmailRegistered === 'function') {
+        try {
+          const registered = await window.checkEmailRegistered(email);
+          if (registered) {
+            toast('这个邮箱已经注册过啦，直接登录吧');
+            $('loginEmail').value = email;
+            showView('login');
+            btn.disabled = false; btn.textContent = '注册账号';
+            return;
+          }
+        } catch (e) { /* RPC 不存在或网络异常：跳过预检，交给注册流程兜底 */ }
+      }
       const data = await registerWithEmail(email, p1, username);
       if (!data.session) {
         $('regTip').style.display = 'block';
-        $('regTip').textContent = '验证码已寄往 ' + email;
+        $('regTip').textContent = '验证码已寄往 ' + email + '，填 8 位验证码完成注册';
         $('regCodeGroup').style.display = 'block';
         $('btnRegVerify').style.display = 'block';
+        $('regResendRow').style.display = 'block';
         btn.style.display = 'none';
         toast('验证码已发送，查收邮箱');
       } else {
@@ -378,7 +393,7 @@ function initAuth() {
 
   $('btnRegVerify').addEventListener('click', async () => {
     const code = $('regCode').value.trim();
-    if (code.length !== 6) return toast('输入6位验证码');
+    if (code.length !== 8) return toast('输入8位验证码');
     const email = $('regEmail').value.trim();
     const username = $('regUsername').value.trim();
     try {
@@ -425,8 +440,24 @@ function initAuth() {
     if (!isEmail(email)) return toast('邮箱好像不对哦');
     sentEmail = email;
     const btn = $('btnSendCode');
-    btn.disabled = true; btn.textContent = '发送中…';
+    btn.disabled = true; btn.textContent = '检查中…';
     try {
+      /* 分流：未注册 → 引导去注册；已注册 → 才发验证码（避免 OTP 静默占坑） */
+      let registered = false;
+      if (typeof window.checkEmailRegistered === 'function') {
+        try { registered = await window.checkEmailRegistered(email); }
+        catch (e) { /* RPC 不存在/网络异常：走老逻辑，直接发验证码兜底 */ }
+      }
+      if (!registered) {
+        /* 未注册 → 跳到注册页并预填邮箱 */
+        $('regEmail').value = email;
+        $('regTip').style.display = 'none';
+        toast('这个邮箱还没注册，先创建个账号吧');
+        showView('register');
+        btn.disabled = false; btn.textContent = '发送验证码';
+        return;
+      }
+      /* 已注册 → 发验证码 */
       await sendVerificationCode(email);
       $('codeEmailGroup').style.display = 'none';
       $('codeInputGroup').style.display = 'block';
@@ -441,14 +472,24 @@ function initAuth() {
       };
       countdown = setInterval(tick, 1000); tick();
     } catch (e) {
-      toast('发送失败：' + (e.message || '稍后再试'));
+      const m = String(e && e.message || '');
+      /* 兜底分流：RPC 未部署时，未注册邮箱发码会被 Supabase 拒绝（otp_disabled），
+         同样判定为「未注册」，引导去注册页，避免干巴巴的报错 */
+      if (e && (e.code === 'otp_disabled' || m.includes('Signups not allowed'))) {
+        $('regEmail').value = email;
+        $('regTip').style.display = 'none';
+        toast('这个邮箱还没注册，先创建个账号吧');
+        showView('register');
+      } else {
+        toast('发送失败：' + (m || '稍后再试'));
+      }
       btn.disabled = false; btn.textContent = '发送验证码';
     }
   });
 
   $('btnVerifyCode').addEventListener('click', async () => {
     const code = $('codeInput').value.trim();
-    if (code.length !== 6) return toast('输入6位验证码');
+    if (code.length !== 8) return toast('输入8位验证码');
     const btn = $('btnVerifyCode');
     btn.disabled = true; btn.textContent = '验证中…';
     try {
@@ -482,7 +523,43 @@ function initAuth() {
   $('btnSkipPwd').addEventListener('click', () => { close(); location.reload(); });
 
   // ===== 返回 =====
-  $('btnToRegister').addEventListener('click', e => { e.preventDefault(); showView('register'); });
+  $('btnToRegister').addEventListener('click', e => {
+    e.preventDefault();
+    /* 回到注册第一步：隐藏验证码区，恢复「注册账号」按钮 */
+    try {
+      $('regCodeGroup').style.display = 'none';
+      $('btnRegVerify').style.display = 'none';
+      $('regResendRow').style.display = 'none';
+      $('regTip').style.display = 'none';
+      $('regCode').value = '';
+      const rb = $('btnRegister'); rb.style.display = 'block'; rb.disabled = false; rb.textContent = '注册账号';
+    } catch (err) {}
+    showView('register');
+  });
+
+  /* 重新发送注册验证码（验证码过期/没收到时用，60 秒冷却） */
+  $('btnResendRegCode').addEventListener('click', async e => {
+    e.preventDefault();
+    const email = $('regEmail').value.trim();
+    if (!isEmail(email)) return toast('邮箱好像不对哦');
+    const a = $('btnResendRegCode');
+    if (a.dataset.busy === '1') return;
+    a.dataset.busy = '1';
+    a.textContent = '发送中…';
+    try {
+      await resendSignupCode(email);
+      toast('验证码已重新发送，查收邮箱');
+      let sec = 60;
+      const t = setInterval(() => {
+        a.textContent = sec > 0 ? sec + 's 后可重发' : '没收到验证码？重新发送';
+        if (sec-- <= 0) { clearInterval(t); a.dataset.busy = ''; }
+      }, 1000);
+    } catch (err) {
+      a.textContent = '没收到验证码？重新发送';
+      a.dataset.busy = '';
+      toast('重发失败：' + (err.message || '稍后再试'));
+    }
+  });
   $('btnBackLogin2').addEventListener('click', e => { e.preventDefault(); showView('login'); });
   $('btnBackLogin3').addEventListener('click', e => { e.preventDefault(); resetCodeView(); showView('login'); });
 

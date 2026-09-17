@@ -232,6 +232,54 @@ textarea#question:focus{border-color:var(--gold);background:rgba(255,255,255,.06
 .slot.revealed .card-name,.slot.revealed .card-en{opacity:1;transform:none}
 .tapped-hint{font-size:.78rem;color:#a49cc9;margin-top:24px;letter-spacing:.18em;animation:breathe 2.8s ease-in-out infinite;
   display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+/* ---------- 手动抽牌：选牌区（洗牌后扇形摊牌，凭直觉选牌背） ---------- */
+.pick-zone{margin-top:clamp(8px,1.8vh,16px);text-align:center}
+.pick-hint{font-size:.8rem;color:#a49cc9;letter-spacing:.14em;line-height:1.9;margin-bottom:12px}
+.pick-hint b{color:var(--gold)}
+.pick-swipe{display:inline-block;font-size:.68rem;color:#7d74ad;letter-spacing:.08em;margin-left:8px;animation:breathe 3s ease-in-out infinite}
+.pick-fan{position:relative;height:calc(var(--ch) + 130px);margin:0 auto;width:100%;max-width:720px;
+  transform-origin:50% 100%;transform:rotate(var(--fanRot,0deg));
+  transition:transform .12s ease-out;touch-action:pan-y;cursor:grab}
+.pick-fan:active{cursor:grabbing}
+.pick-card{position:absolute;left:50%;bottom:0;width:var(--cw);height:var(--ch);border-radius:14px;cursor:pointer;
+  background:linear-gradient(148deg,#2c2164 0%,#1a1344 47%,#342573 100%);
+  border:1.5px solid rgba(240,207,130,.5);
+  box-shadow:0 10px 30px rgba(4,2,18,.55), inset 0 0 26px rgba(240,207,130,.06);
+  transform-origin:50% 100%;
+  transform:translateX(-50%) rotate(var(--ang)) translateY(calc(-1*var(--spread)));
+  z-index:var(--z);
+  transition:transform .3s var(--spring-fast), border-color .3s, box-shadow .3s, z-index .3s;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.pick-card .pat{position:absolute;inset:7px;border-radius:10px;border:1px solid rgba(240,207,130,.32);
+  background-image:radial-gradient(rgba(240,207,130,.30) 1px,transparent 1.7px),
+                   radial-gradient(rgba(240,207,130,.17) 1px,transparent 1.7px);
+  background-size:15px 15px,15px 15px;background-position:0 0,7.5px 7.5px}
+.pick-card .em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:rgba(240,207,130,.92);font-size:calc(var(--cw)*.21);text-shadow:0 0 16px rgba(240,207,130,.55)}
+.pick-card:hover{transform:translateX(-50%) rotate(var(--ang)) translateY(calc(-1*var(--spread))) translateY(-4px);
+  border-color:rgba(240,207,130,.85);z-index:9990}
+.pick-card:active{transform:translateX(-50%) rotate(var(--ang)) translateY(calc(-1*var(--spread))) scale(.97)}
+.pick-card.picked{border-color:#ffd98a;box-shadow:0 0 0 2px rgba(255,217,138,.75), 0 10px 30px rgba(4,2,18,.55);
+  transform:translateX(-50%) rotate(var(--ang)) translateY(calc(-1*var(--spread))) translateY(-8px);
+  z-index:9999}
+.pick-no{position:absolute;top:-9px;right:-9px;min-width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#1a1020;
+  background:linear-gradient(160deg,#ffe6a8,#f0cf82);box-shadow:0 4px 12px rgba(240,207,130,.45);
+  opacity:0;transform:scale(.4);transition:all .3s var(--spring-fast);z-index:3}
+.pick-card.picked .pick-no{opacity:1;transform:scale(1)}
+.pick-bar{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:4px;flex-wrap:wrap}
+.pick-progress{font-size:.82rem;color:#a49cc9;letter-spacing:.12em}
+.pick-progress b{color:var(--gold);font-size:.95rem}
+.pick-bar .btn-glass:disabled{opacity:.35;pointer-events:none}
+/* ---------- 抽牌模式切换（手动/自动） ---------- */
+.mode-sel{display:flex;justify-content:center;gap:12px;margin-top:18px}
+.mode-btn{cursor:pointer;border-radius:999px;padding:9px 26px;font-family:inherit;font-size:.84rem;
+  letter-spacing:.2em;text-indent:.1em;color:#b9aedf;background:rgba(255,255,255,.03);
+  border:1px solid rgba(240,207,130,.28);transition:all .3s var(--spring-fast);transform:translateZ(0)}
+.mode-btn:hover{border-color:rgba(240,207,130,.55);color:var(--gold)}
+.mode-btn.active{color:#1a1020;background:linear-gradient(160deg,#ffe6a8,#f0cf82);
+  border-color:transparent;box-shadow:0 8px 24px rgba(240,207,130,.28)}
+.mode-btn:active{transform:translateY(0) scale(.97)}
 .btn-quick{cursor:pointer;border-radius:999px;padding:6px 16px;font-family:inherit;font-size:.74rem;
   letter-spacing:.14em;color:var(--gold);border:1px solid rgba(240,207,130,.35);
   background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.015));

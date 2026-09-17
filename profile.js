@@ -255,6 +255,7 @@
         <button class="pf-btn" id="pfBtnBirthday">设置生日</button>
         <button class="pf-btn full" id="pfBtnPwd">修改密码</button>
         <button class="pf-btn full danger" id="pfBtnOut">退出登录</button>
+        <button class="pf-btn full danger" id="pfBtnDel">注销账号</button>
       </div>
     </div>
 
@@ -284,7 +285,11 @@
     inputCb = cb;
     setTimeout(() => inp.focus(), 120);
   }
-  function closeInput() { $('pfInputMask').style.display = 'none'; inputCb = null; }
+  function closeInput() {
+    $('pfInputMask').style.display = 'none';
+    try { const inp = $('pfInputVal'); inp.value = ''; inp.type = 'text'; } catch (e) {}
+    inputCb = null;
+  }
 
   /* ==================== 渲染 ==================== */
   let curUser = null;
@@ -487,6 +492,54 @@
       sessionStorage.removeItem('cloud_restored');
       try { await signOut(); } catch (e) {}
       location.reload();
+    });
+
+    /* 注销账号（永久删除账号与云端数据；须输入登录密码二次验证，防误删） */
+    $('pfBtnDel').addEventListener('click', () => {
+      if (!window.confirm('确定要注销账号吗？\n云端的所有记忆、占卜记录将被永久删除，无法恢复。')) return;
+      askInput('输入登录密码以确认注销', '', 'password', async v => {
+        v = (v || '').trim();
+        if (!v) { toast('请输入密码'); return; }
+        const btn = $('pfBtnDel');
+        btn.disabled = true; btn.textContent = '注销中…';
+        const restore = () => { btn.disabled = false; btn.textContent = '注销账号'; };
+        try {
+          /* 取当前账号邮箱（页面渲染时可能存在，兜底再查一次） */
+          let email = curUser && curUser.email ? curUser.email : null;
+          if (!email) { try { email = (await getCurrentUser())?.email || null; } catch (e) {} }
+          if (!email) { toast('拿不到账号邮箱，请重新登录后再试'); restore(); return; }
+
+          /* ① 先用密码重新认证：密码不对会被拦下，绝不进入删除 */
+          try {
+            await loginWithPassword(email, v);
+          } catch (e) {
+            const m = String(e && e.message || '');
+            if (m.includes('Invalid login credentials')) {
+              toast('密码不对，注销已取消');
+            } else if (m.includes('Email not confirmed')) {
+              toast('账号邮箱未验证，暂时无法用密码注销');
+            } else {
+              toast('密码验证失败：' + (m || '请稍后再试'));
+            }
+            restore();
+            return;
+          }
+
+          /* ② 认证通过，才真正删除账号（云端业务数据经外键级联清空） */
+          if (typeof window.deleteMyAccount !== 'function') throw new Error('注销功能未就绪，请稍后再试');
+          await window.deleteMyAccount();
+
+          /* ③ 清空本机残留并回首页 */
+          try { if (typeof window.clearLocalCache === 'function') window.clearLocalCache(); } catch (e) {}
+          try { localStorage.removeItem('sb-ooewxcqksrvixnslzhkw-auth-token'); } catch (e) {}
+          sessionStorage.removeItem('cloud_restored');
+          toast('账号已注销，江湖再见 ✦');
+          setTimeout(() => location.reload(), 800);
+        } catch (e) {
+          toast('注销失败：' + (e && e.message || '请稍后再试'));
+          restore();
+        }
+      });
     });
 
     /* 成就收藏册 */

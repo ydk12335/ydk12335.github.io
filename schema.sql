@@ -137,3 +137,27 @@ LANGUAGE sql SECURITY DEFINER STABLE
 AS $$
   SELECT EXISTS (SELECT 1 FROM public.profiles WHERE username = uname);
 $$;
+
+-- 12. 邮箱是否已注册 RPC（供「验证码登录」分流：未注册→跳注册；已注册→才发验证码）
+--     依赖触发器 handle_new_user：auth.users 每建一个用户，profiles 必有一条对应记录，
+--     所以查 profiles 即可覆盖「密码注册」和「OTP 占坑」两类账号。
+--     注意：参数名用 p_email 避免与列名 email 歧义（email=email 会恒真）
+CREATE OR REPLACE FUNCTION check_email(p_email TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql SECURITY DEFINER STABLE
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.profiles WHERE email = p_email);
+$$;
+
+-- 13. 注销账号 RPC（SECURITY DEFINER：删除自己的 auth.users 记录，
+--     依赖所有业务表的外键 ON DELETE CASCADE 级联清空：profiles / memories /
+--     user_profiles / chat_messages 等）
+CREATE OR REPLACE FUNCTION delete_my_account()
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$$;
