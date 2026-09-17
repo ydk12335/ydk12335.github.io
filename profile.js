@@ -480,7 +480,17 @@
       askInput('设置新密码（至少 6 位）', '', 'password', async v => {
         if (!v || v.length < 6) { toast('密码至少 6 位'); return; }
         try { await setPassword(v); toast('密码已更新，下次用新密码登录'); }
-        catch (e) { toast('修改失败：' + (e.message || '再试试')); }
+        catch (e) {
+          const code = e && e.code ? String(e.code) : '';
+          const msg = String((e && e.message) || '');
+          if (code === 'same_password' || msg.includes('should be different from the old password')) {
+            toast('新密码不能和现在的密码一样');
+          } else if (code === 'reauthentication_needed' || msg.includes('reauthentication')) {
+            toast('为安全起见，请退出后重新登录再改密码');
+          } else {
+            toast('修改失败：' + (msg || '再试试'));
+          }
+        }
       });
     });
 

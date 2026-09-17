@@ -77,7 +77,7 @@ const AUTH_HTML = `
 
     <!-- ④ 设置密码（验证码登录成功后） -->
     <div class="auth-view" id="viewSetPwd" style="display:none">
-      <div class="auth-tip">登录成功！设个密码，以后直接用密码进来 ✨</div>
+      <div class="auth-tip">登录成功！给账号设个登录密码，以后用邮箱+密码就能快速进来 ✨</div>
       <div class="form-group">
         <label class="form-label">新密码</label>
         <input class="form-input" id="newPwd" type="password" placeholder="至少6位">
@@ -87,7 +87,6 @@ const AUTH_HTML = `
         <input class="form-input" id="newPwd2" type="password" placeholder="确认密码">
       </div>
       <button class="auth-btn-primary" id="btnSetPwd">保存密码</button>
-      <button class="auth-btn-ghost" id="btnSkipPwd">跳过，下次再说</button>
       <div class="auth-footer"><a href="#" id="authClose3">关闭</a></div>
     </div>
 
@@ -503,7 +502,7 @@ function initAuth() {
     btn.disabled = false; btn.textContent = '验证登录';
   });
 
-  // ===== ④ 设置密码 =====
+  // ===== ④ 设置密码（注册完成 / 验证码登录后必填，无跳过） =====
   $('btnSetPwd').addEventListener('click', async () => {
     const p1 = $('newPwd').value, p2 = $('newPwd2').value;
     if (!p1 || p1.length < 6) return toast('密码至少6位');
@@ -512,15 +511,29 @@ function initAuth() {
     btn.disabled = true; btn.textContent = '保存中…';
     try {
       await setPassword(p1);
-      toast('密码已保存，下次直接输密码进来');
+      toast('密码已设置，下次直接用密码登录');
       close(); location.reload();
     } catch (e) {
-      toast('保存失败：' + (e.message || '再试试'));
+      const code = e && e.code ? String(e.code) : '';
+      const msg = String((e && e.message) || '');
+      /* 这个密码就是账号现有密码（注册时已存过）：目标已达成，直接放行，不能把用户卡死在这一页 */
+      if (code === 'same_password' || msg.includes('should be different from the old password')) {
+        toast('已沿用你原来的密码 ✨');
+        close(); location.reload();
+        return;
+      }
+      /* 后台若开启「Secure password change」会要求最近一次登录才让改密码 */
+      if (code === 'reauthentication_needed' || msg.includes('reauthentication')) {
+        toast('为安全起见，请退出后用验证码重新登录再设密码');
+      } else {
+        toast('保存失败：' + (msg || '再试试'));
+      }
       btn.disabled = false; btn.textContent = '保存密码';
     }
   });
 
-  $('btnSkipPwd').addEventListener('click', () => { close(); location.reload(); });
+  /* 设密码页的「关闭」：此时已登录，关掉并刷新页面反映登录态 */
+  $('authClose3').addEventListener('click', e => { e.preventDefault(); close(); location.reload(); });
 
   // ===== 返回 =====
   $('btnToRegister').addEventListener('click', e => {
