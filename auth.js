@@ -399,6 +399,11 @@ function initAuth() {
     const email = $('regEmail').value.trim();
     const p1 = $('regPwd').value, p2 = $('regPwd2').value;
     if (!username) return toast('先给自己取个名字吧');
+    /* 保留名拦截：用户曾用名（易大可/微易/yd/ydk）不可注册 */
+    if (typeof window.checkUsernameAllowed === 'function') {
+      const allow = window.checkUsernameAllowed(username);
+      if (!allow.ok) return toast(allow.msg);
+    }
     if (!isEmail(email)) return toast('邮箱好像不对哦');
     if (!p1 || p1.length < 6) return toast('密码至少6位');
     if (p1 !== p2) return toast('两次密码不一致');

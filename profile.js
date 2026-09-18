@@ -449,6 +449,11 @@
       askInput('修改昵称', $('pfName').textContent, 'text', async v => {
         v = (v || '').trim();
         if (!v) { toast('昵称不能为空'); return; }
+        /* 保留名拦截：用户曾用名（易大可/微易/yd/ydk）不可用 */
+        if (typeof window.checkUsernameAllowed === 'function') {
+          const allow = window.checkUsernameAllowed(v);
+          if (!allow.ok) { toast(allow.msg); return; }
+        }
         try {
           const sb = await initSupabase();
           await sb.auth.updateUser({ data: { display_name: v } });

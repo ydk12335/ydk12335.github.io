@@ -125,6 +125,22 @@ async function checkUsernameTaken(username) {
   return !!data;
 }
 
+/** 用户名是否可用：禁止使用保留名（用户曾用名/昵称），防止被冒用
+ *  - 中文名（易大可/微易）直接匹配
+ *  - 英文缩写（yd/ydk）按独立单词边界匹配，避免误杀 hydrate/yard 等正常英文
+ * 返回 { ok:true } 或 { ok:false, msg:'提示文案' } */
+function checkUsernameAllowed(name) {
+  const s = String(name || '').trim().toLowerCase();
+  if (!s) return { ok: false, msg: '名字不能为空' };
+  const RESERVED_CN = ['易大可', '微易'];
+  for (const w of RESERVED_CN) {
+    if (s.includes(w)) return { ok: false, msg: '这个名字不能使用哦，换一个吧' };
+  }
+  const ALIAS_RE = /(^|[^a-z0-9])(ydk|yd)([^a-z0-9]|$)/i;
+  if (ALIAS_RE.test(s)) return { ok: false, msg: '这个名字不能使用哦，换一个吧' };
+  return { ok: true };
+}
+
 /** 检查邮箱是否已注册（RPC；用于验证码登录分流：未注册→引导注册，已注册→才发验证码） */
 async function checkEmailRegistered(email) {
   if (!email || !String(email).trim()) return false;
@@ -564,6 +580,7 @@ window.verifyPassword = verifyPassword;
 window.setPassword = setPassword;
 window.registerWithEmail = registerWithEmail;
 window.checkUsernameTaken = checkUsernameTaken;
+window.checkUsernameAllowed = checkUsernameAllowed;
 window.checkEmailRegistered = checkEmailRegistered;
 window.deleteMyAccount = deleteMyAccount;
 window.verifyEmailOtp = verifyEmailOtp;
