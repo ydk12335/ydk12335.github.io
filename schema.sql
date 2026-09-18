@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS wish_notes (
   id TEXT PRIMARY KEY,                 -- 前端 uid()，兼容本地
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,  -- 作者（未登录可空）
   type TEXT NOT NULL DEFAULT 'bless',
+  sub TEXT NOT NULL DEFAULT '',        -- 关系细分（couple/friend/family/crush），非关系为空
   title TEXT NOT NULL DEFAULT '',
   content TEXT NOT NULL DEFAULT '',
   author TEXT NOT NULL DEFAULT '',
@@ -183,18 +184,45 @@ CREATE TABLE IF NOT EXISTS wish_notes (
   r REAL,
   comments JSONB NOT NULL DEFAULT '[]',
   owner TEXT,                           -- 前端本地标识（未登录时区分我的便签）
+  partner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,  -- 双人共签：搭档
+  partner_name TEXT NOT NULL DEFAULT '',   -- 搭档名字
+  partner_avatar TEXT NOT NULL DEFAULT '', -- 搭档头像
+  invite_code TEXT NOT NULL DEFAULT '',    -- 8 位邀请码（关系便签邀请搭档用）
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_wish_notes_vis ON wish_notes(vis, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_wish_notes_user ON wish_notes(user_id);
+CREATE INDEX IF NOT EXISTS idx_wish_notes_invite ON wish_notes(invite_code) WHERE invite_code <> '';
 
 -- 15. 开启 RLS
 ALTER TABLE wish_notes ENABLE ROW LEVEL SECURITY;
 
--- 16. RLS 策略：公开便签所有人可读；私密便签仅作者可读；写只能写自己的
+-- 16. RLS 策略：公开便签所有人可读；私密便签作者+搭档可读；写只能写自己的
 CREATE POLICY "读公开便签" ON wish_notes FOR SELECT USING (vis = 'public');
-CREATE POLICY "读自己私密便签" ON wish_notes FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "读自己私密便签" ON wish_notes FOR SELECT USING (auth.uid() = user_id OR auth.uid() = partner_id);
 CREATE POLICY "插自己的便签" ON wish_notes FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "改自己的便签" ON wish_notes FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "改自己的便签" ON wish_notes FOR UPDATE USING (auth.uid() = user_id OR auth.uid() = partner_id) WITH CHECK (auth.uid() = user_id OR auth.uid() = partner_id);
 CREATE POLICY "删自己的便签" ON wish_notes FOR DELETE USING (auth.uid() = user_id);
+
+-- 17. 双人共签：接受邀请 RPC（SECURITY DEFINER，校验邀请码并绑定搭档）
+CREATE OR REPLACE FUNCTION accept_invite(p_code TEXT, p_name TEXT DEFAULT '', p_avatar TEXT DEFAULT '')
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_note wish_notes%ROWTYPE;
+BEGIN
+  SELECT * INTO v_note FROM wish_notes WHERE invite_code = upper(p_code) AND partner_id IS NULL LIMIT 1;
+  IF NOT FOUND THEN
+    RETURN NULL;
+  END IF;
+  IF v_note.user_id = auth.uid() THEN
+    RETURN NULL;
+  END IF;
+  UPDATE wish_notes SET partner_id = auth.uid(), partner_name = p_name, partner_avatar = p_avatar WHERE id = v_note.id;
+  RETURN v_note.id;
+END;
+$$;

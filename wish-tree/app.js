@@ -14,12 +14,26 @@ const TYPE_META = {
   relation: { name: '关系',  shades: ['#f3e6ff', '#e0b8ff', '#b98ae0'] },
   heart:    { name: '心事',  shades: ['#ffe8f0', '#ffd0de', '#f290b0'] }
 };
+/* 「关系」细分类型：选中关系后显示二级选择，各细分配独立色相（淡色手绘风） */
+const REL_SUBS = {
+  couple:  { name: '情侣', shades: ['#f3e6ff', '#e0b8ff', '#b98ae0'] },  // 紫
+  friend:  { name: '朋友', shades: ['#e4f3ff', '#bfe0ff', '#7fb5e8'] },  // 青蓝
+  family:  { name: '家人', shades: ['#ffece0', '#ffd0b0', '#f2a06a'] },  // 暖橙
+  crush:   { name: '暗恋', shades: ['#fde6f2', '#f9c4e0', '#e88ab5'] }   // 粉紫
+};
+const REL_SUB_KEYS = Object.keys(REL_SUBS);
 const SHADE_LABELS = ['浅', '标准', '深'];
 /* 便签颜色由类型决定色相 + 深浅档；旧数据没存深浅就按标准档 */
 const noteColor = c => {
-  const meta = TYPE_META[c.type] || TYPE_META.bless;
+  let meta = TYPE_META[c.type] || TYPE_META.bless;
+  if (c.type === 'relation' && c.sub && REL_SUBS[c.sub]) meta = REL_SUBS[c.sub];
   const idx = (c.shade != null ? c.shade : 1);
   return meta.shades[idx] || meta.shades[1];
+};
+/* 类型显示名：关系带细分名 */
+const typeName = c => {
+  if (c.type === 'relation' && c.sub && REL_SUBS[c.sub]) return REL_SUBS[c.sub].name;
+  return (TYPE_META[c.type] || TYPE_META.bless).name;
 };
 let curShade = 1;   // 当前选中深浅档（0 浅 / 1 标准 / 2 深）
 const MAX_CARDS = 500;
@@ -32,12 +46,18 @@ async function getCurUser() {
   const sb = await getSbClient(); if (!sb) return null;
   try { const { data: { session } } = await sb.auth.getSession(); return session?.user ?? null; } catch (e) { return null; }
 }
-/* 加载时拉取云端公开便签（未登录也能看公共墙） */
+/* 加载时拉取云端便签：公开所有人可见；登录用户额外拉自己作者/搭档的私密便签 */
 async function pullCloudNotes() {
   const sb = await getSbClient(); if (!sb) return;
   try {
-    const { data: rows, error } = await sb.from('wish_notes')
-      .select('*').eq('vis', 'public').order('created_at', { ascending: false }).limit(300);
+    const meId = meInfo.userId;
+    let q = sb.from('wish_notes').select('*').order('created_at', { ascending: false }).limit(300);
+    if (meId) {
+      q = q.or(`vis.eq.public,user_id.eq.${meId},partner_id.eq.${meId}`);
+    } else {
+      q = q.eq('vis', 'public');
+    }
+    const { data: rows, error } = await q;
     if (error) { console.warn('[wish-tree] 拉取公开便签失败', error.message); return; }
     if (!rows || !rows.length) return;
     const local = loadCards();
@@ -51,6 +71,8 @@ async function pullCloudNotes() {
         author: r.author || '', vis: r.vis, owner: r.owner || '', createdAt: r.created_at,
         comments: r.comments || [], shade: r.shade != null ? r.shade : (r.color ? 1 : 1),
         anon: !!r.anon, avatar: r.avatar || '',
+        sub: r.sub || '', partner_id: r.partner_id || '', partner_name: r.partner_name || '',
+        partner_avatar: r.partner_avatar || '', invite_code: r.invite_code || '',
         x: r.x != null ? r.x : undefined, y: r.y != null ? r.y : undefined,
         r: r.r != null ? r.r : undefined
       });
@@ -59,29 +81,34 @@ async function pullCloudNotes() {
     if (added) { saveCards(merged); cards = loadCards(); renderWall(); }
   } catch (e) { console.warn('[wish-tree] 拉取公开便签异常', e); }
 }
-/* 上传一张便签到云端（公开/私密都传；私密只有自己能读到） */
+/* 上传一张便签到云端（公开/私密都传；私密只有自己能读到）
+   注意：仅作者本人可全量上传（含 user_id），搭档/他人一律不走这里，避免覆盖 user_id */
 async function pushNoteCloud(c) {
   const sb = await getSbClient(); if (!sb) return;
   const user = await getCurUser();
   if (!user) return false;   // 未登录不传（本地保留）
+  if (!isMine(c)) return false;  // 非本人便签禁止全量上传（防止篡改归属）
   try {
     const { error } = await sb.from('wish_notes').upsert({
       id: c.id, user_id: user.id, type: c.type, title: c.title, content: c.content,
       author: c.author, vis: c.vis, shade: c.shade != null ? c.shade : 1,
       anon: !!c.anon, avatar: c.avatar || '',
+      sub: c.sub || '', partner_id: c.partner_id || null, partner_name: c.partner_name || '',
+      partner_avatar: c.partner_avatar || '', invite_code: c.invite_code || '',
       x: c.x ?? null, y: c.y ?? null, r: c.r ?? null,
       comments: c.comments || [], owner: c.owner || ''
     }, { onConflict: 'id' });
     if (error) console.warn('[wish-tree] 上传便签失败', error.message);
   } catch (e) { console.warn('[wish-tree] 上传便签异常', e); }
 }
-/* 上传/删除评论（公开便签的评论也上云，让别人看到） */
+/* 上传/删除评论（公开便签的评论也上云；作者和搭档都能同步，RLS 兜底权限） */
 async function syncCommentsCloud(c) {
   const sb = await getSbClient(); if (!sb) return;
   const user = await getCurUser(); if (!user) return;
+  if (!canEdit(c)) return;   // 仅本人/搭档可同步评论
   try {
     const { error } = await sb.from('wish_notes')
-      .update({ comments: c.comments || [] }).eq('id', c.id).eq('user_id', user.id);
+      .update({ comments: c.comments || [] }).eq('id', c.id);
     if (error) console.warn('[wish-tree] 同步评论失败', error.message);
   } catch (e) {}
 }
@@ -89,9 +116,55 @@ async function deleteNoteCloud(id) {
   const sb = await getSbClient(); if (!sb) return;
   const user = await getCurUser(); if (!user) return;
   try {
+    /* 仅作者本人可删（RLS 兜底：auth.uid() = user_id） */
     const { error } = await sb.from('wish_notes').delete().eq('id', id).eq('user_id', user.id);
     if (error) console.warn('[wish-tree] 删除云端便签失败', error.message);
   } catch (e) {}
+}
+/* ---------- 双人邀请（关系便签） ---------- */
+/* 生成 8 位邀请码（大写字母+数字，去除易混字符） */
+function genInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+/* 当前用户是否是便签的「搭档」（对方或本人） */
+function isPartner(c) {
+  if (!c) return false;
+  return meInfo.userId && (c.partner_id === meInfo.userId);
+}
+/* 双人共签：本人 / 搭档都算「可操作」 */
+function canEdit(c) { return isMine(c) || isPartner(c); }
+/* 接受邀请：调用 SECURITY DEFINER RPC 把当前用户设为搭档 */
+async function acceptInviteByCode(code) {
+  const sb = await getSbClient(); if (!sb) return { ok: false, msg: '未登录' };
+  const user = await getCurUser(); if (!user) return { ok: false, msg: '未登录' };
+  try {
+    const { data, error } = await sb.rpc('accept_invite', {
+      p_code: (code || '').trim().toUpperCase(),
+      p_name: meInfo.name || '',
+      p_avatar: meInfo.avatar || ''
+    });
+    if (error) return { ok: false, msg: error.message };
+    if (!data) return { ok: false, msg: '邀请码无效或已失效' };
+    return { ok: true, noteId: data };
+  } catch (e) { return { ok: false, msg: String(e) }; }
+}
+/* 把邀请码复制到剪贴板（移动端优先 Clipboard API，失败则选中文本提示） */
+async function copyInviteCode(code) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(code);
+      hint('邀请码已复制：' + code);
+      return;
+    }
+  } catch (e) {}
+  const ta = document.createElement('textarea');
+  ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); hint('邀请码已复制：' + code); } catch (e) { hint('邀请码：' + code); }
+  document.body.removeChild(ta);
 }
 
 function loadCards() {
@@ -103,6 +176,56 @@ function saveCards(list) {
 }
 function uid() { return 'wt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+/* ================================================================
+   内容过滤器：①敏感词 ②网址/联系方式 ③塔罗类禁问问题
+   命中返回 { bad:true, msg:'提示文案' }；未命中返回 { bad:false }
+   ================================================================ */
+const FILTER_MSG = '内容里包含不能发布的内容，换一句话试试吧';
+/* ① 敏感词（通用 + 人身攻击 + 色情 + 暴力 + 违禁） */
+const BAD_WORDS = [
+  '傻逼', '煞笔', '沙比', '脑残', '智障', '弱智', '白痴', '蠢货', '废物', '垃圾货',
+  '操你妈', '草泥马', '去死', '滚蛋', '贱人', '婊子', '妓女', '嫖娼', '卖淫',
+  '杀人', '自杀', '贩毒', '吸毒', '毒品', '枪支', '炸药', '炸弹', '恐怖袭击',
+  '共产党', '习大大', '法轮功', '台独', '藏独', '疆独', '邪教', '传销',
+  '赌博', '赌场', '博彩', '开奖', '六合彩', '彩票预测', '翻墙', 'VPN破解', '破解版', '外挂', '代刷'
+];
+/* ② 网址/联系方式（http/https/www/域名/邮箱/QQ号/手机号） */
+const URL_RE = /(https?:\/\/|www\.)[^\s\u4e00-\u9fa5，。！？；：、（）()""''\s]+/i;
+const DOMAIN_RE = /[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?/i;
+const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+const QQ_RE = /(^|[^0-9])([1-9][0-9]{5,10})([^0-9]|$)/;
+const PHONE_RE = /(^|[^0-9])(1[3-9][0-9]{9})([^0-9]|$)/;
+/* ③ 塔罗类禁问：生死寿命 / 疾病确诊 / 具体时间点 / 投机赌博 / 诅咒害人 */
+const TAROT_BAD = [
+  '死', '死亡', '去世', '寿命', '活多久', '活几年', '何时死', '能不能活', '会不会死',
+  '自杀', '杀人', '癌症', '肿瘤', '绝症', '重病', '疾病确诊', '确诊', '寿命多久',
+  '什么时候', '何时', '几点', '几号', '哪一天', '哪天', '哪年',
+  '彩票', '中奖', '赌博', '赌', '买马', '股票', '基金涨停', '稳赚', '暴富',
+  '诅咒', '下降头', '害人', '整人', '报复', '拆散'
+];
+/* 综合检查：text 命中任一规则返回 { bad, msg } */
+function checkContent(text) {
+  const s = String(text || '');
+  if (!s.trim()) return { bad: false };
+  /* 敏感词精确命中 */
+  for (const w of BAD_WORDS) {
+    if (s.includes(w)) return { bad: true, msg: '内容里包含敏感词，不能发布' };
+  }
+  /* 网址 / 联系方式 */
+  if (URL_RE.test(s)) return { bad: true, msg: '不能发布网址链接哦' };
+  if (EMAIL_RE.test(s)) return { bad: true, msg: '不能发布邮箱/联系方式哦' };
+  if (PHONE_RE.test(s)) return { bad: true, msg: '不能发布手机号哦' };
+  if (QQ_RE.test(s)) return { bad: true, msg: '不能发布QQ号哦' };
+  /* 纯域名（如 abc.com）单独判断，避免误杀正常中文 */
+  const noCn = s.replace(/[\u4e00-\u9fa5]/g, '');
+  if (DOMAIN_RE.test(noCn)) return { bad: true, msg: '不能发布网址链接哦' };
+  /* 塔罗禁问 */
+  for (const w of TAROT_BAD) {
+    if (s.includes(w)) return { bad: true, msg: '这类问题不方便在这里问哦' };
+  }
+  return { bad: false };
+}
 function shade(hex, amt) {
   const n = parseInt(hex.slice(1), 16);
   let r = (n >> 16) + amt, g = ((n >> 8) & 255) + amt, b = (n & 255) + amt;
@@ -176,10 +299,10 @@ function makeNoteEl(c, i) {
   el.style.transform = `rotate(${(c.r != null ? c.r : ROTS[i % ROTS.length])}deg)`;
   const lock = c.vis === 'private' ? '私密 · ' : '';
   el.innerHTML = `
-    <div class="ic">${TYPE_META[c.type] ? TYPE_META[c.type].name : '祝福'}</div>
+    <div class="ic">${typeName(c)}</div>
     <div class="tt">${esc(c.title || '无题')}</div>
     <div class="ct">${esc((c.content || '').slice(0, 40))}${(c.content || '').length > 40 ? '…' : ''}</div>
-    <div class="au">${authorHTML(c)}<span class="au-dt">${lock}${fmtDate(c.createdAt).slice(5, 16)}</span></div>
+    <div class="au">${authorHTML(c)}${partnerHTML(c)}<span class="au-dt">${lock}${fmtDate(c.createdAt).slice(5, 16)}</span></div>
     <div class="wcurl"></div>`;
   el.onclick = e => { e.stopPropagation(); openZoom(c.id); };
   return el;
@@ -193,6 +316,16 @@ function authorHTML(c) {
   const ch = [...name][0] || '匿';
   const hue = (c.id ? [...c.id].reduce((s, x) => s + x.charCodeAt(0), 0) : 0) % 360;
   return `<span class="av av-letter" style="background:hsl(${hue},55%,62%)">${esc(ch)}</span><span class="au-nm">${esc(name)}</span>`;
+}
+/* 双人共签：有搭档时在作者条上追加搭档头像+名字（左右并排） */
+function partnerHTML(c) {
+  if (!c.partner_id || !c.partner_name) return '';
+  const nm = c.partner_name || '搭档';
+  const av = (c.partner_avatar || '').trim();
+  if (av) return `<span class="av av-partner" style="background-image:url('${esc(av)}')"></span><span class="au-nm">${esc(nm)}</span>`;
+  const ch = [...nm][0] || '搭';
+  const hue = (c.partner_id ? [...c.partner_id].reduce((s, x) => s + x.charCodeAt(0), 0) : 0) % 360;
+  return `<span class="av av-partner av-letter" style="background:hsl(${hue},55%,62%)">${esc(ch)}</span><span class="au-nm">${esc(nm)}</span>`;
 }
 function renderWall() {
   const wall = canvasEl();
@@ -210,13 +343,25 @@ function openZoom(id) {
   zoomId = id;
   const card = $('zoomCard');
   card.style.background = `linear-gradient(165deg, ${noteColor(c)}, ${shade(noteColor(c), -22)})`;
-  $('zType').textContent = (TYPE_META[c.type] ? TYPE_META[c.type].name : '祝福') + ' · ' + (c.vis === 'private' ? '私密' : '公开');
+  $('zType').textContent = typeName(c) + ' · ' + (c.vis === 'private' ? '私密' : '公开');
   $('zTitle').textContent = c.title || '无题';
   $('zContent').textContent = c.content || '';
-  $('zAuthor').innerHTML = authorHTML(c);
+  $('zAuthor').innerHTML = authorHTML(c) + partnerHTML(c);
   $('zDate').textContent = fmtDate(c.createdAt);
   $('zBadge').textContent = c.vis === 'private' ? '私密' : '公开';
-  $('zDel').style.display = isMine(c) ? 'inline-block' : 'none';
+  $('zDel').style.display = isMine(c) ? 'inline-block' : 'none';   // 删除仅作者本人
+  /* 双人共签区：关系便签未绑定搭档 → 显示邀请码（本人可复制）；已绑定 → 显示搭档名 */
+  const inviteBox = $('zInvite');
+  if (c.type === 'relation' && !c.partner_id) {
+    if (!c.invite_code) { c.invite_code = genInviteCode(); saveCards(cards); pushNoteCloud(c); }
+    inviteBox.style.display = '';
+    $('zInviteCode').textContent = c.invite_code;
+    $('zInviteTip').textContent = isMine(c) ? '把邀请码发给 TA，接受后你们共用这张便签' : '输入邀请码加入这张便签';
+    $('zInviteCopy').style.display = isMine(c) ? '' : 'none';
+    $('zInviteAccept').style.display = isMine(c) ? 'none' : '';
+  } else {
+    inviteBox.style.display = 'none';
+  }
   renderComments(c);
   $('zCmtText').value = '';
   $('cmtAnonBtn').classList.remove('on');
@@ -349,12 +494,36 @@ function placeAt(px, py) {
   pushNoteCloud(c);   // 登录用户：同步上传云端（公开/私密都传，RLS 控制可见）
   hint('贴好啦');
 }
+/* 渲染「关系」细分选择器（选中类型是关系时显示，否则隐藏） */
+function renderSubSel() {
+  const box = $('subSel');
+  if (!box) return;
+  const type = document.querySelector('#typeSel .wt-type.on')?.dataset.t || 'bless';
+  if (type !== 'relation') { box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = REL_SUB_KEYS.map((k, i) => {
+    const meta = REL_SUBS[k];
+    const on = i === 0 ? ' on' : '';
+    return `<div class="wt-sub${on}" data-s="${k}" style="--subc:${meta.shades[1]}">${meta.name}</div>`;
+  }).join('');
+  box.querySelectorAll('.wt-sub').forEach(d => {
+    d.onclick = () => {
+      document.querySelectorAll('#subSel .wt-sub').forEach(x => x.classList.remove('on'));
+      d.classList.add('on');
+      renderShadeSel();
+    };
+  });
+}
 /* 渲染深浅选择器：当前类型的 3 档颜色，选中档高亮 */
 function renderShadeSel() {
   const sel = $('shadeSel');
   if (!sel) return;
   const type = document.querySelector('#typeSel .wt-type.on')?.dataset.t || 'bless';
-  const meta = TYPE_META[type] || TYPE_META.bless;
+  let meta = TYPE_META[type] || TYPE_META.bless;
+  if (type === 'relation') {
+    const sub = document.querySelector('#subSel .wt-sub.on')?.dataset.s || 'couple';
+    meta = REL_SUBS[sub] || REL_SUBS.couple;
+  }
   sel.innerHTML = meta.shades.map((col, i) =>
     `<div class="wt-shade${i === curShade ? ' on' : ''}" data-i="${i}" style="background:${col}"><span>${SHADE_LABELS[i]}</span></div>`
   ).join('');
@@ -376,6 +545,8 @@ function openAdd() {
   $('anonBtn').classList.remove('on');
   $('anonBtn').textContent = '不匿名';
   document.querySelectorAll('.wt-vis-btn').forEach(b => b.classList.toggle('on', b.dataset.v === 'public'));
+  document.querySelectorAll('#subSel .wt-sub').forEach(b => b.classList.toggle('on', b.dataset.s === 'couple'));
+  renderSubSel();
   renderShadeSel();
   showMask('addMask');
 }
@@ -383,14 +554,21 @@ function submitAdd() {
   const title = $('addTitle').value.trim();
   const content = $('addContent').value.trim();
   if (!title && !content) { hint('写点什么再贴呀'); return; }
+  /* 内容过滤：标题 + 内容任一命中都拦截 */
+  const tChk = checkContent(title);
+  if (tChk.bad) { hint(tChk.msg || FILTER_MSG); return; }
+  const cChk = checkContent(content);
+  if (cChk.bad) { hint(cChk.msg || FILTER_MSG); return; }
   const type = document.querySelector('#typeSel .wt-type.on')?.dataset.t || 'bless';
+  const sub = (type === 'relation') ? (document.querySelector('#subSel .wt-sub.on')?.dataset.s || 'couple') : '';
   const anon = curAnon;
   const c = {
-    id: uid(), type, shade: curShade, title: title || '无题', content,
+    id: uid(), type, sub, shade: curShade, title: title || '无题', content,
     author: anon ? '匿名' : (meInfo.name || '匿名'),
     anon,
     avatar: (!anon && meInfo.avatar) ? meInfo.avatar : '',
-    vis: curVis, owner: myOwner(), createdAt: new Date().toISOString(), comments: []
+    vis: curVis, owner: myOwner(), createdAt: new Date().toISOString(), comments: [],
+    partner_id: '', partner_name: '', partner_avatar: '', invite_code: ''
   };
   hideMask('addMask');
   enterPlace(c);
@@ -414,6 +592,8 @@ function submitComment() {
   if (!c) return;
   const text = $('zCmtText').value.trim();
   if (!text) { hint('写点内容再评论'); return; }
+  const chk = checkContent(text);
+  if (chk.bad) { hint(chk.msg || FILTER_MSG); return; }
   if (!c.comments) c.comments = [];
   const anon = cmtAnon;
   c.comments.push({
@@ -498,6 +678,7 @@ function bind() {
     if (!t) return;
     document.querySelectorAll('#typeSel .wt-type').forEach(x => x.classList.remove('on'));
     t.classList.add('on');
+    renderSubSel();
     renderShadeSel();
   });
   // 写便签：公开/私密
@@ -529,6 +710,26 @@ function bind() {
   // 放大查看
   $('zoomClose').onclick = closeZoom;
   $('zDel').onclick = deleteNote;
+  $('zInviteCopy').onclick = () => {
+    const c = cards.find(x => x.id === zoomId);
+    if (c && c.invite_code) copyInviteCode(c.invite_code);
+  };
+  $('zInviteAccept').onclick = async () => {
+    const c = cards.find(x => x.id === zoomId);
+    if (!c) return;
+    const code = prompt('输入邀请码（8 位）：');
+    if (!code) return;
+    const r = await acceptInviteByCode(code);
+    if (!r.ok) { hint(r.msg || '接受邀请失败'); return; }
+    /* 云端已通过 SECURITY DEFINER RPC 更新 partner 字段；本地同步更新显示 */
+    c.partner_id = meInfo.userId;
+    c.partner_name = meInfo.name || '';
+    c.partner_avatar = meInfo.avatar || '';
+    saveCards(cards);
+    renderWall();
+    openZoom(c.id);
+    hint('已成为搭档，你们共用这张便签啦');
+  };
   $('zoomMask').addEventListener('click', e => { if (e.target === $('zoomMask')) closeZoom(); });
   // 评论
   $('zCmtSend').onclick = submitComment;
@@ -561,7 +762,8 @@ function isMine(c) {
   if (!c) return false;
   return c.owner === myOwner() || (meInfo.userId && c.owner === myLocalId());
 }
-function canSee(c) { return c.vis !== 'private' || isMine(c); }
+/* 可见性：公开所有人可见；私密仅作者/搭档可见 */
+function canSee(c) { return c.vis !== 'private' || canEdit(c); }
 bind();
 initCanvas();
 renderWall();
