@@ -73,6 +73,7 @@ async function pullCloudNotes() {
         anon: !!r.anon, avatar: r.avatar || '',
         sub: r.sub || '', partner_id: r.partner_id || '', partner_name: r.partner_name || '',
         partner_avatar: r.partner_avatar || '', invite_code: r.invite_code || '',
+        bind_status: r.bind_status || '', bind_by: r.bind_by || '',
         x: r.x != null ? r.x : undefined, y: r.y != null ? r.y : undefined,
         r: r.r != null ? r.r : undefined
       });
@@ -95,20 +96,22 @@ async function pushNoteCloud(c) {
       anon: !!c.anon, avatar: c.avatar || '',
       sub: c.sub || '', partner_id: c.partner_id || null, partner_name: c.partner_name || '',
       partner_avatar: c.partner_avatar || '', invite_code: c.invite_code || '',
+      bind_status: c.bind_status || '', bind_by: c.bind_by || null,
       x: c.x ?? null, y: c.y ?? null, r: c.r ?? null,
       comments: c.comments || [], owner: c.owner || ''
     }, { onConflict: 'id' });
     if (error) console.warn('[wish-tree] 上传便签失败', error.message);
   } catch (e) { console.warn('[wish-tree] 上传便签异常', e); }
 }
-/* 上传/删除评论（公开便签的评论也上云；作者和搭档都能同步，RLS 兜底权限） */
+/* 上传/删除评论（公开便签任何登录用户都能评论上云；私密仅作者/搭档，RPC 兜底权限） */
 async function syncCommentsCloud(c) {
   const sb = await getSbClient(); if (!sb) return;
   const user = await getCurUser(); if (!user) return;
-  if (!canEdit(c)) return;   // 仅本人/搭档可同步评论
   try {
-    const { error } = await sb.from('wish_notes')
-      .update({ comments: c.comments || [] }).eq('id', c.id);
+    const { error } = await sb.rpc('sync_comments', {
+      p_id: c.id,
+      p_comments: c.comments || []
+    });
     if (error) console.warn('[wish-tree] 同步评论失败', error.message);
   } catch (e) {}
 }
@@ -165,6 +168,16 @@ async function copyInviteCode(code) {
   document.body.appendChild(ta); ta.select();
   try { document.execCommand('copy'); hint('邀请码已复制：' + code); } catch (e) { hint('邀请码：' + code); }
   document.body.removeChild(ta);
+}
+/* 永久绑定 RPC 封装：调用指定绑定函数，返回状态字符串或错误消息 */
+async function bindRpc(fn, noteId) {
+  const sb = await getSbClient(); if (!sb) return 'no_login';
+  const user = await getCurUser(); if (!user) return 'no_login';
+  try {
+    const { data, error } = await sb.rpc(fn, { p_id: noteId });
+    if (error) return error.message || 'rpc_error';
+    return data || 'unknown';
+  } catch (e) { return String(e); }
 }
 
 function loadCards() {
@@ -262,6 +275,7 @@ let cmtAnon = false;         // 当前评论文是否匿名
 let hintTimer = null;
 let placeMode = false;      // 放置模式：点画布贴上去
 let pending = null;         // 等待放置的新便签数据
+let pendingInviteCode = ''; // 表单阶段已生成的关系邀请码（贴上去后沿用）
 const NOTE_W = 190, NOTE_H = 238;
 
 /* 启动时读取登录用户信息（名字 / 头像） */
@@ -310,11 +324,17 @@ function makeNoteEl(c, i) {
   el.style.background = `linear-gradient(165deg, ${noteColor(c)}, ${shade(noteColor(c), -22)})`;
   el.style.transform = `rotate(${(c.r != null ? c.r : ROTS[i % ROTS.length])}deg)`;
   const lock = c.vis === 'private' ? '私密 · ' : '';
+  /* 关系便签未绑定搭档：作者自己可见「等待通过邀请」状态 */
+  let waitHTML = '';
+  if (c.type === 'relation' && !c.partner_id && isMine(c)) {
+    waitHTML = `<div class="wt-wait">⏳ 等待对方通过邀请</div>`;
+  }
   el.innerHTML = `
     <div class="ic">${typeName(c)}</div>
     <div class="tt">${esc(c.title || '无题')}</div>
     <div class="ct">${esc((c.content || '').slice(0, 40))}${(c.content || '').length > 40 ? '…' : ''}</div>
     <div class="au">${authorHTML(c)}${partnerHTML(c)}<span class="au-dt">${lock}${fmtDate(c.createdAt).slice(5, 16)}</span></div>
+    ${waitHTML}
     <div class="wcurl"></div>`;
   el.onclick = e => { e.stopPropagation(); openZoom(c.id); };
   return el;
@@ -361,7 +381,32 @@ function openZoom(id) {
   $('zAuthor').innerHTML = authorHTML(c) + partnerHTML(c);
   $('zDate').textContent = fmtDate(c.createdAt);
   $('zBadge').textContent = c.vis === 'private' ? '私密' : '公开';
-  $('zDel').style.display = isMine(c) ? 'inline-block' : 'none';   // 删除仅作者本人
+  /* 永久绑定状态：locked 显示锁定标识，删除按钮隐藏 */
+  const isLocked = c.bind_status === 'locked';
+  $('zBadge').textContent = (c.vis === 'private' ? '私密' : '公开') + (isLocked ? ' · 🔒永久绑定' : (c.bind_status === 'pending' ? ' · ⏳绑定确认中' : ''));
+  $('zDel').style.display = (isMine(c) && !isLocked) ? 'inline-block' : 'none';   // 永久绑定谁都删不了
+  /* 永久绑定操作区：关系便签已绑定搭档时可发起/确认永久绑定 */
+  const bindBox = $('zBind');
+  const isRelation = c.type === 'relation';
+  const hasPartner = !!c.partner_id;
+  if (isRelation && hasPartner && canEdit(c)) {
+    bindBox.style.display = '';
+    if (isLocked) {
+      $('zBindTip').textContent = '你们已永久绑定，这张便签永远保留 💞';
+      $('zBindBtn').style.display = 'none';
+    } else if (c.bind_status === 'pending') {
+      const iAmBy = c.bind_by && meInfo.userId && c.bind_by === meInfo.userId;
+      $('zBindTip').textContent = iAmBy ? '已发起永久绑定，等 TA 确认…' : '对方发起了永久绑定，确认后谁都删不了这张便签';
+      $('zBindBtn').textContent = iAmBy ? '取消发起' : '确认永久绑定';
+      $('zBindBtn').style.display = '';
+    } else {
+      $('zBindTip').textContent = '永久绑定后，谁都删不了这张便签（需双方确认）';
+      $('zBindBtn').textContent = '永久绑定';
+      $('zBindBtn').style.display = '';
+    }
+  } else {
+    bindBox.style.display = 'none';
+  }
   /* 双人共签区：关系便签未绑定搭档 → 显示邀请码（本人可复制）；已绑定 → 显示搭档名 */
   const inviteBox = $('zInvite');
   if (c.type === 'relation' && !c.partner_id) {
@@ -381,10 +426,11 @@ function openZoom(id) {
   $('zoomMask').classList.add('show');
 }
 function closeZoom() { $('zoomMask').classList.remove('show'); zoomId = null; }
-/* 删除便签（本地 + 云端），仅本人可见删除按钮 */
+/* 删除便签（本地 + 云端），仅本人可见删除按钮；永久绑定(locked)谁都删不了 */
 function deleteNote() {
   const c = cards.find(x => x.id === zoomId);
   if (!c || !isMine(c)) return;
+  if (c.bind_status === 'locked') { hint('这张便签已永久绑定，无法删除'); return; }
   if (!confirm('确定删除这张便签吗？')) return;
   cards = cards.filter(x => x.id !== c.id);
   saveCards(cards);
@@ -554,12 +600,14 @@ function openAdd() {
   curVis = 'public';
   curAnon = false;
   curShade = 1;
+  pendingInviteCode = genInviteCode();   // 每次打开表单预生成邀请码
   $('anonBtn').classList.remove('on');
   $('anonBtn').textContent = '不匿名';
   document.querySelectorAll('.wt-vis-btn').forEach(b => b.classList.toggle('on', b.dataset.v === 'public'));
   document.querySelectorAll('#subSel .wt-sub').forEach(b => b.classList.toggle('on', b.dataset.s === 'couple'));
   renderSubSel();
   renderShadeSel();
+  $('addInvite').style.display = 'none';   // 默认隐藏，选中「关系」才显示
   showMask('addMask');
 }
 function submitAdd() {
@@ -580,8 +628,10 @@ function submitAdd() {
     anon,
     avatar: (!anon && meInfo.avatar) ? meInfo.avatar : '',
     vis: curVis, owner: myOwner(), createdAt: new Date().toISOString(), comments: [],
-    partner_id: '', partner_name: '', partner_avatar: '', invite_code: ''
+    partner_id: '', partner_name: '', partner_avatar: '',
+    invite_code: (type === 'relation') ? (pendingInviteCode || genInviteCode()) : ''
   };
+  if (type !== 'relation') pendingInviteCode = '';   // 非关系便签清空待用邀请码
   hideMask('addMask');
   enterPlace(c);
 }
@@ -662,6 +712,48 @@ function doFind() {
   });
 }
 
+/* ---------- 加入关系 ---------- */
+/* 输入邀请码加入关系便签：RPC 设为搭档 → 拉取该便签内容 → 本地合并显示（私密也双方可见） */
+async function doJoin() {
+  const code = $('joinInput').value.trim().toUpperCase();
+  if (!code) { hint('先输入邀请码呀'); return; }
+  const me = await getCurUser();
+  if (!me) { hint('加入关系需要先登录'); hideMask('joinMask'); return; }
+  const r = await acceptInviteByCode(code);
+  if (!r.ok) { hint(r.msg || '加入失败'); return; }
+  hideMask('joinMask');
+  /* 从云端拉取这张便签的最新内容（含私密，RLS 已允许搭档读取） */
+  let note = null;
+  try {
+    const sb = await getSbClient();
+    if (sb && r.noteId) {
+      const { data } = await sb.from('wish_notes').select('*').eq('id', r.noteId).maybeSingle();
+      if (data) note = data;
+    }
+  } catch (e) {}
+  if (!note) { hint('已加入，刷新后可看到这张便签'); return; }
+  /* 本地合并（不覆盖已有本地改动） */
+  const local = loadCards();
+  const idx = local.findIndex(x => x.id === note.id);
+  const merged = {
+    id: note.id, type: note.type, sub: note.sub || '', title: note.title || '无题',
+    content: note.content || '', author: note.author || '', anon: !!note.anon,
+    avatar: note.avatar || '', vis: note.vis || 'public', shade: note.shade != null ? note.shade : 1,
+    owner: note.owner || '', createdAt: note.created_at || new Date().toISOString(),
+    comments: note.comments || [], partner_id: note.partner_id || '',
+    partner_name: note.partner_name || '', partner_avatar: note.partner_avatar || '',
+    invite_code: note.invite_code || '', bind_status: note.bind_status || '', bind_by: note.bind_by || '',
+    x: note.x != null ? note.x : undefined, y: note.y != null ? note.y : undefined,
+    r: note.r != null ? note.r : undefined
+  };
+  if (idx >= 0) local[idx] = merged; else local.push(merged);
+  saveCards(local);
+  cards = local;
+  renderWall();
+  hint('加入成功，你们共用这张便签啦');
+  openZoom(note.id);
+}
+
 /* ---------- 弹层 ---------- */
 function showMask(id) { $(id).classList.add('show'); }
 function hideMask(id) { $(id).classList.remove('show'); }
@@ -692,6 +784,15 @@ function bind() {
     t.classList.add('on');
     renderSubSel();
     renderShadeSel();
+    /* 关系类型：表单里就生成邀请码显示，不用等贴完 */
+    const inviteBox = $('addInvite');
+    if (t.dataset.t === 'relation') {
+      if (!pendingInviteCode) pendingInviteCode = genInviteCode();
+      $('addInviteCode').textContent = pendingInviteCode;
+      inviteBox.style.display = '';
+    } else {
+      inviteBox.style.display = 'none';
+    }
   });
   // 写便签：公开/私密
   document.querySelectorAll('.wt-vis-btn').forEach(b => {
@@ -713,12 +814,19 @@ function bind() {
   $('btnAdd').onclick = openAdd;
   $('addCancel').onclick = () => hideMask('addMask');
   $('addOk').onclick = submitAdd;
+  /* 表单里复制关系邀请码 */
+  $('addInviteCopy').onclick = () => { if (pendingInviteCode) copyInviteCode(pendingInviteCode); };
   $('btnMy').onclick = openMy;
   $('myClose').onclick = () => hideMask('myMask');
   $('btnFind').onclick = () => { $('findInput').value = ''; $('findList').innerHTML = '<div class="wt-empty">输入关键词搜索</div>'; showMask('findMask'); };
   $('findClose').onclick = () => hideMask('findMask');
   $('findGo').onclick = doFind;
   $('findInput').addEventListener('keydown', e => { if (e.key === 'Enter') doFind(); });
+  /* 加入关系：全局入口（输入邀请码 → 确认加入，双方都能看到这张便签） */
+  $('btnJoin').onclick = () => { $('joinInput').value = ''; showMask('joinMask'); };
+  $('joinClose').onclick = () => hideMask('joinMask');
+  $('joinGo').onclick = doJoin;
+  $('joinInput').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
   // 放大查看
   $('zoomClose').onclick = closeZoom;
   $('zDel').onclick = deleteNote;
@@ -731,16 +839,66 @@ function bind() {
     if (!c) return;
     const code = prompt('输入邀请码（8 位）：');
     if (!code) return;
+    const me = await getCurUser();
+    if (!me) { hint('加入关系需要先登录'); return; }
     const r = await acceptInviteByCode(code);
     if (!r.ok) { hint(r.msg || '接受邀请失败'); return; }
-    /* 云端已通过 SECURITY DEFINER RPC 更新 partner 字段；本地同步更新显示 */
-    c.partner_id = meInfo.userId;
-    c.partner_name = meInfo.name || '';
-    c.partner_avatar = meInfo.avatar || '';
-    saveCards(cards);
+    /* 从云端拉取这张便签的最新内容（含私密，RLS 已允许搭档读取） */
+    let note = null;
+    try {
+      const sb = await getSbClient();
+      if (sb && r.noteId) {
+        const { data } = await sb.from('wish_notes').select('*').eq('id', r.noteId).maybeSingle();
+        if (data) note = data;
+      }
+    } catch (e) {}
+    if (note) {
+      const idx = cards.findIndex(x => x.id === note.id);
+      const merged = {
+        id: note.id, type: note.type, sub: note.sub || '', title: note.title || '无题',
+        content: note.content || '', author: note.author || '', anon: !!note.anon,
+        avatar: note.avatar || '', vis: note.vis || 'public', shade: note.shade != null ? note.shade : 1,
+        owner: note.owner || '', createdAt: note.created_at || new Date().toISOString(),
+        comments: note.comments || [], partner_id: note.partner_id || '',
+        partner_name: note.partner_name || '', partner_avatar: note.partner_avatar || '',
+        invite_code: note.invite_code || '', bind_status: note.bind_status || '', bind_by: note.bind_by || '',
+        x: note.x != null ? note.x : undefined, y: note.y != null ? note.y : undefined,
+        r: note.r != null ? note.r : undefined
+      };
+      if (idx >= 0) cards[idx] = merged; else cards.push(merged);
+      saveCards(cards);
+    }
     renderWall();
     openZoom(c.id);
     hint('已成为搭档，你们共用这张便签啦');
+  };
+  /* 永久绑定按钮：发起 / 确认 / 取消（按当前状态分流） */
+  $('zBindBtn').onclick = async () => {
+    const c = cards.find(x => x.id === zoomId);
+    if (!c || !canEdit(c)) return;
+    if (c.bind_status === 'pending') {
+      const iAmBy = c.bind_by && meInfo.userId && c.bind_by === meInfo.userId;
+      if (iAmBy) {
+        if (!confirm('取消永久绑定发起？')) return;
+        const r = await bindRpc('cancel_permanent_bind', c.id);
+        if (r === 'cancelled') { c.bind_status = ''; c.bind_by = ''; saveCards(cards); hint('已取消发起'); }
+        else hint(r === 'forbidden' ? '只有发起人能取消' : '取消失败，再试试');
+      } else {
+        if (!confirm('确认永久绑定？绑定后谁都删不了这张便签')) return;
+        const r = await bindRpc('confirm_permanent_bind', c.id);
+        if (r === 'locked') { c.bind_status = 'locked'; saveCards(cards); hint('永久绑定成功 💞'); }
+        else hint(r === 'need_other' ? '需要对方确认' : '确认失败，再试试');
+      }
+    } else {
+      if (!confirm('发起永久绑定？对方确认后，谁都删不了这张便签')) return;
+      const r = await bindRpc('request_permanent_bind', c.id);
+      if (r === 'pending') { c.bind_status = 'pending'; c.bind_by = meInfo.userId; saveCards(cards); hint('已发起，等 TA 确认'); }
+      else if (r === 'no_partner') hint('还没有搭档，先接受邀请成为搭档吧');
+      else if (r === 'locked') hint('已永久绑定');
+      else hint('发起失败，再试试');
+    }
+    renderWall();
+    openZoom(c.id);
   };
   $('zoomMask').addEventListener('click', e => { if (e.target === $('zoomMask')) closeZoom(); });
   // 评论
@@ -774,8 +932,12 @@ function isMine(c) {
   if (!c) return false;
   return c.owner === myOwner() || (meInfo.userId && c.owner === myLocalId());
 }
-/* 可见性：公开所有人可见；私密仅作者/搭档可见 */
-function canSee(c) { return c.vis !== 'private' || canEdit(c); }
+/* 可见性：公开所有人可见；私密仅作者/搭档可见；关系便签未绑定搭档时仅作者可见（等待通过邀请） */
+function canSee(c) {
+  if (!c) return false;
+  if (c.type === 'relation' && !c.partner_id) return isMine(c);  // 关系便签未通过邀请：只有作者能看到
+  return c.vis !== 'private' || canEdit(c);
+}
 bind();
 initCanvas();
 renderWall();

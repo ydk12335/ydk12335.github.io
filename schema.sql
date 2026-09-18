@@ -188,6 +188,8 @@ CREATE TABLE IF NOT EXISTS wish_notes (
   partner_name TEXT NOT NULL DEFAULT '',   -- 搭档名字
   partner_avatar TEXT NOT NULL DEFAULT '', -- 搭档头像
   invite_code TEXT NOT NULL DEFAULT '',    -- 8 位邀请码（关系便签邀请搭档用）
+  bind_status TEXT NOT NULL DEFAULT '',    -- 永久绑定：''=未绑定 / pending=待确认 / locked=永久绑定（谁都删不了）
+  bind_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,     -- 永久绑定发起人
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -199,11 +201,13 @@ CREATE INDEX IF NOT EXISTS idx_wish_notes_invite ON wish_notes(invite_code) WHER
 ALTER TABLE wish_notes ENABLE ROW LEVEL SECURITY;
 
 -- 16. RLS 策略：公开便签所有人可读；私密便签作者+搭档可读；写只能写自己的
-CREATE POLICY "读公开便签" ON wish_notes FOR SELECT USING (vis = 'public');
+--     公开关系便签：未绑定搭档时仅作者可见（等待通过邀请），绑定后才公开
+CREATE POLICY "读公开便签" ON wish_notes FOR SELECT USING (vis = 'public' AND (type <> 'relation' OR partner_id IS NOT NULL));
+CREATE POLICY "读未绑定关系便签" ON wish_notes FOR SELECT USING (type = 'relation' AND partner_id IS NULL AND auth.uid() = user_id);
 CREATE POLICY "读自己私密便签" ON wish_notes FOR SELECT USING (auth.uid() = user_id OR auth.uid() = partner_id);
 CREATE POLICY "插自己的便签" ON wish_notes FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "改自己的便签" ON wish_notes FOR UPDATE USING (auth.uid() = user_id OR auth.uid() = partner_id) WITH CHECK (auth.uid() = user_id OR auth.uid() = partner_id);
-CREATE POLICY "删自己的便签" ON wish_notes FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "删自己的便签" ON wish_notes FOR DELETE USING (auth.uid() = user_id AND bind_status <> 'locked');
 
 -- 17. 双人共签：接受邀请 RPC（SECURITY DEFINER，校验邀请码并绑定搭档）
 CREATE OR REPLACE FUNCTION accept_invite(p_code TEXT, p_name TEXT DEFAULT '', p_avatar TEXT DEFAULT '')
@@ -224,5 +228,97 @@ BEGIN
   END IF;
   UPDATE wish_notes SET partner_id = auth.uid(), partner_name = p_name, partner_avatar = p_avatar WHERE id = v_note.id;
   RETURN v_note.id;
+END;
+$$;
+
+-- 18. 永久绑定：删除策略重写（locked 状态谁都删不了）
+DROP POLICY IF EXISTS "删自己的便签" ON wish_notes;
+CREATE POLICY "删自己的便签" ON wish_notes FOR DELETE USING (auth.uid() = user_id AND bind_status <> 'locked');
+
+-- 19. 评论同步 RPC（公开便签任何登录用户可评论；私密仅作者/搭档）
+CREATE OR REPLACE FUNCTION sync_comments(p_id TEXT, p_comments JSONB)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_vis TEXT;
+  v_uid UUID;
+BEGIN
+  SELECT vis, user_id INTO v_vis, v_uid FROM wish_notes WHERE id = p_id;
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+  IF v_vis = 'public' THEN
+    UPDATE wish_notes SET comments = p_comments WHERE id = p_id;
+    RETURN true;
+  END IF;
+  -- 私密：仅作者/搭档可更新评论
+  IF auth.uid() = v_uid OR auth.uid() = (SELECT partner_id FROM wish_notes WHERE id = p_id) THEN
+    UPDATE wish_notes SET comments = p_comments WHERE id = p_id;
+    RETURN true;
+  END IF;
+  RETURN false;
+END;
+$$;
+
+-- 20. 永久绑定 RPC（关系便签双人确认后 locked，谁都删不了）
+-- 发起：需已有搭档，置 pending
+CREATE OR REPLACE FUNCTION request_permanent_bind(p_id TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_note wish_notes%ROWTYPE;
+BEGIN
+  SELECT * INTO v_note FROM wish_notes WHERE id = p_id;
+  IF NOT FOUND THEN RETURN 'not_found'; END IF;
+  IF v_note.user_id <> auth.uid() AND v_note.partner_id <> auth.uid() THEN RETURN 'forbidden'; END IF;
+  IF v_note.bind_status = 'locked' THEN RETURN 'locked'; END IF;
+  IF v_note.partner_id IS NULL THEN RETURN 'no_partner'; END IF;
+  UPDATE wish_notes SET bind_status = 'pending', bind_by = auth.uid() WHERE id = p_id;
+  RETURN 'pending';
+END;
+$$;
+
+-- 确认：对方（非发起人）确认后 locked
+CREATE OR REPLACE FUNCTION confirm_permanent_bind(p_id TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_note wish_notes%ROWTYPE;
+BEGIN
+  SELECT * INTO v_note FROM wish_notes WHERE id = p_id;
+  IF NOT FOUND THEN RETURN 'not_found'; END IF;
+  IF v_note.bind_status <> 'pending' THEN RETURN 'not_pending'; END IF;
+  IF v_note.bind_by = auth.uid() THEN RETURN 'self_confirm'; END IF;
+  IF v_note.user_id <> auth.uid() AND v_note.partner_id <> auth.uid() THEN RETURN 'forbidden'; END IF;
+  UPDATE wish_notes SET bind_status = 'locked' WHERE id = p_id;
+  RETURN 'locked';
+END;
+$$;
+
+-- 取消：仅发起人可取消 pending
+CREATE OR REPLACE FUNCTION cancel_permanent_bind(p_id TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_note wish_notes%ROWTYPE;
+BEGIN
+  SELECT * INTO v_note FROM wish_notes WHERE id = p_id;
+  IF NOT FOUND THEN RETURN 'not_found'; END IF;
+  IF v_note.bind_by IS DISTINCT FROM auth.uid() THEN RETURN 'forbidden'; END IF;
+  IF v_note.bind_status <> 'pending' THEN RETURN 'not_pending'; END IF;
+  UPDATE wish_notes SET bind_status = '', bind_by = NULL WHERE id = p_id;
+  RETURN 'cancelled';
 END;
 $$;

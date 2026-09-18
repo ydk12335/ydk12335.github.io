@@ -25,6 +25,7 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
 .wt-note .ct{font-size:.7rem;color:rgba(0,0,0,.6);line-height:1.6;margin-top:5px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all;flex:1}
 .wt-note .au{display:flex;align-items:center;gap:5px;font-size:.6rem;color:rgba(0,0,0,.5);margin-top:4px;min-width:0}
 .wt-note .au-dt{margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wt-note .wt-wait{font-size:.58rem;color:#b06a3c;font-weight:600;letter-spacing:.06em;margin-top:4px;padding:3px 7px;border-radius:4px;background:rgba(255,236,214,.75);border:1.5px dashed rgba(176,106,60,.45);display:inline-block;align-self:flex-start}
 .wt-note .au-nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:74px;font-size:.62rem;color:rgba(0,0,0,.55)}
 .wt-note .av{width:16px;height:16px;border-radius:50%;flex:none;border:1.5px solid rgba(0,0,0,.28);background-size:cover;background-position:center;display:inline-flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;color:#fff;line-height:1}
 .wt-note .av-anon{background:#9aa8bd;color:#fff}
@@ -77,6 +78,17 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
 .wt-field input:focus,.wt-field textarea:focus{border-color:#3a4a66;box-shadow:3px 3px 0 rgba(48,64,92,.35)}
 .wt-field textarea{min-height:110px;resize:vertical;line-height:1.7}
 .wt-field .cnt{text-align:right;font-size:.6rem;color:rgba(48,64,92,.4);margin-top:3px}
+.wt-invite{margin:-4px 0 14px;padding:10px 12px;border-radius:6px;background:rgba(255,255,255,.6);border:2px dashed rgba(48,64,92,.4);text-align:center}
+.wt-invite-tip{font-size:.64rem;color:rgba(48,64,92,.6);letter-spacing:.04em;margin-bottom:8px;line-height:1.6}
+.wt-invite-row{display:flex;align-items:center;justify-content:center;gap:8px}
+.wt-invite-code{font-size:.95rem;font-weight:700;letter-spacing:.18em;color:#3a4a66;font-family:monospace}
+.wt-invite-copy{padding:6px 14px;border-radius:5px;border:2px solid #3a4a66;background:#cfe6ff;color:#3a4a66;font-family:inherit;font-size:.64rem;cursor:pointer;font-weight:700}
+.wt-invite-copy:active{transform:scale(.94)}
+.wt-search{display:flex;gap:8px;margin-bottom:6px}
+.wt-search input{flex:1;min-width:0;padding:11px 13px;border-radius:6px;border:2.5px solid rgba(48,64,92,.45);background:#fff;color:#3d4a5e;font-family:inherit;font-size:.85rem;outline:none;box-sizing:border-box;text-align:center}
+.wt-search input:focus{border-color:#3a4a66;box-shadow:3px 3px 0 rgba(48,64,92,.35)}
+.wt-search button{flex:none;padding:11px 18px;border-radius:6px;border:2.5px solid #3a4a66;background:#a8d8ff;color:#3a4a66;font-family:inherit;font-size:.82rem;cursor:pointer;font-weight:700;box-shadow:2px 2.5px 0 rgba(48,64,92,.6)}
+.wt-search button:active{transform:translate(2px,2px);box-shadow:0 0 0}
 .wt-anon-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .wt-anon-row .anon-lbl{font-size:.68rem;color:rgba(48,64,92,.6);letter-spacing:.08em;font-weight:600}
 .wt-anon{flex:none;padding:7px 16px;border-radius:6px;border:2.5px solid #3a4a66;background:#f2f7fd;color:#3a4a66;font-family:inherit;font-size:.7rem;cursor:pointer;transition:.15s;box-shadow:2px 2.5px 0 rgba(48,64,92,.7);font-weight:600}
@@ -159,7 +171,7 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
 <div class="wt-tabs" id="wallTabs"><button class="wt-tab on" data-w="all">全部</button><button class="wt-tab" data-w="bless">祝福</button><button class="wt-tab" data-w="story">故事</button><button class="wt-tab" data-w="relation">关系</button><button class="wt-tab" data-w="heart">心事</button></div>
 <button class="wt-add" id="btnAdd">贴一张便签</button>
 <div class="wt-zoom-ctl"><button class="wt-zbtn" id="zoomIn">+</button><button class="wt-zbtn" id="zoomOut">-</button><button class="wt-zbtn" id="zoomFit" style="font-size:.78rem">全</button></div>
-<div class="wt-bottom"><button class="wt-btn2" id="btnFind">找便签</button></div>
+<div class="wt-bottom"><button class="wt-btn2" id="btnFind">找便签</button><button class="wt-btn2" id="btnJoin">加入关系</button></div>
 <div class="wt-zoom-lbl" id="zoomLbl">100%</div>
 <div id="placeBar">点画布上的位置贴上去 <b id="placeCancel">取消</b></div>
 <div class="wt-hint" id="wtHint"></div>
@@ -185,6 +197,10 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
         <button type="button" class="wt-vis-btn" data-v="private">私密（仅自己可见）</button>
       </div>
     </div>
+    <div class="wt-invite" id="addInvite" style="display:none">
+      <div class="wt-invite-tip">这是一张关系便签，邀请 TA 加入（填完内容贴上去后，把邀请码发给 TA）：</div>
+      <div class="wt-invite-row"><span class="wt-invite-code" id="addInviteCode"></span><button type="button" class="wt-invite-copy" id="addInviteCopy">复制邀请码</button></div>
+    </div>
     <div class="wt-btns"><button class="wt-cancel" id="addCancel">算了</button><button class="wt-ok" id="addOk">贴上去</button></div>
   </div>
 </div>
@@ -207,6 +223,15 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
     <div class="wt-btns"><button class="wt-cancel" id="findClose">关 闭</button></div>
   </div>
 </div>
+<!-- 加入关系弹层 -->
+<div class="wt-mask" id="joinMask">
+  <div class="wt-panel">
+    <h3>加 入 关 系</h3>
+    <div class="sub">输入 TA 给你的 8 位邀请码，加入这张关系便签</div>
+    <div class="wt-search"><input id="joinInput" placeholder="输入邀请码（8位）" maxlength="8" style="letter-spacing:.2em;text-transform:uppercase"><button id="joinGo">加入</button></div>
+    <div class="wt-btns"><button class="wt-cancel" id="joinClose">关 闭</button></div>
+  </div>
+</div>
 <!-- 放大查看（含评论） -->
 <div class="wt-zoom" id="zoomMask">
   <button class="wt-zoom-close" id="zoomClose">×</button>
@@ -221,6 +246,10 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
       <button type="button" class="z-invite-btn" id="zInviteCopy">复制</button>
       <button type="button" class="z-invite-btn z-invite-accept" id="zInviteAccept">输入邀请码加入</button>
     </div>
+    <div class="z-invite z-bind" id="zBind" style="display:none">
+      <span class="z-invite-tip" id="zBindTip"></span>
+      <button type="button" class="z-invite-btn" id="zBindBtn"></button>
+    </div>
     <div class="z-meta"><span id="zDate"></span><span class="z-meta-r"><span class="z-badge" id="zBadge"></span><button id="zDel" style="display:none">删除</button></span></div>
     <div class="z-comments" id="zComments"></div>
     <div class="z-cmt-form">
@@ -231,6 +260,6 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
   </div>
 </div>
 <script src="../supabase-config.js?v=14"></script>
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
