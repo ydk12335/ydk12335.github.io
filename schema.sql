@@ -161,3 +161,40 @@ BEGIN
   DELETE FROM auth.users WHERE id = auth.uid();
 END;
 $$;
+-- ========================================
+-- 便签墙 · 公共便签表（2026-09-18 新增）
+-- 公开便签所有人可见；私密便签仅作者本人可见
+-- ========================================
+
+-- 14. wish_notes 表（公开/私密便签）
+CREATE TABLE IF NOT EXISTS wish_notes (
+  id TEXT PRIMARY KEY,                 -- 前端 uid()，兼容本地
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,  -- 作者（未登录可空）
+  type TEXT NOT NULL DEFAULT 'bless',
+  title TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  author TEXT NOT NULL DEFAULT '',
+  vis TEXT NOT NULL DEFAULT 'public' CHECK (vis IN ('public','private')),
+  shade INTEGER NOT NULL DEFAULT 1 CHECK (shade IN (0,1,2)),   -- 颜色深浅档（0浅/1标准/2深），色相由类型决定
+  anon BOOLEAN NOT NULL DEFAULT false,   -- 是否匿名（匿名不显示头像和名字）
+  avatar TEXT NOT NULL DEFAULT '',       -- 作者头像（data URL，可空）
+  x INTEGER,
+  y INTEGER,
+  r REAL,
+  comments JSONB NOT NULL DEFAULT '[]',
+  owner TEXT,                           -- 前端本地标识（未登录时区分我的便签）
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_wish_notes_vis ON wish_notes(vis, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wish_notes_user ON wish_notes(user_id);
+
+-- 15. 开启 RLS
+ALTER TABLE wish_notes ENABLE ROW LEVEL SECURITY;
+
+-- 16. RLS 策略：公开便签所有人可读；私密便签仅作者可读；写只能写自己的
+CREATE POLICY "读公开便签" ON wish_notes FOR SELECT USING (vis = 'public');
+CREATE POLICY "读自己私密便签" ON wish_notes FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "插自己的便签" ON wish_notes FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "改自己的便签" ON wish_notes FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "删自己的便签" ON wish_notes FOR DELETE USING (auth.uid() = user_id);
