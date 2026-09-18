@@ -48,7 +48,7 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
 .wt-zoom-ctl{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);z-index:20;display:flex;flex-direction:column;gap:8px}
 .wt-zbtn{width:42px;height:42px;border-radius:6px;border:2.5px solid #3a4a66;background:#f2f7fd;color:#3a4a66;font-family:inherit;font-size:1.1rem;cursor:pointer;box-shadow:2.5px 3px 0 rgba(48,64,92,.7);display:flex;align-items:center;justify-content:center;font-weight:700}
 .wt-zbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0}
-.wt-bottom{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);z-index:20;display:flex;gap:10px;align-items:center}
+.wt-bottom{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);z-index:30;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .wt-btn2{display:flex;align-items:center;gap:6px;padding:11px 20px;border-radius:7px;border:3px solid #3a4a66;background:#f2f7fd;color:#3a4a66;font-family:inherit;font-size:.8rem;letter-spacing:.1em;cursor:pointer;box-shadow:4px 4.5px 0 rgba(48,64,92,.85);font-weight:600;transition:transform .16s,box-shadow .2s;transform:rotate(.7deg)}
 .wt-btn2:active{transform:translate(3px,3px) rotate(0deg);box-shadow:1px 1px 0 rgba(48,64,92,.85)}
 .wt-zoom-lbl{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);transform:translateX(-50%);z-index:20;background:#f2f7fd;border:2.5px solid #3a4a66;border-radius:6px;padding:6px 14px;font-size:.72rem;color:#3a4a66;letter-spacing:.08em;box-shadow:2.5px 3px 0 rgba(48,64,92,.6);font-weight:600;pointer-events:none}
@@ -89,6 +89,16 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
 .wt-search input:focus{border-color:#3a4a66;box-shadow:3px 3px 0 rgba(48,64,92,.35)}
 .wt-search button{flex:none;padding:11px 18px;border-radius:6px;border:2.5px solid #3a4a66;background:#a8d8ff;color:#3a4a66;font-family:inherit;font-size:.82rem;cursor:pointer;font-weight:700;box-shadow:2px 2.5px 0 rgba(48,64,92,.6)}
 .wt-search button:active{transform:translate(2px,2px);box-shadow:0 0 0}
+.wt-join-divider{text-align:center;font-size:.66rem;color:rgba(48,64,92,.45);letter-spacing:.12em;margin:6px 0 10px}
+.wt-rel-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;margin-bottom:8px;background:#fff;border:2px solid rgba(48,64,92,.35);box-shadow:2px 2.5px 0 rgba(48,64,92,.25)}
+.wt-rel-item .rel-dot{width:30px;height:30px;border-radius:6px;flex:none;border:2px solid rgba(48,64,92,.4);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#3a4a66}
+.wt-rel-item .rel-bd{flex:1;min-width:0}
+.wt-rel-item .rel-tt{font-size:.78rem;font-weight:700;color:#2c3a52;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wt-rel-item .rel-meta{font-size:.62rem;color:rgba(48,64,92,.55);margin-top:2px}
+.wt-rel-item .rel-btn{flex:none;padding:5px 12px;border-radius:5px;border:2px solid #3a4a66;background:#f2f7fd;color:#3a4a66;font-family:inherit;font-size:.62rem;cursor:pointer;font-weight:700}
+.wt-rel-item .rel-btn:active{transform:scale(.94)}
+.wt-rel-item .rel-btn.danger{background:#ffe3e3;border-color:#c25a5a;color:#a03a3a}
+.wt-empty{text-align:center;padding:22px 10px;font-size:.72rem;color:rgba(48,64,92,.5);line-height:1.8}
 .wt-anon-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .wt-anon-row .anon-lbl{font-size:.68rem;color:rgba(48,64,92,.6);letter-spacing:.08em;font-weight:600}
 .wt-anon{flex:none;padding:7px 16px;border-radius:6px;border:2.5px solid #3a4a66;background:#f2f7fd;color:#3a4a66;font-family:inherit;font-size:.7rem;cursor:pointer;transition:.15s;box-shadow:2px 2.5px 0 rgba(48,64,92,.7);font-weight:600}
@@ -171,7 +181,7 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
 <div class="wt-tabs" id="wallTabs"><button class="wt-tab on" data-w="all">全部</button><button class="wt-tab" data-w="bless">祝福</button><button class="wt-tab" data-w="story">故事</button><button class="wt-tab" data-w="relation">关系</button><button class="wt-tab" data-w="heart">心事</button></div>
 <button class="wt-add" id="btnAdd">贴一张便签</button>
 <div class="wt-zoom-ctl"><button class="wt-zbtn" id="zoomIn">+</button><button class="wt-zbtn" id="zoomOut">-</button><button class="wt-zbtn" id="zoomFit" style="font-size:.78rem">全</button></div>
-<div class="wt-bottom"><button class="wt-btn2" id="btnFind">找便签</button><button class="wt-btn2" id="btnJoin">加入关系</button></div>
+<div class="wt-bottom"><button class="wt-btn2" id="btnJoin">关系</button><button class="wt-btn2" id="btnFind">找便签</button></div>
 <div class="wt-zoom-lbl" id="zoomLbl">100%</div>
 <div id="placeBar">点画布上的位置贴上去 <b id="placeCancel">取消</b></div>
 <div class="wt-hint" id="wtHint"></div>
@@ -223,12 +233,14 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
     <div class="wt-btns"><button class="wt-cancel" id="findClose">关 闭</button></div>
   </div>
 </div>
-<!-- 加入关系弹层 -->
+<!-- 我的关系弹层 -->
 <div class="wt-mask" id="joinMask">
   <div class="wt-panel">
-    <h3>加 入 关 系</h3>
-    <div class="sub">输入 TA 给你的 8 位邀请码，加入这张关系便签</div>
-    <div class="wt-search"><input id="joinInput" placeholder="输入邀请码（8位）" maxlength="8" style="letter-spacing:.2em;text-transform:uppercase"><button id="joinGo">加入</button></div>
+    <h3>我 的 关 系</h3>
+    <div class="sub">已绑定的关系便签（永久绑定不可解绑）</div>
+    <div class="wt-list" id="relList"></div>
+    <div class="wt-join-divider">— 加入新关系 —</div>
+    <div class="wt-search"><input id="joinInput" placeholder="输入 TA 的邀请码（8位）" maxlength="8" style="letter-spacing:.2em;text-transform:uppercase"><button id="joinGo">加入</button></div>
     <div class="wt-btns"><button class="wt-cancel" id="joinClose">关 闭</button></div>
   </div>
 </div>
@@ -260,6 +272,6 @@ html,body{width:100%;height:100%;background:#eaf3fb;color:#3d4a5e;font-family:"M
   </div>
 </div>
 <script src="../supabase-config.js?v=14"></script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

@@ -190,6 +190,7 @@ CREATE TABLE IF NOT EXISTS wish_notes (
   invite_code TEXT NOT NULL DEFAULT '',    -- 8 位邀请码（关系便签邀请搭档用）
   bind_status TEXT NOT NULL DEFAULT '',    -- 永久绑定：''=未绑定 / pending=待确认 / locked=永久绑定（谁都删不了）
   bind_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,     -- 永久绑定发起人
+  bind_at TIMESTAMPTZ,                       -- 绑定搭档时间（用于显示已绑定天数）
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -226,7 +227,7 @@ BEGIN
   IF v_note.user_id = auth.uid() THEN
     RETURN NULL;
   END IF;
-  UPDATE wish_notes SET partner_id = auth.uid(), partner_name = p_name, partner_avatar = p_avatar WHERE id = v_note.id;
+  UPDATE wish_notes SET partner_id = auth.uid(), partner_name = p_name, partner_avatar = p_avatar, bind_at = now() WHERE id = v_note.id;
   RETURN v_note.id;
 END;
 $$;
@@ -320,5 +321,27 @@ BEGIN
   IF v_note.bind_status <> 'pending' THEN RETURN 'not_pending'; END IF;
   UPDATE wish_notes SET bind_status = '', bind_by = NULL WHERE id = p_id;
   RETURN 'cancelled';
+END;
+$$;
+
+-- 20. 解除关系绑定（作者或搭档均可；永久绑定 locked 拒绝解绑）
+CREATE OR REPLACE FUNCTION unbind_relation(p_id TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_note wish_notes%ROWTYPE;
+BEGIN
+  SELECT * INTO v_note FROM wish_notes WHERE id = p_id;
+  IF NOT FOUND THEN RETURN 'not_found'; END IF;
+  IF v_note.user_id <> auth.uid() AND v_note.partner_id <> auth.uid() THEN RETURN 'forbidden'; END IF;
+  IF v_note.bind_status = 'locked' THEN RETURN 'locked'; END IF;
+  UPDATE wish_notes
+  SET partner_id = NULL, partner_name = '', partner_avatar = '',
+      invite_code = '', bind_status = '', bind_by = NULL, bind_at = NULL
+  WHERE id = p_id;
+  RETURN 'unbound';
 END;
 $$;

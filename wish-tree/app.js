@@ -14,12 +14,12 @@ const TYPE_META = {
   relation: { name: '关系',  shades: ['#f3e6ff', '#e0b8ff', '#b98ae0'] },
   heart:    { name: '心事',  shades: ['#ffe8f0', '#ffd0de', '#f290b0'] }
 };
-/* 「关系」细分类型：选中关系后显示二级选择，各细分配独立色相（淡色手绘风） */
+/* 「关系」细分类型：选中关系后显示二级选择；所有子类型统一同一色系（紫色，与 TYPE_META.relation 一致） */
 const REL_SUBS = {
-  couple:  { name: '情侣', shades: ['#f3e6ff', '#e0b8ff', '#b98ae0'] },  // 紫
-  friend:  { name: '朋友', shades: ['#e4f3ff', '#bfe0ff', '#7fb5e8'] },  // 青蓝
-  family:  { name: '家人', shades: ['#ffece0', '#ffd0b0', '#f2a06a'] },  // 暖橙
-  crush:   { name: '暗恋', shades: ['#fde6f2', '#f9c4e0', '#e88ab5'] }   // 粉紫
+  couple:  { name: '情侣', shades: ['#f3e6ff', '#e0b8ff', '#b98ae0'] },  // 统一紫
+  friend:  { name: '朋友', shades: ['#f3e6ff', '#e0b8ff', '#b98ae0'] },  // 统一紫
+  family:  { name: '家人', shades: ['#f3e6ff', '#e0b8ff', '#b98ae0'] },  // 统一紫
+  crush:   { name: '暗恋', shades: ['#f3e6ff', '#e0b8ff', '#b98ae0'] }   // 统一紫
 };
 const REL_SUB_KEYS = Object.keys(REL_SUBS);
 const SHADE_LABELS = ['浅', '标准', '深'];
@@ -61,12 +61,12 @@ async function pullCloudNotes() {
     if (error) { console.warn('[wish-tree] 拉取公开便签失败', error.message); return; }
     if (!rows || !rows.length) return;
     const local = loadCards();
-    const ids = new Set(local.map(c => c.id));
+    const byId = new Map(local.map(c => [c.id, c]));
     const merged = local.slice();
-    let added = 0;
+    let changed = 0;
     rows.forEach(r => {
-      if (ids.has(r.id)) return;
-      merged.push({
+      const ex = byId.get(r.id);
+      const fresh = {
         id: r.id, type: r.type, title: r.title || '无题', content: r.content || '',
         author: r.author || '', vis: r.vis, owner: r.owner || '', createdAt: r.created_at,
         comments: r.comments || [], shade: r.shade != null ? r.shade : (r.color ? 1 : 1),
@@ -74,12 +74,24 @@ async function pullCloudNotes() {
         sub: r.sub || '', partner_id: r.partner_id || '', partner_name: r.partner_name || '',
         partner_avatar: r.partner_avatar || '', invite_code: r.invite_code || '',
         bind_status: r.bind_status || '', bind_by: r.bind_by || '',
+        bind_at: r.bind_at || '',
         x: r.x != null ? r.x : undefined, y: r.y != null ? r.y : undefined,
         r: r.r != null ? r.r : undefined
-      });
-      ids.add(r.id); added++;
+      };
+      if (ex) {
+        // 本地已存在：字段级合并，云端新值覆盖（partner/bind 等必须同步，否则作者端一直显示等待）
+        let dirty = false;
+        ['type','title','content','author','vis','owner','createdAt','shade','anon','avatar','sub','partner_id','partner_name','partner_avatar','invite_code','bind_status','bind_by','bind_at','x','y','r'].forEach(k => {
+          if (fresh[k] !== undefined && fresh[k] !== ex[k]) { ex[k] = fresh[k]; dirty = true; }
+        });
+        // 评论合并：以云端为准（RPC 已保证评论写入云端）
+        if (JSON.stringify(fresh.comments) !== JSON.stringify(ex.comments)) { ex.comments = fresh.comments; dirty = true; }
+        if (dirty) changed++;
+      } else {
+        merged.push(fresh); byId.set(r.id, fresh); changed++;
+      }
     });
-    if (added) { saveCards(merged); cards = loadCards(); renderWall(); }
+    if (changed) { saveCards(merged); cards = loadCards(); renderWall(); }
   } catch (e) { console.warn('[wish-tree] 拉取公开便签异常', e); }
 }
 /* 上传一张便签到云端（公开/私密都传；私密只有自己能读到）
@@ -97,6 +109,7 @@ async function pushNoteCloud(c) {
       sub: c.sub || '', partner_id: c.partner_id || null, partner_name: c.partner_name || '',
       partner_avatar: c.partner_avatar || '', invite_code: c.invite_code || '',
       bind_status: c.bind_status || '', bind_by: c.bind_by || null,
+      bind_at: c.bind_at || null,
       x: c.x ?? null, y: c.y ?? null, r: c.r ?? null,
       comments: c.comments || [], owner: c.owner || ''
     }, { onConflict: 'id' });
@@ -139,11 +152,18 @@ function isPartner(c) {
 }
 /* 双人共签：本人 / 搭档都算「可操作」 */
 function canEdit(c) { return isMine(c) || isPartner(c); }
-/* 接受邀请：调用 SECURITY DEFINER RPC 把当前用户设为搭档 */
-async function acceptInviteByCode(code) {
+/* 接受邀请：调用 SECURITY DEFINER RPC 把当前用户设为搭档；dryRun=true 时只查不绑（用于情侣唯一校验） */
+async function acceptInviteByCode(code, dryRun) {
   const sb = await getSbClient(); if (!sb) return { ok: false, msg: '未登录' };
   const user = await getCurUser(); if (!user) return { ok: false, msg: '未登录' };
   try {
+    if (dryRun) {
+      /* 只查这张便签的类型（不绑定），用于情侣唯一校验 */
+      const { data, error } = await sb.from('wish_notes').select('id, sub, type').eq('invite_code', (code || '').trim().toUpperCase()).maybeSingle();
+      if (error) return { ok: false, msg: error.message };
+      if (!data) return { ok: false, msg: '邀请码无效或已失效' };
+      return { ok: true, note: data };
+    }
     const { data, error } = await sb.rpc('accept_invite', {
       p_code: (code || '').trim().toUpperCase(),
       p_name: meInfo.name || '',
@@ -153,6 +173,16 @@ async function acceptInviteByCode(code) {
     if (!data) return { ok: false, msg: '邀请码无效或已失效' };
     return { ok: true, noteId: data };
   } catch (e) { return { ok: false, msg: String(e) }; }
+}
+/* 解绑关系 RPC：作者或搭档均可解绑；永久绑定(locked)不可解绑 */
+async function unbindRpc(noteId) {
+  const sb = await getSbClient(); if (!sb) return 'no_login';
+  const user = await getCurUser(); if (!user) return 'no_login';
+  try {
+    const { data, error } = await sb.rpc('unbind_relation', { p_id: noteId });
+    if (error) return error.message || 'rpc_error';
+    return data || 'rpc_error';
+  } catch (e) { return String(e); }
 }
 /* 把邀请码复制到剪贴板（移动端优先 Clipboard API，失败则选中文本提示） */
 async function copyInviteCode(code) {
@@ -562,7 +592,7 @@ function renderSubSel() {
   box.innerHTML = REL_SUB_KEYS.map((k, i) => {
     const meta = REL_SUBS[k];
     const on = i === 0 ? ' on' : '';
-    return `<div class="wt-sub${on}" data-s="${k}" style="--subc:${meta.shades[1]}">${meta.name}</div>`;
+    return `<div class="wt-sub${on}" data-s="${k}">${meta.name}</div>`;
   }).join('');
   box.querySelectorAll('.wt-sub').forEach(d => {
     d.onclick = () => {
@@ -712,6 +742,53 @@ function doFind() {
   });
 }
 
+/* ---------- 我的关系 ---------- */
+/* 计算已绑定天数（bind_at → 至今） */
+function bindDays(c) {
+  const t = c.bind_at || c.bindTime || '';
+  if (!t) return 0;
+  const d = (Date.now() - new Date(t).getTime()) / 86400000;
+  return Math.max(0, Math.floor(d));
+}
+/* 渲染「我的关系」列表：作者/搭档视角的关系便签，显示绑定天数、永久绑定锁、解绑按钮 */
+function renderRelList() {
+  const box = $('relList');
+  if (!box) return;
+  const rels = cards.filter(c => c.type === 'relation' && c.partner_id && (isMine(c) || isPartner(c)));
+  if (!rels.length) { box.innerHTML = '<div class="wt-empty">还没有绑定关系<br>输入下方邀请码加入 TA 的关系便签</div>'; return; }
+  box.innerHTML = rels.map(c => {
+    const subName = (c.sub && REL_SUBS[c.sub]) ? REL_SUBS[c.sub].name : '关系';
+    const days = bindDays(c);
+    const locked = c.bind_status === 'locked';
+    const daysTxt = days > 0 ? `已绑定 ${days} 天` : '刚绑定';
+    const lockTxt = locked ? ' · 🔒永久' : '';
+    const partner = isPartner(c) ? (c.author || '对方') : (c.partner_name || '对方');
+    const btn = locked
+      ? '<span class="rel-btn" style="border-color:#8a8a8a;color:#8a8a8a;background:#f0f0f0;cursor:default">永久绑定</span>'
+      : '<button type="button" class="rel-btn danger" data-unbind="' + esc(c.id) + '">解绑</button>';
+    return `<div class="wt-rel-item">
+      <span class="rel-dot" style="background:${noteColor(c)}">${esc(subName[0] || '关')}</span>
+      <div class="rel-bd"><div class="rel-tt">${esc(c.title || '无题')}</div><div class="rel-meta">${esc(partner)} · ${esc(subName)}${lockTxt} · ${daysTxt}</div></div>
+      ${btn}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-unbind]').forEach(b => {
+    b.onclick = async () => {
+      const id = b.dataset.unbind;
+      const c = cards.find(x => x.id === id);
+      if (!c) return;
+      if (c.bind_status === 'locked') { hint('永久绑定的关系不能解绑'); return; }
+      if (!confirm('确定解绑这个关系吗？')) return;
+      const r = await unbindRpc(id);
+      if (r === 'unbound') {
+        c.partner_id = ''; c.partner_name = ''; c.partner_avatar = '';
+        saveCards(cards); renderRelList(); renderWall();
+        hint('已解绑');
+      } else { hint(r === 'locked' ? '永久绑定不可解绑' : (r === 'forbidden' ? '只有关系双方能解绑' : '解绑失败，再试试')); }
+    };
+  });
+}
+
 /* ---------- 加入关系 ---------- */
 /* 输入邀请码加入关系便签：RPC 设为搭档 → 拉取该便签内容 → 本地合并显示（私密也双方可见） */
 async function doJoin() {
@@ -719,6 +796,12 @@ async function doJoin() {
   if (!code) { hint('先输入邀请码呀'); return; }
   const me = await getCurUser();
   if (!me) { hint('加入关系需要先登录'); hideMask('joinMask'); return; }
+  /* 情侣唯一：想加入情侣关系时，检查自己是否已有情侣关系便签 */
+  const r0 = await acceptInviteByCode(code, true);  // dryRun：只查不绑
+  if (r0.ok && r0.note && r0.note.sub === 'couple') {
+    const hasCouple = cards.some(c => c.type === 'relation' && c.sub === 'couple' && c.partner_id && (isMine(c) || isPartner(c)));
+    if (hasCouple) { hint('你已经有一个情侣关系啦'); return; }
+  }
   const r = await acceptInviteByCode(code);
   if (!r.ok) { hint(r.msg || '加入失败'); return; }
   hideMask('joinMask');
@@ -743,6 +826,7 @@ async function doJoin() {
     comments: note.comments || [], partner_id: note.partner_id || '',
     partner_name: note.partner_name || '', partner_avatar: note.partner_avatar || '',
     invite_code: note.invite_code || '', bind_status: note.bind_status || '', bind_by: note.bind_by || '',
+    bind_at: note.bind_at || '',
     x: note.x != null ? note.x : undefined, y: note.y != null ? note.y : undefined,
     r: note.r != null ? note.r : undefined
   };
@@ -751,6 +835,8 @@ async function doJoin() {
   cards = local;
   renderWall();
   hint('加入成功，你们共用这张便签啦');
+  renderRelList();
+  showMask('joinMask');
   openZoom(note.id);
 }
 
@@ -822,8 +908,8 @@ function bind() {
   $('findClose').onclick = () => hideMask('findMask');
   $('findGo').onclick = doFind;
   $('findInput').addEventListener('keydown', e => { if (e.key === 'Enter') doFind(); });
-  /* 加入关系：全局入口（输入邀请码 → 确认加入，双方都能看到这张便签） */
-  $('btnJoin').onclick = () => { $('joinInput').value = ''; showMask('joinMask'); };
+  /* 我的关系：全局入口（显示已绑定关系 + 输入邀请码加入） */
+  $('btnJoin').onclick = () => { $('joinInput').value = ''; renderRelList(); showMask('joinMask'); };
   $('joinClose').onclick = () => hideMask('joinMask');
   $('joinGo').onclick = doJoin;
   $('joinInput').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
